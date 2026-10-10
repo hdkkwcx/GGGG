@@ -266,6 +266,10 @@ test asserts every incumbent metric row is identical with them on):
 Blended methods are scored on the shared mask but never join `MASK_METHODS`, so they cannot move
 another method's denominator.
 
+`--gpm-uncal` is different: it swaps a product rather than adding methods. It scores uncalibrated
+IMERG (`GPM_uncal`, built by `scripts/prepare_gpm_uncal_inputs.jl`) in place of calibrated `GPM`,
+and the run writes to its own `_gpmuncal` output directory.
+
 ### Loading `src/` from a script or test
 
 There is exactly one idiom. Never `include` a standalone module file directly: `include`ing a file
