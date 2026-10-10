@@ -27,7 +27,7 @@ function benchmark_config(
     mgwr_grouping::Symbol=:intercept_only, residual_shrinkage::Bool=true,
     unsupported_local_target::Symbol=:missing, satellite_wet_blend::Bool=false,
     blend_axes::Vector{Symbol}=[:constant], fused_anchor::Bool=false,
-    fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false,
+    fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
     nested_covariates && legacy_dem && throw(ArgumentError(
@@ -75,6 +75,7 @@ function benchmark_config(
             (fused_anchor ? "_fusedanchor" : "") *
             (fused_anchor_lagnbr ? "_fusedlagnbr" : "") *
             (stacked_blend ? "_stackblend" : "") *
+            (gpm_uncal ? "_gpmuncal" : "") *
             (repeats > 1 ? "_repeats$(repeats)" : ""),
     )
     mkpath(outdir)
@@ -112,6 +113,15 @@ function benchmark_config(
     # GWR-family-versus-adw gap says too.
     bw_adaptive = local_grid ? [8.0, 12.0, 16.0, 20.0, 30.0, 50.0, 80.0, 120.0] :
         (smoke ? [30.0, 80.0] : [30.0, 50.0, 80.0, 120.0])
+    # --gpm-uncal swaps calibrated IMERG for its uncalibrated (`precipitationUncal`) field, built by
+    # `prepare_gpm_uncal_inputs.jl`. Only a full-year file exists; smoke is clipped to June like FY4B.
+    gpm = gpm_uncal ?
+        "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
+        "GPM" => joinpath(
+            STUDY_DATA,
+            smoke ? "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv" :
+                "hubei_gpm_hourly_2022_2024_full_aligned.csv",
+        )
     mger = MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
@@ -120,11 +130,7 @@ function benchmark_config(
             "FY4B" => joinpath(
                 STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
             ),
-            "GPM" => joinpath(
-                STUDY_DATA,
-                smoke ? "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv" :
-                    "hubei_gpm_hourly_2022_2024_full_aligned.csv",
-            ),
+            gpm,
             "GSMaP" => joinpath(
                 STUDY_DATA,
                 smoke ? "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv" :
@@ -370,10 +376,12 @@ function main(args=ARGS)
     # Add stack_mgwr: a banded non-negative stack of mgwr, adw, the anchor, tps and mgwr's/adw's
     # t-1/t+1 predictions, fitted on the inner split. See `STACK_FEATURES`.
     stacked_blend = "--stacked-blend" in args
+    # Score uncalibrated IMERG (`GPM_uncal`) in place of the calibrated `GPM` product.
+    gpm_uncal = "--gpm-uncal" in args
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
-        fused_anchor, fused_anchor_lagnbr, stacked_blend)
+        fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t auto for parallel hourly fits",
     )
@@ -394,6 +402,7 @@ function main(args=ARGS)
         "fused_anchor=$fused_anchor, " *
         "fused_anchor_lagnbr=$fused_anchor_lagnbr, " *
         "stacked_blend=$stacked_blend, " *
+        "gpm_uncal=$gpm_uncal, " *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
     println("Finished: $(nrow(result.metrics)) metric rows, $(nrow(result.scans)) scan rows")
