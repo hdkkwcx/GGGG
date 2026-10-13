@@ -35,6 +35,9 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.lines import Line2D
 
+import joh_style
+from joh_style import AXIS, GRID, INK, INK_SECONDARY, MUTED, SURFACE
+
 ROOT = Path(__file__).resolve().parents[1]
 GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
 RUN_DIR = ROOT / "output" / ("heavy_rain_events_gpm_gsmap" if GPM_GSMAP_ONLY else "heavy_rain_events")
@@ -42,12 +45,6 @@ FIG_DIR = RUN_DIR / "figures"
 PRODUCTS = ["GPM", "GSMaP"] if GPM_GSMAP_ONLY else ["FY4B", "GPM", "GSMaP"]
 WINDOW = "common_hours"
 
-SURFACE = "#fcfcfb"
-INK = "#0b0b0b"
-INK_SECONDARY = "#52514e"
-MUTED = "#898781"
-GRID = "#e1e0d9"
-AXIS = "#c3c2b7"
 PRODUCT_COLORS = {"FY4B": "#2a78d6", "GPM": "#eb6834", "GSMaP": "#1baf7a"}
 # Shapes double-code the products so the metric summary reads without colour.
 PRODUCT_MARKERS = {"FY4B": "s", "GPM": "o", "GSMaP": "^"}
@@ -85,27 +82,7 @@ OVERVIEW_ERROR_CMAP.set_under("#681114")
 OVERVIEW_ERROR_CMAP.set_over("#0d366b")
 OVERVIEW_ERROR_NORM = BoundaryNorm(ERROR_BOUNDS, OVERVIEW_ERROR_CMAP.N)
 
-mpl.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Segoe UI", "Arial", "DejaVu Sans"],
-    "font.size": 7,
-    "axes.edgecolor": AXIS,
-    "axes.linewidth": 0.6,
-    "axes.labelcolor": INK_SECONDARY,
-    "axes.titlesize": 8,
-    "axes.titlecolor": INK,
-    "text.color": INK,
-    "xtick.color": AXIS,
-    "ytick.color": AXIS,
-    "xtick.labelcolor": INK_SECONDARY,
-    "ytick.labelcolor": INK_SECONDARY,
-    "xtick.major.width": 0.6,
-    "ytick.major.width": 0.6,
-    "figure.facecolor": SURFACE,
-    "axes.facecolor": SURFACE,
-    "savefig.facecolor": SURFACE,
-    "pdf.fonttype": 42,
-})
+mpl.rcParams["axes.titlesize"] = 8
 
 
 def read_rows(name: str) -> list[dict[str, str]]:
@@ -159,12 +136,8 @@ def event_label(event: dict) -> str:
             f"{event['n_heavy']} gauges > 50 mm · {event['hours']} h")
 
 
-def save(fig: plt.Figure, name: str) -> None:
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG_DIR / f"{name}.png", dpi=300)
-    fig.savefig(FIG_DIR / f"{name}.pdf")
-    plt.close(fig)
-    print(f"  wrote {name}.png / .pdf")
+def save(fig: plt.Figure, name: str, submission: bool = False) -> None:
+    joh_style.save(fig, FIG_DIR, name, submission)
 
 
 def style_map(ax: plt.Axes, bounds, show_x: bool, show_y: bool) -> None:
@@ -252,8 +225,8 @@ def fig0_event_overview(events, stations, metrics, bounds) -> None:
     rows = ["Gauge"] + PRODUCTS
     gap = 0.22
     ratios = [1.0] * len(widespread) + [gap] + [1.0] * len(localized)
-    fig = plt.figure(figsize=(6.7, 1.02 * len(rows) + 1.25))
-    grid = fig.add_gridspec(len(rows), len(ratios), width_ratios=ratios, left=0.105, right=0.995,
+    fig = plt.figure(figsize=(joh_style.DOUBLE / 25.4, 1.14 * len(rows) + 1.25))
+    grid = fig.add_gridspec(len(rows), len(ratios), width_ratios=ratios, left=0.095, right=0.995,
                             top=1 - 0.52 / fig.get_figheight(), bottom=0.80 / fig.get_figheight(),
                             wspace=0.05, hspace=0.06)
     columns = [(e, j) for j, e in enumerate(widespread)] + \
@@ -280,7 +253,7 @@ def fig0_event_overview(events, stations, metrics, bounds) -> None:
                        size=5.0)
                 annotate(ax, f"MB\n{signed(m['Bias'])} mm", size=6.2)
             if k == 0:
-                label = "Gauge total" if source == "Gauge" else f"{source} − gauge"
+                label = f"({'abcd'[i]}) " + ("Gauge total" if source == "Gauge" else f"{source} − gauge")
                 ax.text(-0.36, 0.5, label, transform=ax.transAxes, rotation=90, ha="center", va="center",
                         fontsize=7.5, color=INK)
     # Group labels over the widespread and localized blocks.
@@ -308,7 +281,7 @@ def fig0_event_overview(events, stations, metrics, bounds) -> None:
                   color=INK_SECONDARY)
     error.ax.text(1.0, 1.35, "satellite wetter →", transform=error.ax.transAxes, ha="right", fontsize=6.2,
                   color=INK_SECONDARY)
-    save(fig, "fig0_event_overview")
+    save(fig, "fig0_event_overview", submission=True)
 
 
 def fig2_error_maps(events, stations, metrics, bounds) -> None:
@@ -454,13 +427,13 @@ METRIC_PANELS = [
 
 
 def fig5_metric_summary(events, metrics) -> None:
-    fig, axes = plt.subplots(2, 3, figsize=(7.8, 5.4))
-    fig.subplots_adjust(left=0.07, right=0.99, top=0.80, bottom=0.12, wspace=0.26, hspace=0.42)
+    fig, axes = plt.subplots(2, 3, figsize=joh_style.mm(joh_style.DOUBLE, 120))
+    fig.subplots_adjust(left=0.06, right=0.99, top=0.855, bottom=0.10, wspace=0.26, hspace=0.50)
     x = np.arange(len(events))
     offsets = {p: 0.2 * (k - (len(PRODUCTS) - 1) / 2) for k, p in enumerate(PRODUCTS)}
     n_widespread = sum(event["type"] == "widespread" for event in events)
     tick_labels = [f"{event['day'][5:]}\n{event['day'][:4]}" for event in events]
-    for ax, (key, title, ideal) in zip(axes.flat, METRIC_PANELS):
+    for letter, ax, (key, title, ideal) in zip("abcdef", axes.flat, METRIC_PANELS):
         ax.grid(axis="y", color=GRID, linewidth=0.5, zorder=0)
         ax.axhline(ideal, color=AXIS, linewidth=1.4, zorder=1.8)  # above the gridlines (1.5)
         # Dashed and darker than the gridlines, so it reads as the widespread | localized boundary.
@@ -474,7 +447,7 @@ def fig5_metric_summary(events, metrics) -> None:
             marker = PRODUCT_MARKERS[product]
             ax.scatter(x + offsets[product], values[product], s=34 if marker == "^" else 26, marker=marker,
                        color=PRODUCT_COLORS[product], edgecolors=SURFACE, linewidths=0.8, zorder=3)
-        ax.set_title(title, loc="left", fontsize=7.5, pad=6)
+        ax.set_title(f"({letter}) {title}", loc="left", fontsize=7.5, pad=6)
         ax.set_xticks(x)
         ax.set_xticklabels(tick_labels, fontsize=6)
         ax.set_xlim(-0.6, len(events) - 0.4)
@@ -489,11 +462,10 @@ def fig5_metric_summary(events, metrics) -> None:
                     ha="center", va="bottom", fontsize=6.8, color=INK_SECONDARY)
     handles = [Line2D([], [], linestyle="none", marker=PRODUCT_MARKERS[p], markersize=6.5 if PRODUCT_MARKERS[p] == "^" else 5.5,
                       markerfacecolor=PRODUCT_COLORS[p], markeredgecolor=SURFACE, label=p) for p in PRODUCTS]
-    fig.legend(handles=handles, loc="upper right", ncol=len(PRODUCTS), frameon=False, fontsize=7, bbox_to_anchor=(0.99, 0.975))
-    fig.suptitle("Event-scale spatial metrics by product", x=0.07, ha="left", fontsize=9, y=0.965)
-    fig.text(0.07, 0.915, "Gauge-pixel pairs over each event's common hours. The solid grey line marks "
-             "the perfect score.", ha="left", fontsize=6.5, color=INK_SECONDARY)
-    save(fig, "fig5_metric_summary")
+    # No title or note in the figure: the caption carries both (gauge-pixel pairs over each event's
+    # common hours; the solid grey line marks the perfect score).
+    fig.legend(handles=handles, loc="upper right", ncol=len(PRODUCTS), frameon=False, fontsize=7, bbox_to_anchor=(0.99, 1.0))
+    save(fig, "fig5_metric_summary", submission=True)
 
 
 def fig6_taylor(events, metrics) -> None:

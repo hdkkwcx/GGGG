@@ -35,6 +35,9 @@ from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
+import joh_style
+from joh_style import AXIS, GRID, INK, INK_SECONDARY, MUTED, SURFACE
+
 ROOT = Path(__file__).resolve().parents[1]
 GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
 ARGS = [arg for arg in sys.argv[1:] if arg != "--gpm-gsmap"]
@@ -42,12 +45,6 @@ RUN_DIR = Path(ARGS[0]) if len(ARGS) > 0 else ROOT / "output" / "gauge_satellite
 FIG_DIR = RUN_DIR / ("figures_gpm_gsmap" if GPM_GSMAP_ONLY else "figures")
 REPORT_DIR = Path(ARGS[1]) if len(ARGS) > 1 else ROOT / "Interim_results"
 
-SURFACE = "#fcfcfb"
-INK = "#0b0b0b"
-INK_SECONDARY = "#52514e"
-MUTED = "#898781"
-GRID = "#e1e0d9"
-AXIS = "#c3c2b7"
 ORDINAL_BLUES = ["#86b6ef", "#5598e7", "#256abf", "#104281"]
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]   # validated categorical slots 1-4 (adjacent use)
 DIVERGING = LinearSegmentedColormap.from_list(
@@ -75,29 +72,6 @@ INTENSITY = [("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2.5"), ("moderat
              ("heavy", "Heavy\n≥ 8")]
 DISTANCE = [("0_20", "< 20 km"), ("20_50", "20–50 km"), ("50_100", "50–100 km")]
 THRESHOLDS = [0.1, 2.5, 8.0, 16.0]
-
-mpl.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Segoe UI", "Arial", "DejaVu Sans"],
-    "font.size": 7,
-    "axes.edgecolor": AXIS,
-    "axes.linewidth": 0.6,
-    "axes.labelcolor": INK_SECONDARY,
-    "axes.titlesize": 7.5,
-    "axes.titlecolor": INK,
-    "text.color": INK,
-    "xtick.color": AXIS,
-    "ytick.color": AXIS,
-    "xtick.labelcolor": INK_SECONDARY,
-    "ytick.labelcolor": INK_SECONDARY,
-    "xtick.major.width": 0.6,
-    "ytick.major.width": 0.6,
-    "figure.facecolor": SURFACE,
-    "axes.facecolor": SURFACE,
-    "savefig.facecolor": SURFACE,
-    "pdf.fonttype": 42,
-})
-
 
 def read_rows(path: Path) -> list[dict]:
     """CSV rows with numeric-looking fields converted to float and true/false to bool."""
@@ -135,12 +109,8 @@ def value(rows, column, **conditions) -> float:
     return float("nan") if row is None else float(row[column])
 
 
-def save(fig: plt.Figure, name: str) -> None:
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG_DIR / f"{name}.png", dpi=300)
-    fig.savefig(FIG_DIR / f"{name}.pdf")
-    plt.close(fig)
-    print(f"  wrote {name}.png / .pdf")
+def save(fig: plt.Figure, name: str, submission: bool = False) -> None:
+    joh_style.save(fig, FIG_DIR, name, submission)
 
 
 def clean_axis(ax: plt.Axes, grid_axis: str = "y") -> None:
@@ -265,7 +235,7 @@ def fig2_interpolators(ranking: list[dict], summary: list[dict]) -> None:
 
 
 def fig3_heatmap(fusion: list[dict]) -> None:
-    fig = plt.figure(figsize=(9.6, 4.6))
+    fig = plt.figure(figsize=joh_style.mm(joh_style.DOUBLE, 105))
     norm = TwoSlopeNorm(vmin=-16, vcenter=0, vmax=16)
     # Row positions: three rows per group, with a gap above each group that holds its heading.
     gap = 1.0
@@ -273,9 +243,9 @@ def fig3_heatmap(fusion: list[dict]) -> None:
     for g, (heading, methods) in enumerate(FUSION_GROUPS):
         for k, method in enumerate(methods):
             rows.append((gap + g * (len(methods) + gap) + k, method, heading if k == 0 else None))
-    panels = [("overall", "(a) All hours"), ("heavy", "(b) Heavy hours (≥ 8 mm h⁻¹)")]
+    panels = [("overall", "(a) All hours"), ("heavy", "(b) Heavy hours (≥ 8 mm h$^{-1}$)")]
     for index, (stratum, label) in enumerate(panels):
-        ax = fig.add_axes([0.15 + index * 0.37, 0.12, 0.32, 0.6])
+        ax = fig.add_axes([0.15 + index * 0.37, 0.12, 0.32, 0.68])
         for y, method, heading in rows:
             for j, anchor in enumerate(ANCHORS):
                 row = one(fusion, stratum=stratum, product=anchor, method=method)
@@ -302,7 +272,7 @@ def fig3_heatmap(fusion: list[dict]) -> None:
         ax.set_ylim(rows[-1][0] + 0.5, 0.0)
         ax.xaxis.tick_top()
         ax.set_xticks(range(len(ANCHORS)))
-        ax.set_xticklabels([ANCHOR_LABELS[a].replace("\n", " ") for a in ANCHORS], fontsize=6.4, color=INK)
+        ax.set_xticklabels([ANCHOR_LABELS[a] for a in ANCHORS], fontsize=6.4, color=INK)
         ax.set_yticks([y for y, _, _ in rows])
         base = {m: METHOD_LABELS[m] for m in ("residual_gwr", "mixed_gwr", "mgwr")}
         ax.set_yticklabels([base[m.removeprefix("blend_agrenv_").removeprefix("blend_")] for _, m, _ in rows]
@@ -312,9 +282,9 @@ def fig3_heatmap(fusion: list[dict]) -> None:
             spine.set_visible(False)
         # A heading and a rule over each panel, so the two read as separate comparisons.
         box = ax.get_position()
-        fig.text(box.x0, box.y1 + 0.065, label, ha="left", va="bottom", fontsize=8.5, fontweight="semibold")
-        fig.add_artist(Line2D([box.x0, box.x1], [box.y1 + 0.055] * 2, color=AXIS, linewidth=0.8))
-    bar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=DIVERGING), cax=fig.add_axes([0.9, 0.12, 0.012, 0.6]))
+        fig.text(box.x0, box.y1 + 0.10, label, ha="left", va="bottom", fontsize=8, fontweight="bold")
+        fig.add_artist(Line2D([box.x0, box.x1], [box.y1 + 0.09] * 2, color=AXIS, linewidth=0.8))
+    bar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=DIVERGING), cax=fig.add_axes([0.9, 0.12, 0.012, 0.68]))
     bar.set_label("RMSE improvement vs ADW (%)", fontsize=6)
     bar.ax.tick_params(labelsize=6, length=2)
     bar.outline.set_visible(False)
@@ -322,11 +292,10 @@ def fig3_heatmap(fusion: list[dict]) -> None:
                Patch(facecolor=SURFACE, edgecolor=MUTED, linewidth=0.6, label="Not significant")]
     fig.legend(handles=handles, frameon=False, fontsize=6.4, ncol=2, loc="lower center", bbox_to_anchor=(0.52, 0.02),
                handlelength=1.4)
-    title(fig, "Which fusion method, on which anchor, beats gauge-only ADW",
-          "Relative RMSE improvement over ADW at held-out gauges (blue better, red worse; colour clipped at ±16%). "
-          "Hollow cells: 95% bootstrap interval includes 0 or Holm-adjusted p ≥ 0.05 across every cell of the panel.",
-          top=0.97)
-    save(fig, "fusion_fig3_methods_by_anchor")
+    # No title or note in the figure; the caption carries them: relative RMSE improvement over ADW at
+    # held-out gauges (blue better, red worse; colour clipped at ±16%); hollow cells have a 95% bootstrap
+    # interval including 0 or a Holm-adjusted p ≥ 0.05 across every cell of the panel.
+    save(fig, "fusion_fig3_methods_by_anchor", submission=True)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -334,8 +303,8 @@ def fig3_heatmap(fusion: list[dict]) -> None:
 
 
 def fig4_where(stratified: list[dict], detection: list[dict]) -> None:
-    fig, axes = plt.subplots(3, len(ANCHORS), figsize=(10.0, 7.0), sharey="row")
-    fig.subplots_adjust(left=0.07, right=0.99, top=0.84, bottom=0.09, wspace=0.08, hspace=0.72)
+    fig, axes = plt.subplots(3, len(ANCHORS), figsize=joh_style.mm(joh_style.DOUBLE, 150), sharey="row")
+    fig.subplots_adjust(left=0.075, right=0.99, top=0.85, bottom=0.08, wspace=0.08, hspace=0.75)
     offsets = {"auto": -0.12, "blend_agrenv_mgwr": 0.12}
     for column, anchor in enumerate(ANCHORS):
         for row_index, (group, levels) in enumerate([("rain_intensity", INTENSITY), ("nearest_train_km", DISTANCE)]):
@@ -348,11 +317,11 @@ def fig4_where(stratified: list[dict], detection: list[dict]) -> None:
                                     level=level)) for level, _ in levels]
                 ax.scatter(x + offsets[method], values, s=22, color=color, edgecolors=SURFACE, linewidths=0.8, zorder=3)
             ax.set_xticks(x)
-            ax.set_xticklabels([label for _, label in levels], fontsize=5.6)
+            ax.set_xticklabels([label for _, label in levels], fontsize=6)
             if column == 0:
                 ax.set_ylabel("RMSE change vs ADW (%)", fontsize=6)
             if row_index == 0:
-                ax.set_title(ANCHOR_LABELS[anchor].replace("\n", " "), loc="center", pad=4, fontsize=9.5,
+                ax.set_title(ANCHOR_LABELS[anchor].replace("\n", " "), loc="center", pad=4, fontsize=8,
                              fontweight="bold")
         ax = axes[2, column]
         clean_axis(ax)
@@ -363,22 +332,21 @@ def fig4_where(stratified: list[dict], detection: list[dict]) -> None:
             centre = [row["delta"] if row else np.nan for row in rows]
             ax.scatter(x + offsets[method], centre, s=22, color=color, edgecolors=SURFACE, linewidths=0.8, zorder=3)
         ax.set_xticks(x)
-        ax.set_xticklabels([f"≥ {t:g}" for t in THRESHOLDS], fontsize=5.8)
-        ax.set_xlabel("Event threshold (mm/h)", fontsize=6)
+        ax.set_xticklabels([f"≥ {t:g}" for t in THRESHOLDS], fontsize=6)
+        ax.set_xlabel("Event threshold (mm h$^{-1}$)", fontsize=6)
         if column == 0:
             ax.set_ylabel("CSI change vs ADW", fontsize=6)
-    sections = ["RMSE change vs ADW by gauge rain intensity (mm/h)",
-                "RMSE change vs ADW by distance from the held-out gauge to the nearest training gauge",
-                "CSI change vs ADW by event threshold (mm/h)"]
+    sections = ["(a) RMSE change vs ADW by gauge rain intensity (mm h$^{-1}$)",
+                "(b) RMSE change vs ADW by distance from the held-out gauge to the nearest training gauge",
+                "(c) CSI change vs ADW by event threshold (mm h$^{-1}$)"]
     for row_index, text in enumerate(sections):
         top = axes[row_index, 0].get_position().y1
         # Row 0 carries the anchor names as panel titles, so its section label sits above them.
-        fig.text(0.07, top + (0.045 if row_index == 0 else 0.018), text, fontsize=7.2, color=INK,
-                 fontweight="semibold")
-    fig.suptitle("Where the satellite adds to the gauges: heavy rain, detection, and distance from the network",
-                 x=0.02, ha="left", fontsize=9, y=0.985)
-    ladder_legend(fig, raw=False, adw_width=1.15, loc="upper right", bbox_to_anchor=(0.99, 0.955))
-    save(fig, "fusion_fig4_where_it_helps")
+        fig.text(0.075, top + (0.05 if row_index == 0 else 0.02), text, fontsize=7, color=INK,
+                 fontweight="bold")
+    # No title in the figure: the caption carries it.
+    ladder_legend(fig, raw=False, adw_width=1.15, loc="upper right", bbox_to_anchor=(0.99, 1.0))
+    save(fig, "fusion_fig4_where_it_helps", submission=True)
 
 
 # --------------------------------------------------------------------------------------------------

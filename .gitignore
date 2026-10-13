@@ -4,6 +4,7 @@ Manifest.toml
 docs
 # *.png
 *.nc
+__pycache__/
 data/raw/copernicus_glo30/
 
 *.csv

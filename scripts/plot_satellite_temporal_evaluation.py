@@ -34,17 +34,14 @@ from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
+import joh_style
+from joh_style import AXIS, GRID, INK, INK_SECONDARY, MUTED, SURFACE
+
 ROOT = Path(__file__).resolve().parents[1]
 RUN_DIR = ROOT / "output" / "satellite_temporal_evaluation"
 GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
 FIG_DIR = RUN_DIR / ("figures_gpm_gsmap" if GPM_GSMAP_ONLY else "figures")
 
-SURFACE = "#fcfcfb"
-INK = "#0b0b0b"
-INK_SECONDARY = "#52514e"
-MUTED = "#898781"
-GRID = "#e1e0d9"
-AXIS = "#c3c2b7"
 PRODUCT_COLORS = {"FY4B": "#2a78d6", "GPM": "#eb6834", "GSMaP": "#1baf7a"}
 # Shapes double-code the products, as in plot_heavy_rain_events.py, so the figures read without colour.
 PRODUCT_MARKERS = {"FY4B": "s", "GPM": "o", "GSMaP": "^"}
@@ -67,29 +64,6 @@ SEQUENTIAL_BLUES = ["#f0efec", "#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256
 CAVEAT = ("Gauge data are quantised to 0.5 mm: gauge 'light' hours are 0.5–1.5 mm and satellite 0.1–0.5 mm "
           "cannot be verified.\nHollow markers: fewer than 100 hours or 30 events. Winter gauge timing may include "
           "delayed snowmelt tips (the DJF gauge diurnal cycle peaks at midday).")
-
-mpl.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Segoe UI", "Arial", "DejaVu Sans"],
-    "font.size": 7,
-    "axes.edgecolor": AXIS,
-    "axes.linewidth": 0.6,
-    "axes.labelcolor": INK_SECONDARY,
-    "axes.titlesize": 7.5,
-    "axes.titlecolor": INK,
-    "text.color": INK,
-    "xtick.color": AXIS,
-    "ytick.color": AXIS,
-    "xtick.labelcolor": INK_SECONDARY,
-    "ytick.labelcolor": INK_SECONDARY,
-    "xtick.major.width": 0.6,
-    "ytick.major.width": 0.6,
-    "figure.facecolor": SURFACE,
-    "axes.facecolor": SURFACE,
-    "savefig.facecolor": SURFACE,
-    "pdf.fonttype": 42,
-})
-
 
 TEXT_COLUMNS = {"station_id"}   # numeric-looking identifiers stay text
 
@@ -124,12 +98,8 @@ def one(rows: list[dict], **conditions) -> dict | None:
     return found[0] if found else None
 
 
-def save(fig: plt.Figure, name: str) -> None:
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG_DIR / f"{name}.png", dpi=300)
-    fig.savefig(FIG_DIR / f"{name}.pdf")
-    plt.close(fig)
-    print(f"  wrote {name}.png / .pdf")
+def save(fig: plt.Figure, name: str, submission: bool = False) -> None:
+    joh_style.save(fig, FIG_DIR, name, submission)
 
 
 def clean_axis(ax: plt.Axes, grid_axis: str = "y") -> None:
@@ -204,7 +174,7 @@ def fig1_landform() -> None:
 
     side = [row["side_km"] for row in change]
     for ax, key, label in ((ax_relief, "mean_relief_m", "Area-wide mean relief (m)"),
-                           (ax_gain, "change_point_gain", "Change-point gain S − Sᵢ")):
+                           (ax_gain, "change_point_gain", "Change-point gain S − S$_i$")):
         clean_axis(ax)
         values = [row[key] for row in change]
         ax.plot(side, values, color=PRODUCT_COLORS["FY4B"], linewidth=1.6, zorder=2)
@@ -237,8 +207,9 @@ def fig2_intensity(metrics: list[dict], sample: str, by: str = "season") -> None
     # One column per season (all gauges) or per landform region (all seasons).
     # The season split shows the four seasons only; the pooled year stays in the CSV.
     strata = [(s, "all") for s in SEASONS if s != "all"] if by == "season" else [("all", g) for g in ["all"] + REGIONS]
-    fig, axes = plt.subplots(len(INTENSITY_PANELS), len(strata), figsize=(8.6, 6.0), sharey="row")
-    fig.subplots_adjust(left=0.085, right=0.975, top=0.81, bottom=0.12, wspace=0.08, hspace=0.30)
+    fig, axes = plt.subplots(len(INTENSITY_PANELS), len(strata), figsize=joh_style.mm(joh_style.DOUBLE, 130),
+                             sharey="row")
+    fig.subplots_adjust(left=0.08, right=0.99, top=0.90, bottom=0.10, wspace=0.08, hspace=0.22)
     x = np.arange(len(CLASSES))
     offsets = np.linspace(-0.22, 0.22, len(products))
     for j, (season, region) in enumerate(strata):
@@ -255,22 +226,21 @@ def fig2_intensity(metrics: list[dict], sample: str, by: str = "season") -> None
                 dots(ax, x + offset, values, PRODUCT_COLORS[product], lo, hi, hollow, marker=PRODUCT_MARKERS[product])
             ax.set_xticks(x)
             ax.set_xlim(-0.6, len(CLASSES) - 0.4)
-            ax.set_xticklabels(CLASS_LABELS if i == len(INTENSITY_PANELS) - 1 else [], fontsize=5.6)
+            # Ranges only: the class names do not fit five to a panel at print size; the caption names them.
+            ax.set_xticklabels([label.split("\n")[1] for label in CLASS_LABELS] if i == len(INTENSITY_PANELS) - 1
+                               else [], fontsize=6)
             if i == 0:
                 ax.set_title(REGION_LABELS[region] if by == "region" else
                              ("All seasons" if season == "all" else season), pad=4)
             if j == 0:
-                ax.set_ylabel(title, fontsize=6.5)
+                ax.set_ylabel(f"({'abc'[i]}) {title}", fontsize=6.5)
     # Centred under the whole grid, which works for an even number of columns too.
     left, right = axes[-1, 0].get_position().x0, axes[-1, -1].get_position().x1
-    fig.text((left + right) / 2, 0.055, "Gauge hourly intensity class (mm/h)", ha="center", color=INK_SECONDARY)
-    product_legend(fig, products, loc="upper right", bbox_to_anchor=(0.99, 0.975))
-    fig.suptitle(f"Hourly performance by gauge intensity class — {SAMPLE_TITLES[sample]}", x=0.085, ha="left", fontsize=9, y=0.975)
-    fig.text(0.085, 0.925, "Gauge-wet hours only (no-rain hours excluded), " +
-             ("all gauges" if by == "season" else "all seasons, gauges grouped by local relief") + ". Whiskers: 95% day-block bootstrap. "
-             "Grey line: perfect score.", ha="left", fontsize=6.3, color=INK_SECONDARY)
-    fig.text(0.085, 0.905, CAVEAT, ha="left", va="top", fontsize=6.0, color=MUTED, linespacing=1.4)
-    save(fig, f"fig2_intensity_classes_{sample}" if by == "season" else f"fig2_intensity_classes_region_{sample}")
+    fig.text((left + right) / 2, 0.035, "Gauge hourly intensity class (mm h$^{-1}$)", ha="center", color=INK_SECONDARY)
+    # No title or notes in the figure: the sample, whiskers, perfect-score line and CAVEAT go in the caption.
+    product_legend(fig, products, loc="upper right", bbox_to_anchor=(0.99, 1.0))
+    save(fig, f"fig2_intensity_classes_{sample}" if by == "season" else f"fig2_intensity_classes_region_{sample}",
+         submission=True)
 
 
 # --------------------------------------------------------------------------------------------------

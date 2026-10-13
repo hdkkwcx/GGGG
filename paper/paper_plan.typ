@@ -93,15 +93,17 @@ rain-centre shift, mean bias, RMSE and CSI at 50 mm.
 
 #figure(
   image("figures/fig02_event_maps.png", width: 100%),
-  caption: [Draft Fig. 2. The six heavy-rain events (columns). Top row: gauge 24 h totals (08–08 BJT).
-  Lower rows: satellite minus gauge at each gauge, from the pixel sampled there; red means the satellite is
+  caption: [Draft Fig. 2. The six heavy-rain events (columns). (a) Gauge 24 h totals (08–08 BJT).
+  (b, c) Satellite minus gauge at each gauge, from the pixel sampled there; red means the satellite is
   drier, blue wetter, grey within ±10 mm. MB is the mean bias (mean of satellite − gauge over the
   event's gauges).],
 )
 
 #figure(
   image("figures/fig03_event_metrics.png", width: 100%),
-  caption: [Draft Fig. 3. Spatial scores per event and product.],
+  caption: [Draft Fig. 3. Event-scale spatial scores per event and product: (a) spatial correlation, (b) spatial
+  CV ratio, (c) rain-centre shift, (d) mean bias, (e) RMSE, (f) CSI at 50 mm. Gauge–pixel pairs over each
+  event's common hours. The solid grey line marks the perfect score.],
 )
 
 *Key findings.*
@@ -128,8 +130,13 @@ and by landform region, with day-block bootstrap intervals.
 
 #figure(
   image("figures/fig04a_intensity_season.png", width: 100%),
-  caption: [Draft Fig. 4. Hourly skill by gauge intensity class and season. The paper version adds the
-  landform-region split.],
+  caption: [Draft Fig. 4. Hourly skill of GPM and GSMaP over the full 2022–2024 record by gauge intensity
+  class (light 0.1–2, moderate 2–4, heavy 4–8, rainstorm 8–20, severe ≥ 20 mm h⁻¹) and season: (a) relative
+  bias, (b) fraction detected as rain (satellite ≥ 0.1 mm), (c) fraction in the same intensity class.
+  Gauge-wet hours only, all gauges. Whiskers: 95% day-block bootstrap; grey line: perfect score; hollow
+  markers: fewer than 100 hours or 30 events. Gauge data are quantised to 0.5 mm, so gauge light hours are
+  0.5–1.5 mm and satellite 0.1–0.5 mm cannot be verified. Winter gauge timing may include delayed snowmelt
+  tips (the DJF gauge diurnal cycle peaks at midday). The paper version adds the landform-region split.],
 )
 
 *Key findings.*
@@ -157,14 +164,16 @@ satellite reports rain.
   image("figures/fig06b_fusion_methods.png", width: 100%),
   caption: [Draft Fig. 6. RMSE improvement of each fusion method over gauge-only ADW, per anchor, for
   all hours and heavy hours. Rows are grouped by how the satellite enters: direct correction, blend with
-  ADW, agreement blend. Hollow cells are not significant. The paper version adds a panel comparing the
-  gauge-only interpolators.],
+  ADW, agreement blend. Blue is better, red worse; colour is clipped at ±16%. Hollow cells are not significant:
+  their 95% bootstrap interval includes 0, or the Holm-adjusted p ≥ 0.05 across every cell of the panel. The
+  paper version adds a panel comparing the gauge-only interpolators.],
 )
 
 #figure(
   image("figures/fig07_where_fusion_helps.png", width: 100%),
-  caption: [Draft Fig. 7. Where the satellite adds to the gauges: by rain intensity, by distance to
-  the nearest training gauge, and in detection skill (CSI).],
+  caption: [Draft Fig. 7. Where the satellite adds to the gauges, relative to gauge-only ADW (dashed line):
+  (a) RMSE change by gauge rain intensity, (b) RMSE change by distance from the held-out gauge to the
+  nearest training gauge, (c) CSI change by event threshold.],
 )
 
 #figure(
