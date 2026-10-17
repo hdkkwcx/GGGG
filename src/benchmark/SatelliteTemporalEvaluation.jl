@@ -32,7 +32,7 @@ Conventions every function relies on:
 module SatelliteTemporalEvaluation
 
 using DataFrames, Dates, Random, Statistics
-using MixedGWR: metric_continuous, metric_event
+using MixedGWR: metric_continuous, metric_event, RAIN_INTENSITY_BOUNDS, RAIN_INTENSITY_CLASSES
 using Main.HeavyRainEvents: met_day, _tied_ranks
 
 export WET_MM, GAUGE_RESOLUTION_MM, INTENSITY_BOUNDS, INTENSITY_CLASSES, SEASONS, FALSE_ALARM_BINS
@@ -45,8 +45,8 @@ export regional_mean_series, aggregate_series, series_metrics, regional_series_t
 
 const WET_MM = 0.1
 const GAUGE_RESOLUTION_MM = 0.5
-const INTENSITY_BOUNDS = [0.1, 2.0, 4.0, 8.0, 20.0]
-const INTENSITY_CLASSES = ["no_rain", "light", "moderate", "heavy", "rainstorm", "severe_rainstorm"]
+const INTENSITY_BOUNDS = RAIN_INTENSITY_BOUNDS
+const INTENSITY_CLASSES = RAIN_INTENSITY_CLASSES
 const SEASONS = ["MAM", "JJA", "SON", "DJF"]
 const SEASON_LABELS = ["all"; SEASONS]
 const FALSE_ALARM_BINS = ["no_rain", "below_gauge_resolution", "light_resolved", "moderate", "heavy",

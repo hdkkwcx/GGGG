@@ -70,8 +70,14 @@ const BLEND_LAMBDAS = collect(0.0:0.1:1.0)
 # different intervention set, not just a different weight on the same one.
 const BLEND_AXES = (:constant, :agreement_envelope)
 
-"""Band edges of the three-product envelope (mm/h)."""
-const BLEND_ENVELOPE_EDGES = [0.1, 2.5, 8.0]
+"""Band edges of the three-product envelope (mm/h): the hourly rain-intensity class bounds."""
+const BLEND_ENVELOPE_EDGES = RAIN_INTENSITY_BOUNDS
+
+# The two pooled gauge-intensity strata the claim gates read, reported under the `claim_intensity`
+# group beside the `rain_intensity` classes, and the strata `paired_bootstrap_rows` tests beside
+# `overall`. `moderate_to_heavy` is the [2, 8) non-inferiority gate; `rainstorm_or_above` is the
+# >= 8 mm/h win gate (the hours the old `heavy` class held).
+const CLAIM_STRATA = (("moderate_to_heavy", 2.0, 8.0), ("rainstorm_or_above", 8.0, Inf))
 
 """How many bands an axis carries. `:constant` is one band covering every satellite-wet cell."""
 blend_band_count(axis::Symbol) = axis === :constant ? 1 :
@@ -279,7 +285,7 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # `[1.0]` disables shrinkage and reproduces the historical unshrunk behaviour exactly.
     residual_shrinkage_candidates::Vector{Float64} =
         [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    event_thresholds::Vector{Float64} = [0.1, 2.5, 8.0, 16.0]
+    event_thresholds::Vector{Float64} = copy(RAIN_INTENSITY_BOUNDS)
     bootstrap_reps::Int = 2000
 end
 

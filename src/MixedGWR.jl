@@ -20,6 +20,7 @@ export fitted, fitted!
 
 export cor
 export metric_continuous, metric_event, common_valid_mask, complete_time_mask
+export RAIN_INTENSITY_BOUNDS, RAIN_INTENSITY_CLASSES, rain_intensity_strata
 
 Base.Matrix(x::Vector) = reshape(x, length(x), 1)
 

@@ -19,6 +19,7 @@ duplication here is a choice rather than a constraint. The two also differ at th
 module BenchmarkDiagnostics
 
 using CSV, DataFrames, Dates, Statistics
+using MixedGWR: rain_intensity_strata
 
 export read_wide_matrix, read_mask_matrix, read_fold_map, load_prediction_matrices
 export null_baseline_matrices, satellite_rescale_matrix
@@ -28,11 +29,8 @@ export rebuild_common_mask, dropout_table, mask_cost_table, run_comparison_table
 export benchmark_diagnostics_outdir
 export RAIN_CLASSES, MASK_METHODS
 
-"""Rain-intensity strata, mirroring `InterpolationBenchmark.append_stratified_metrics!`."""
-const RAIN_CLASSES = [
-    ("no_rain", -Inf, 0.1), ("light", 0.1, 2.5),
-    ("moderate", 2.5, 8.0), ("heavy", 8.0, Inf),
-]
+"""Rain-intensity strata: the shared hourly classes `InterpolationBenchmark.append_stratified_metrics!` also uses."""
+const RAIN_CLASSES = rain_intensity_strata()
 
 """
 Methods whose finiteness defines the shared evaluation mask, mirroring

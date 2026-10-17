@@ -63,12 +63,16 @@ ANCHORED = ["raw", "residual_gwr", "mixed_gwr", "mgwr", "auto", "blend_residual_
             "blend_mgwr", "blend_agrenv_residual_gwr", "blend_agrenv_mixed_gwr", "blend_agrenv_mgwr"]
 ALL_METHODS = ["raw", "idw", "adw", "tps", "gwr"] + ANCHORED[1:]
 VS_ADW_METHODS = ["residual_gwr", "mgwr", "auto", "blend_mgwr", "blend_agrenv_mgwr"]
-STRATA = [("all", "All hours"), ("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2.5"),
-          ("moderate", "Moderate\n2.5–8"), ("heavy", "Heavy\n≥ 8")]
-STRATUM_NAMES = {"all": "all", "no_rain": "dry", "light": "light", "moderate": "moderate", "heavy": "heavy"}
+STRATA = [("all", "All hours"), ("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2"),
+          ("moderate", "Moderate\n2–4"), ("heavy", "Heavy\n4–8"), ("rainstorm", "Rainstorm\n8–20"),
+          ("severe_rainstorm", "Severe\n≥ 20")]
+STRATUM_NAMES = {"all": "all", "no_rain": "dry", "light": "light", "moderate": "moderate", "heavy": "heavy",
+                 "rainstorm": "rainstorm", "severe_rainstorm": "severe rainstorm"}
 TERMS = ["intercept", "fy4b", "gpm", "gsmap", "fy4b_lag1", "gpm_lag1", "gsmap_lag1", "fy4b_lead1", "gpm_lead1",
          "gsmap_lead1", "fy4b_nbr8", "gpm_nbr8", "gsmap_nbr8"]
-ENVELOPE = ["0.1–2.5", "2.5–8", "≥ 8"]
+ENVELOPE = ["0.1–2", "2–4", "4–8", "8–20", "≥ 20"]
+# Band 0 (no product wet) plus one band per (1, 2, 3 products wet) x envelope class.
+N_GROUPS = 1 + 3 * len(ENVELOPE)
 TEXT_COLUMNS = ("scheme", "product", "method", "stratum", "baseline_product", "metric", "term", "file",
                 "comparison", "status", "covariate_variables", "best_traditional")
 
@@ -347,7 +351,7 @@ def fig3_strata(comparison: list[dict]) -> None:
 
 
 DETECTION_METHODS = [("mgwr", "MGWR"), ("blend_mgwr", "Blend")]
-THRESHOLDS = ["0.1", "2.5", "8.0", "16.0"]
+THRESHOLDS = ["0.1", "2.0", "4.0", "8.0", "20.0"]
 
 
 def fig4_vs_adw(vs_adw: list[dict], detection: list[dict]) -> None:
@@ -408,7 +412,7 @@ def fig4_vs_adw(vs_adw: list[dict], detection: list[dict]) -> None:
 def band_label(group: int) -> str:
     if group == 0:
         return "No product wet"
-    agreement, envelope = divmod(group - 1, 3)
+    agreement, envelope = divmod(group - 1, len(ENVELOPE))
     return f"{agreement + 1} wet · max {ENVELOPE[envelope]}"
 
 
@@ -419,10 +423,10 @@ TERM_GROUPS = [("", "At hour t", SERIES[0]), ("_lag1", "t − 1 h", SERIES[1]), 
 def fig5_coefficients(coefficients: list[dict]) -> None:
     rows = [r for r in coefficients if r["scheme"] == "balanced_spatial"]
     get = lambda g, t, c: one(rows, group=float(g), term=t)[c]
-    matrix = np.array([[get(g, t, "coefficient_mean") for t in TERMS] for g in range(10)])
-    spread = np.array([[get(g, t, "coefficient_max") - get(g, t, "coefficient_min") for t in TERMS] for g in range(10)])
-    fallback = [get(g, "intercept", "folds_fell_back") > 0 for g in range(10)]
-    cells = np.array([get(g, "intercept", "n_cell_mean") for g in range(10)])
+    matrix = np.array([[get(g, t, "coefficient_mean") for t in TERMS] for g in range(N_GROUPS)])
+    spread = np.array([[get(g, t, "coefficient_max") - get(g, t, "coefficient_min") for t in TERMS] for g in range(N_GROUPS)])
+    fallback = [get(g, "intercept", "folds_fell_back") > 0 for g in range(N_GROUPS)]
+    cells = np.array([get(g, "intercept", "n_cell_mean") for g in range(N_GROUPS)])
 
     fig = plt.figure(figsize=(7.0, 4.1))
     grid = fig.add_gridspec(1, 3, width_ratios=[13, 2.2, 3.4], left=0.175, right=0.99, top=0.8, bottom=0.15,
@@ -443,15 +447,15 @@ def fig5_coefficients(coefficients: list[dict]) -> None:
     for start, label in ((1, "at hour t"), (4, "t − 1 h"), (7, "t + 1 h"), (10, "nearest 8 stations")):
         ax.text(start + 1, -0.75, label, ha="center", va="bottom", fontsize=5.8, color=INK_SECONDARY)
         ax.axvline(start - 0.5, color=SURFACE, linewidth=1.6)
-    ax.set_yticks(range(10), [f"{band_label(g)}{' †' if fallback[g] else ''}" for g in range(10)], fontsize=5.6)
+    ax.set_yticks(range(N_GROUPS), [f"{band_label(g)}{' †' if fallback[g] else ''}" for g in range(N_GROUPS)], fontsize=5.6)
     ax.tick_params(length=0)
     for spine in ax.spines.values():
         spine.set_visible(False)
 
     bars = fig.add_subplot(grid[0, 1])
-    bars.barh(range(10), cells, height=0.6, color=[MUTED if f else NEW_COLOR for f in fallback], zorder=2)
+    bars.barh(range(N_GROUPS), cells, height=0.6, color=[MUTED if f else NEW_COLOR for f in fallback], zorder=2)
     bars.set_xscale("log")
-    bars.set_ylim(9.5, -0.5)
+    bars.set_ylim(N_GROUPS - 0.5, -0.5)
     bars.set_yticks([])
     clean_axis(bars, "x")
     bars.tick_params(labelsize=4.8)
@@ -464,10 +468,10 @@ def fig5_coefficients(coefficients: list[dict]) -> None:
     clean_axis(sums, "x")
     zero_line(sums)
     for offset, (suffix, label, color) in zip((-0.24, -0.08, 0.08, 0.24), TERM_GROUPS):
-        values = [sum(get(g, f"{p}{suffix}", "coefficient_mean") for p in ("fy4b", "gpm", "gsmap")) for g in range(10)]
-        sums.plot(values, np.arange(10) + offset, linestyle="none", marker="o", markersize=3.3, markerfacecolor=color,
+        values = [sum(get(g, f"{p}{suffix}", "coefficient_mean") for p in ("fy4b", "gpm", "gsmap")) for g in range(N_GROUPS)]
+        sums.plot(values, np.arange(N_GROUPS) + offset, linestyle="none", marker="o", markersize=3.3, markerfacecolor=color,
                   markeredgecolor=SURFACE, markeredgewidth=0.4, label=label, zorder=3)
-    sums.set_ylim(9.5, -0.5)
+    sums.set_ylim(N_GROUPS - 0.5, -0.5)
     sums.set_xlim(-0.12, 0.58)
     sums.set_yticks([])
     sums.tick_params(labelsize=4.8)
@@ -514,17 +518,17 @@ def report_tables(summary, comparison, anchors, anchor_tests, vs_adw, detection,
             for method in ("raw", "residual_gwr", "mgwr", "auto", "blend_mgwr", "blend_agrenv_mgwr"):
                 test = one(anchor_tests, scheme=scheme, product=anchor, method=method)
                 rmse = {s: one(anchors, scheme=scheme, product=anchor, method=method, stratum=s)["RMSE"]
-                        for s in ("all", "moderate", "heavy")}
-                rows.append([scheme, anchor, method, fmt(rmse["all"], 4), fmt(rmse["moderate"], 3),
-                             fmt(rmse["heavy"], 2),
+                        for s in ("all", "moderate_to_heavy", "rainstorm_or_above")}
+                rows.append([scheme, anchor, method, fmt(rmse["all"], 4), fmt(rmse["moderate_to_heavy"], 3),
+                             fmt(rmse["rainstorm_or_above"], 2),
                              "–" if test is None else fmt(pct(test["relative_improvement"]), 2, True),
                              "–" if test is None else fmt(pct(test["ci_low"]), 2, True),
                              "–" if test is None else fmt(pct(test["ci_high"]), 2, True)])
         adw = {s: one(anchors, scheme=scheme, product="gauge_only", method="adw", stratum=s)["RMSE"]
-               for s in ("all", "moderate", "heavy")}
-        rows.append([scheme, "gauge_only", "adw", fmt(adw["all"], 4), fmt(adw["moderate"], 3), fmt(adw["heavy"], 2),
+               for s in ("all", "moderate_to_heavy", "rainstorm_or_above")}
+        rows.append([scheme, "gauge_only", "adw", fmt(adw["all"], 4), fmt(adw["moderate_to_heavy"], 3), fmt(adw["rainstorm_or_above"], 2),
                      "–", "–", "–"])
-    write_table("lagnbr_anchors", ["scheme", "anchor", "method", "RMSE", "RMSE_moderate", "RMSE_heavy", "vs_ols",
+    write_table("lagnbr_anchors", ["scheme", "anchor", "method", "RMSE", "RMSE_moderate_to_heavy", "RMSE_rainstorm_or_above", "vs_ols",
                                    "ci_low", "ci_high"], rows)
 
     write_table("lagnbr_vs_adw", ["scheme", "product", "method", "stratum", "RMSE_adw", "RMSE_method", "gain",
@@ -551,7 +555,7 @@ def report_tables(summary, comparison, anchors, anchor_tests, vs_adw, detection,
                                           "vs_adw"], rows)
 
     rows = []
-    for g in range(10):
+    for g in range(N_GROUPS):
         members = [r for r in coefficients if r["scheme"] == "balanced_spatial" and r["group"] == float(g)]
         by_term = {r["term"]: r for r in members}
         group_sum = lambda suffix: sum(by_term[f"{p}{suffix}"]["coefficient_mean"] for p in ("fy4b", "gpm", "gsmap"))
@@ -562,12 +566,12 @@ def report_tables(summary, comparison, anchors, anchor_tests, vs_adw, detection,
     write_table("lagnbr_bands", ["band", "label", "cells", "fell_back", "intercept", "sum_t", "sum_lag", "sum_lead",
                                  "sum_nbr"], rows)
 
-    write_table("lagnbr_claim", ["product", "RMSE_residual_gwr", "overall_gain", "paired_significant", "heavy_gain",
-                                 "heavy_ci_low", "moderate_degradation", "coverage", "coverage_ok", "events_ok",
+    write_table("lagnbr_claim", ["product", "RMSE_residual_gwr", "overall_gain", "paired_significant", "rainstorm_or_above_gain",
+                                 "rainstorm_or_above_ci_low", "moderate_to_heavy_degradation", "coverage", "coverage_ok", "events_ok",
                                  "supported"],
                 [[r["product"], fmt(r["RMSE_residual_gwr"], 4), fmt(pct(r["overall_relative_improvement"]), 2, True),
-                  "yes" if r["paired_significant"] else "no", fmt(pct(r["heavy_relative_improvement"]), 2, True),
-                  fmt(pct(r["heavy_relative_ci_low"]), 2, True), fmt(pct(r["moderate_relative_degradation"]), 2, True),
+                  "yes" if r["paired_significant"] else "no", fmt(pct(r["rainstorm_or_above_relative_improvement"]), 2, True),
+                  fmt(pct(r["rainstorm_or_above_relative_ci_low"]), 2, True), fmt(pct(r["moderate_to_heavy_relative_degradation"]), 2, True),
                   fmt(r["common_coverage"], 3), "yes" if r["coverage_acceptable"] else "no",
                   "yes" if r["event_not_degraded"] else "no", "yes" if r["product_supported"] else "no"]
                  for r in claim])

@@ -130,11 +130,8 @@ function paired_bootstrap_rows(
     # single-method behaviour: the row already carries `baseline` but nothing naming the treatment,
     # so rows for two methods appended to one table would be indistinguishable.
     tagged = method != DEFAULT_CLAIM_METHOD || pairwise_mask
-    strata = (
-        ("overall", common_mask),
-        ("moderate", common_mask .& (y_obs .>= 2.5) .& (y_obs .< 8.0)),
-        ("heavy", common_mask .& (y_obs .>= 8.0)),
-    )
+    strata = [("overall", common_mask);
+        [(name, common_mask .& (y_obs .>= lower) .& (y_obs .< upper)) for (name, lower, upper) in CLAIM_STRATA]]
     for (stratum, mask) in strata
         local_rows = NamedTuple[]
         for (baseline_index, baseline_method) in enumerate(TRADITIONAL_METHODS)

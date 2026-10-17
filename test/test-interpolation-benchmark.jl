@@ -436,10 +436,10 @@ _claim_bootstrap_row(; product, baseline, stratum, ci_low, pvalue_holm, repeat=1
     push!(rows, _claim_metric_row(product="TEST", method="tps", group="overall", level="all", RMSE=1.3))
     # heavy, moderate, year, event: GWR comfortably beats/matches all three baselines.
     for (method, RMSE) in (("residual_gwr", 0.8), ("idw", 1.5), ("adw", 1.2), ("tps", 1.4))
-        push!(rows, _claim_metric_row(product="TEST", method=method, group="rain_intensity", level="heavy", RMSE=RMSE))
+        push!(rows, _claim_metric_row(product="TEST", method=method, group="claim_intensity", level="rainstorm_or_above", RMSE=RMSE))
     end
     for (method, RMSE) in (("residual_gwr", 1.0), ("idw", 1.02), ("adw", 1.01), ("tps", 1.03))
-        push!(rows, _claim_metric_row(product="TEST", method=method, group="rain_intensity", level="moderate", RMSE=RMSE))
+        push!(rows, _claim_metric_row(product="TEST", method=method, group="claim_intensity", level="moderate_to_heavy", RMSE=RMSE))
     end
     for (method, RMSE) in (("residual_gwr", 0.85), ("idw", 1.4), ("adw", 1.1), ("tps", 1.3))
         push!(rows, _claim_metric_row(product="TEST", method=method, group="year", level="2022", RMSE=RMSE))
@@ -475,8 +475,8 @@ _claim_bootstrap_row(; product, baseline, stratum, ci_low, pvalue_holm, repeat=1
     row_all = only(eachrow(claim_all))
     @test row_all.overall_win_count == 3
     @test row_all.paired_significant == true
-    @test row_all.heavy_win_count == 3
-    @test row_all.moderate_win_count == 3
+    @test row_all.rainstorm_or_above_win_count == 3
+    @test row_all.moderate_to_heavy_win_count == 3
     @test row_all.year_win_count == 1
     @test row_all.event_win_count == 3
     @test row_all.product_supported == true
@@ -493,13 +493,13 @@ _claim_bootstrap_row(; product, baseline, stratum, ci_low, pvalue_holm, repeat=1
     # Partial win in a point-estimate stratum: GWR beats two of three heavy-rain baselines by
     # less than the 5% threshold for the third.
     partial_rows = copy(rows)
-    partial_idx = findfirst(r -> r.method == "tps" && r.group == "rain_intensity" && r.level == "heavy", partial_rows)
+    partial_idx = findfirst(r -> r.method == "tps" && r.group == "claim_intensity" && r.level == "rainstorm_or_above", partial_rows)
     partial_rows[partial_idx] = _claim_metric_row(
-        product="TEST", method="tps", group="rain_intensity", level="heavy", RMSE=0.82,
+        product="TEST", method="tps", group="claim_intensity", level="rainstorm_or_above", RMSE=0.82,
     )
     claim_partial_heavy = assess_gwr_claim(DataFrame(partial_rows), bootstrap_all, products)
     row_partial = only(eachrow(claim_partial_heavy))
-    @test row_partial.heavy_win_count == 2
+    @test row_partial.rainstorm_or_above_win_count == 2
     @test row_partial.product_supported == false
 end
 
@@ -915,11 +915,11 @@ end
             ("residual_gwr", gwr_heavy), ("idw", 1.5), ("adw", 1.2), ("tps", 1.4),
         )
             push!(rows, _claim_metric_row(product="TEST", method=method,
-                group="rain_intensity", level="heavy", RMSE=RMSE, repeat=repeat_value))
+                group="claim_intensity", level="rainstorm_or_above", RMSE=RMSE, repeat=repeat_value))
         end
         for (method, RMSE) in (("residual_gwr", 1.0), ("idw", 1.02), ("adw", 1.01), ("tps", 1.03))
             push!(rows, _claim_metric_row(product="TEST", method=method,
-                group="rain_intensity", level="moderate", RMSE=RMSE, repeat=repeat_value))
+                group="claim_intensity", level="moderate_to_heavy", RMSE=RMSE, repeat=repeat_value))
         end
         for (method, RMSE) in (("residual_gwr", 0.85), ("idw", 1.4), ("adw", 1.1), ("tps", 1.3))
             push!(rows, _claim_metric_row(product="TEST", method=method,

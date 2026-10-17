@@ -188,17 +188,17 @@ end
     @testset "agreement crosses with the envelope" begin
         band = blend_band_matrix(:agreement_envelope, y_sat, sources, threshold)
         # (1,1): nothing wet -> untouched. (1,2): one product wet, max 0.5 -> light -> band 1.
-        # (1,3): two wet, max 4.0 -> moderate -> (2-1)*3+2 = 5.
-        # (2,1): three wet, max 20 -> heavy -> (3-1)*3+3 = 9.
+        # (1,3): two wet, max 4.0 -> heavy [4, 8) -> (2-1)*5+3 = 8.
+        # (2,1): three wet, max 20 -> severe rainstorm -> (3-1)*5+5 = 15.
         # (2,2): nothing wet -> untouched. (2,3): two wet (0.2, 0.05 is below), max 0.2 -> band 1.
-        @test band == [0 1 5; 9 0 1]
-        @test blend_band_count(:agreement_envelope) == 9
+        @test band == [0 1 8; 15 0 1]
+        @test blend_band_count(:agreement_envelope) == 15
     end
 
     @testset "a zero weight is the identity, and band 0 is never touched" begin
         band = blend_band_matrix(:agreement_envelope, y_sat, sources, threshold)
-        @test banded_blend_prediction(band, prediction, fallback, zeros(9)) == prediction
-        ones_everywhere = banded_blend_prediction(band, prediction, fallback, ones(9))
+        @test banded_blend_prediction(band, prediction, fallback, zeros(15)) == prediction
+        ones_everywhere = banded_blend_prediction(band, prediction, fallback, ones(15))
         @test ones_everywhere[1, 1] == prediction[1, 1]
         @test ones_everywhere[2, 2] == prediction[2, 2]
         @test ones_everywhere[1, 2] == fallback[1, 2]
@@ -270,7 +270,7 @@ end
     @testset "bands cross agreement (with band 0) and distance" begin
         agreement = [0 9; 3 0; 1 1]
         band = stack_band_matrix(agreement, [5.0, 20.0, 75.0])
-        @test band == [1 10; 14 11; 22 22]
+        @test band == [1 10; 20 17; 34 34]
         @test maximum(band) <= stack_band_count()
     end
 
@@ -427,15 +427,16 @@ end
             for fold in 1:k
                 validation = [position[id] for id in ids if fold_of[id] == fold]
                 training = setdiff(1:n_station, validation)
-                coefficients, _, _ = fit_grouped_fusion(obs, sources, features, groups, 10, training)
+                coefficients, _, _ = fit_grouped_fusion(obs, sources, features, groups,
+                    blend_band_count(:agreement_envelope) + 1, training)
                 expected = apply_grouped_fusion(sources, features, coefficients, groups)
                 for station in validation, time in eachindex(times)
                     @test stored[time, Symbol(ids[station])] ≈ expected[station, time]
                 end
             end
             table = CSV.read(joinpath(outdir, "fused_anchor_grouped_coefficients.csv"), DataFrame)
-            @test nrow(table) == k * 10 * 13
-            @test sort(unique(table.group)) == collect(0:9)
+            @test nrow(table) == k * (blend_band_count(:agreement_envelope) + 1) * 13
+            @test sort(unique(table.group)) == collect(0:blend_band_count(:agreement_envelope))
         end
     end
 end

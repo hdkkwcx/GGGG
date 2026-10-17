@@ -1,4 +1,5 @@
 using Test, DataFrames, Dates, Random, Statistics
+import MixedGWR
 
 include(joinpath(@__DIR__, "..", "src", "load_modules.jl"))
 load_standalone_modules("SatelliteTemporalEvaluation")
@@ -14,6 +15,17 @@ hourly_axis(day::Date, n::Int) = [DateTime(day) + Hour(9 + h) for h in 0:(n - 1)
     @test STE.season_of(Date(2023, 2, 28)) == "DJF"
     @test STE.season_of(Date(2023, 3, 1)) == "MAM"
     @test STE.season_of(Date(2023, 12, 1)) == "DJF"
+end
+
+@testset "rain_intensity_strata tiles the real line in the shared classes" begin
+    strata = MixedGWR.rain_intensity_strata()
+    @test first.(strata) == MixedGWR.RAIN_INTENSITY_CLASSES == STE.INTENSITY_CLASSES
+    @test strata[1][2] == -Inf && strata[end][3] == Inf
+    @test all(strata[i][3] == strata[i + 1][2] for i in 1:(length(strata) - 1))
+    # Each stratum's [lower, upper) agrees with `intensity_class` on the same value.
+    for value in (0.0, 0.1, 1.99, 2.0, 4.0, 8.0, 20.0, 150.0)
+        @test findfirst(s -> s[2] <= value < s[3], strata) == STE.intensity_class(value) + 1
+    end
 end
 
 @testset "evaluation_context assigns met-days, seasons and day offsets" begin

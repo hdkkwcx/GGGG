@@ -50,7 +50,7 @@ const FUSION_METHODS = [
 # rather than picked per anchor from its results, so the anchor comparison is not a comparison of
 # each anchor's luckiest method.
 const PANEL_METHODS = ["raw", "mgwr", "blend_mgwr", "blend_agrenv_mgwr", "auto"]
-const EVENT_THRESHOLDS = [0.1, 2.5, 8.0, 16.0]
+const EVENT_THRESHOLDS = copy(RAIN_INTENSITY_BOUNDS)
 # The gauge-only reference every fusion method is measured against: the best interpolator on
 # pooled RMSE in every earlier run, and the blends' fallback.
 const REFERENCE = "adw"

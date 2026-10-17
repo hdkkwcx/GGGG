@@ -69,3 +69,17 @@ function complete_time_mask(arrays::AbstractMatrix...)
 	end
 	return mask
 end
+
+
+"""
+The project's one hourly rain-intensity standard (mm/h), applied to the gauge value. Classes are
+lower-bound inclusive: no rain < 0.1, light [0.1, 2), moderate [2, 4), heavy [4, 8),
+rainstorm [8, 20), severe rainstorm >= 20.
+"""
+const RAIN_INTENSITY_BOUNDS = [0.1, 2.0, 4.0, 8.0, 20.0]
+const RAIN_INTENSITY_CLASSES = ["no_rain", "light", "moderate", "heavy", "rainstorm", "severe_rainstorm"]
+
+"""`(name, lower, upper)` per class of `RAIN_INTENSITY_CLASSES`, scored as `lower <= y < upper`."""
+rain_intensity_strata() = [(RAIN_INTENSITY_CLASSES[i],
+	i == 1 ? -Inf : RAIN_INTENSITY_BOUNDS[i - 1],
+	i > length(RAIN_INTENSITY_BOUNDS) ? Inf : RAIN_INTENSITY_BOUNDS[i]) for i in eachindex(RAIN_INTENSITY_CLASSES)]

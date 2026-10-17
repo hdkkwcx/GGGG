@@ -45,14 +45,15 @@ function append_stratified_metrics!(
     scored_mask = common_mask .& .!isnan.(prediction)
     push!(rows, _continuous_row(y_obs, prediction, scored_mask; base..., group="overall", level="all"))
 
-    rain_groups = (
-        ("no_rain", -Inf, 0.1), ("light", 0.1, 2.5),
-        ("moderate", 2.5, 8.0), ("heavy", 8.0, Inf),
-    )
-    for (name, lower, upper) in rain_groups
+    for (name, lower, upper) in rain_intensity_strata()
         stratum = scored_mask .& (y_obs .>= lower) .& (y_obs .< upper)
         push!(rows, _continuous_row(y_obs, prediction, stratum;
             base..., group="rain_intensity", level=name))
+    end
+    for (name, lower, upper) in CLAIM_STRATA
+        stratum = scored_mask .& (y_obs .>= lower) .& (y_obs .< upper)
+        push!(rows, _continuous_row(y_obs, prediction, stratum;
+            base..., group="claim_intensity", level=name))
     end
 
     for year_value in sort(unique(year.(times)))
@@ -293,57 +294,65 @@ function assess_gwr_claim(
         significant = length(significant_per_baseline) == length(TRADITIONAL_METHODS) &&
             overall_win_count == length(TRADITIONAL_METHODS)
 
-        # Heavy: GWR must improve on every baseline by at least 5%.
-        gwr_heavy = _one_metric(metrics, product, method, "rain_intensity", "heavy"; repeat=repeat_value).RMSE
-        heavy_improvements = Dict(baseline => let
-                base = _one_metric(metrics, product, baseline, "rain_intensity", "heavy"; repeat=repeat_value).RMSE
-                isfinite(base) && base > 0 ? (base - gwr_heavy) / base : NaN
+        # Rainstorm or above (>= 8 mm/h; see `CLAIM_STRATA`): GWR must improve on every baseline
+        # by at least 5%. These columns were `heavy_*` before the 6-class standard.
+        gwr_rainstorm_or_above = _one_metric(metrics, product, method,
+            "claim_intensity", "rainstorm_or_above"; repeat=repeat_value).RMSE
+        rainstorm_or_above_improvements = Dict(baseline => let
+                base = _one_metric(metrics, product, baseline,
+                    "claim_intensity", "rainstorm_or_above"; repeat=repeat_value).RMSE
+                isfinite(base) && base > 0 ? (base - gwr_rainstorm_or_above) / base : NaN
             end for baseline in TRADITIONAL_METHODS)
-        heavy_win_count = count(>=(0.05), filter(isfinite, collect(values(heavy_improvements))))
-        heavy_ok = heavy_win_count == length(TRADITIONAL_METHODS)
+        rainstorm_or_above_win_count = count(>=(0.05),
+            filter(isfinite, collect(values(rainstorm_or_above_improvements))))
+        rainstorm_or_above_ok = rainstorm_or_above_win_count == length(TRADITIONAL_METHODS)
         # Worst case across baselines, matching what the gate above requires.
-        heavy_relative_improvement = minimum(values(heavy_improvements))
+        rainstorm_or_above_relative_improvement = minimum(values(rainstorm_or_above_improvements))
 
         # The same gate read off the bootstrap interval instead of the point estimate, reported
         # beside the point version rather than replacing it.
         #
-        # The overall gate above demands `ci_low > 0 && pvalue_holm < 0.05`; the heavy gate demands
-        # >= 5% of a bare ratio and consults no uncertainty at all - even though
-        # `paired_bootstrap_rows` already emits a heavy row, with its interval, for every
-        # (product, method, baseline). The heavy stratum is 0.25% of the cells and its interval is
+        # The overall gate above demands `ci_low > 0 && pvalue_holm < 0.05`; the >= 8 mm/h gate
+        # demands >= 5% of a bare ratio and consults no uncertainty at all - even though
+        # `paired_bootstrap_rows` already emits a `rainstorm_or_above` row, with its interval, for
+        # every (product, method, baseline). That stratum is 0.25% of the cells and its interval is
         # wide against the threshold (a half-width near 1.8 points against a 5-point bar), so a
-        # point estimate near 7% is needed before >= 5% is supported. `heavy_win_count` is left
-        # exactly as it was so earlier runs stay reproducible; read `heavy_win_count_ci` for what
-        # the data support.
-        heavy_bootstrap = filter(row ->
+        # point estimate near 7% is needed before >= 5% is supported. The point-estimate count is
+        # left exactly as it was so earlier runs stay reproducible; read
+        # `rainstorm_or_above_win_count_ci` for what the data support.
+        rainstorm_or_above_bootstrap = filter(row ->
             row.scheme == "balanced_spatial" && row.product == product &&
-            row.stratum == "heavy" && row.repeat == repeat_value &&
+            row.stratum == "rainstorm_or_above" && row.repeat == repeat_value &&
             (!bootstrap_has_method || row.method == method),
             bootstrap,
         )
         # Keyed by baseline so `ci_low` and the denominator it is a fraction of always come from
         # the same row; joining them across rows is the one way this could look right and be wrong.
-        heavy_ci_per_baseline = Dict(String(row.baseline) => let
+        rainstorm_or_above_ci_per_baseline = Dict(String(row.baseline) => let
                 base = row.RMSE_baseline
                 isfinite(base) && base > 0 ? row.ci_low / base : NaN
-            end for row in eachrow(heavy_bootstrap))
-        heavy_win_count_ci = count(>=(0.05),
-            filter(isfinite, collect(values(heavy_ci_per_baseline))))
-        heavy_ok_ci = length(heavy_ci_per_baseline) == length(TRADITIONAL_METHODS) &&
-            heavy_win_count_ci == length(TRADITIONAL_METHODS)
-        heavy_relative_ci_low = isempty(heavy_ci_per_baseline) ? NaN :
-            minimum(values(heavy_ci_per_baseline))
+            end for row in eachrow(rainstorm_or_above_bootstrap))
+        rainstorm_or_above_win_count_ci = count(>=(0.05),
+            filter(isfinite, collect(values(rainstorm_or_above_ci_per_baseline))))
+        rainstorm_or_above_ok_ci =
+            length(rainstorm_or_above_ci_per_baseline) == length(TRADITIONAL_METHODS) &&
+            rainstorm_or_above_win_count_ci == length(TRADITIONAL_METHODS)
+        rainstorm_or_above_relative_ci_low = isempty(rainstorm_or_above_ci_per_baseline) ? NaN :
+            minimum(values(rainstorm_or_above_ci_per_baseline))
 
-        # Moderate: GWR is allowed to be marginally worse here (non-inferiority), but not by
-        # more than 2% against any baseline.
-        gwr_moderate = _one_metric(metrics, product, method, "rain_intensity", "moderate"; repeat=repeat_value).RMSE
-        moderate_degradations = Dict(baseline => let
-                base = _one_metric(metrics, product, baseline, "rain_intensity", "moderate"; repeat=repeat_value).RMSE
-                isfinite(base) && base > 0 ? (gwr_moderate - base) / base : NaN
+        # Moderate to heavy ([2, 8) mm/h; these columns were `moderate_*`): GWR is allowed to be
+        # marginally worse here (non-inferiority), but not by more than 2% against any baseline.
+        gwr_moderate_to_heavy = _one_metric(metrics, product, method,
+            "claim_intensity", "moderate_to_heavy"; repeat=repeat_value).RMSE
+        moderate_to_heavy_degradations = Dict(baseline => let
+                base = _one_metric(metrics, product, baseline,
+                    "claim_intensity", "moderate_to_heavy"; repeat=repeat_value).RMSE
+                isfinite(base) && base > 0 ? (gwr_moderate_to_heavy - base) / base : NaN
             end for baseline in TRADITIONAL_METHODS)
-        moderate_win_count = count(<=(0.02), filter(isfinite, collect(values(moderate_degradations))))
-        moderate_ok = moderate_win_count == length(TRADITIONAL_METHODS)
-        moderate_relative_degradation = maximum(values(moderate_degradations))
+        moderate_to_heavy_win_count = count(<=(0.02),
+            filter(isfinite, collect(values(moderate_to_heavy_degradations))))
+        moderate_to_heavy_ok = moderate_to_heavy_win_count == length(TRADITIONAL_METHODS)
+        moderate_to_heavy_relative_degradation = maximum(values(moderate_to_heavy_degradations))
 
         # Year: a "win" requires beating every baseline that year, not just one.
         # `String.` because a `metrics` table read back from CSV carries InlineString levels,
@@ -376,12 +385,12 @@ function assess_gwr_claim(
             gwr_overall.coverage : Float64(own_coverage[product])
         coverage_acceptable = gated_coverage >= 0.95
         direction_improved = gwr_overall.RMSE < best_overall.RMSE
-        product_supported = significant && heavy_ok && moderate_ok && majority_years &&
-            event_not_degraded && coverage_acceptable
-        # The same conjunction with the interval-based heavy gate swapped in. Strictly stronger:
-        # it can only be true where `product_supported` already is.
-        product_supported_ci = significant && heavy_ok_ci && moderate_ok && majority_years &&
-            event_not_degraded && coverage_acceptable
+        product_supported = significant && rainstorm_or_above_ok && moderate_to_heavy_ok &&
+            majority_years && event_not_degraded && coverage_acceptable
+        # The same conjunction with the interval-based >= 8 mm/h gate swapped in. Strictly
+        # stronger: it can only be true where `product_supported` already is.
+        product_supported_ci = significant && rainstorm_or_above_ok_ci && moderate_to_heavy_ok &&
+            majority_years && event_not_degraded && coverage_acceptable
         head = (;
             repeat=repeat_value, product, best_traditional=best_method,
             RMSE_best_traditional=best_overall.RMSE,
@@ -389,11 +398,10 @@ function assess_gwr_claim(
         tail = (;
             overall_relative_improvement=(best_overall.RMSE - gwr_overall.RMSE) / best_overall.RMSE,
             paired_significant=significant, overall_win_count=overall_win_count,
-            heavy_relative_improvement=heavy_relative_improvement, heavy_win_count=heavy_win_count,
-            heavy_relative_ci_low=heavy_relative_ci_low, heavy_win_count_ci=heavy_win_count_ci,
-            heavy_ok_ci=heavy_ok_ci,
-            moderate_relative_degradation=moderate_relative_degradation,
-            moderate_win_count=moderate_win_count,
+            rainstorm_or_above_relative_improvement, rainstorm_or_above_win_count,
+            rainstorm_or_above_relative_ci_low, rainstorm_or_above_win_count_ci,
+            rainstorm_or_above_ok_ci,
+            moderate_to_heavy_relative_degradation, moderate_to_heavy_win_count,
             year_win_count=year_wins, year_count=length(year_levels), majority_years,
             event_not_degraded, event_win_count, common_coverage=gwr_overall.coverage,
             coverage_acceptable, direction_improved, product_supported, product_supported_ci,

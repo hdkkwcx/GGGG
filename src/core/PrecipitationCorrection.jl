@@ -33,7 +33,7 @@ as substitutes for satellite predictors.
 """
 Base.@kwdef struct HurdleGWRConfig
     wet_threshold::Float64 = 0.1
-    intensity_breaks::Vector{Float64} = [0.1, 2.5, 8.0, 16.0]
+    intensity_breaks::Vector{Float64} = copy(RAIN_INTENSITY_BOUNDS)
     kernel::Int = BISQUARE
     bandwidth::SpatialBandwidth = AdaptiveBandwidth(50)
 

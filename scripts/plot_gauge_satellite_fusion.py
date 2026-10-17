@@ -68,10 +68,10 @@ METHOD_LABELS = {
 }
 # The integration ladder, in order. Raw and ADW are drawn as references, not as coloured series.
 LADDER = [("auto", ORDINAL_BLUES[1]), ("blend_agrenv_mgwr", ORDINAL_BLUES[3])]
-INTENSITY = [("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2.5"), ("moderate", "Moderate\n2.5–8"),
-             ("heavy", "Heavy\n≥ 8")]
+INTENSITY = [("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2"), ("moderate", "Moderate\n2–4"),
+             ("heavy", "Heavy\n4–8"), ("rainstorm", "Rainstorm\n8–20"), ("severe_rainstorm", "Severe\n≥ 20")]
 DISTANCE = [("0_20", "< 20 km"), ("20_50", "20–50 km"), ("50_100", "50–100 km")]
-THRESHOLDS = [0.1, 2.5, 8.0, 16.0]
+THRESHOLDS = [0.1, 2.0, 4.0, 8.0, 20.0]
 
 def read_rows(path: Path) -> list[dict]:
     """CSV rows with numeric-looking fields converted to float and true/false to bool."""
@@ -147,7 +147,7 @@ def pct(x: float) -> float:
 
 
 BENEFIT_PANELS = [("RMSE", "RMSE (mm/h) · lower is better"), ("r", "Correlation r · higher is better"),
-                  ("CSI_2.5", "CSI at 2.5 mm/h · higher is better"), ("CSI_8.0", "CSI at 8 mm/h · higher is better")]
+                  ("CSI_2.0", "CSI at 2 mm/h · higher is better"), ("CSI_8.0", "CSI at 8 mm/h · higher is better")]
 
 
 def fig1_benefit(summary: list[dict]) -> None:
@@ -181,7 +181,7 @@ def fig1_benefit(summary: list[dict]) -> None:
 
 def fig2_interpolators(ranking: list[dict], summary: list[dict]) -> None:
     fig = plt.figure(figsize=(10.0, 3.2))
-    strata = [("overall", "All hours"), ("moderate", "Moderate hours (2.5–8 mm/h)"), ("heavy", "Heavy hours (≥ 8 mm/h)")]
+    strata = [("overall", "All hours"), ("moderate_to_heavy", "Moderate–heavy hours (2–8 mm/h)"), ("rainstorm_or_above", "Rainstorm hours (≥ 8 mm/h)")]
     pairs = [("idw", "adw"), ("tps", "adw"), ("gwr", "adw")]
     width = 0.19
     for panel, (stratum, label) in enumerate(strata):
@@ -243,7 +243,7 @@ def fig3_heatmap(fusion: list[dict]) -> None:
     for g, (heading, methods) in enumerate(FUSION_GROUPS):
         for k, method in enumerate(methods):
             rows.append((gap + g * (len(methods) + gap) + k, method, heading if k == 0 else None))
-    panels = [("overall", "(a) All hours"), ("heavy", "(b) Heavy hours (≥ 8 mm h$^{-1}$)")]
+    panels = [("overall", "(a) All hours"), ("rainstorm_or_above", "(b) Rainstorm hours (≥ 8 mm h$^{-1}$)")]
     for index, (stratum, label) in enumerate(panels):
         ax = fig.add_axes([0.15 + index * 0.37, 0.12, 0.32, 0.68])
         for y, method, heading in rows:
@@ -497,13 +497,13 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
             if row is None:
                 continue
             rows.append([anchor, METHOD_LABELS[method], fmt(row["RMSE"]), fmt(row["MAE"]), fmt(row["Bias"], signed=True),
-                         fmt(row["r"]), fmt(row["CSI_0.1"]), fmt(row["CSI_2.5"]), fmt(row["CSI_8.0"]),
+                         fmt(row["r"]), fmt(row["CSI_0.1"]), fmt(row["CSI_2.0"]), fmt(row["CSI_8.0"]),
                          fmt(pct(row["RMSE_improvement_vs_raw"]), 1, True), fmt(pct(row["RMSE_improvement_vs_adw"]), 1, True)])
-    write_table("overall_metrics", ["anchor", "method", "RMSE", "MAE", "Bias", "r", "CSI0.1", "CSI2.5", "CSI8",
+    write_table("overall_metrics", ["anchor", "method", "RMSE", "MAE", "Bias", "r", "CSI0.1", "CSI2", "CSI8",
                                     "vs_raw", "vs_adw"], rows)
 
     rows = []
-    for stratum in ("overall", "moderate", "heavy"):
+    for stratum in ("overall", "moderate_to_heavy", "rainstorm_or_above"):
         for other in ("idw", "tps", "gwr"):
             if other == "gwr":
                 row = one(ranking, method="gwr", baseline="adw", stratum=stratum)
@@ -523,7 +523,7 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
     write_table("interpolation_ranking", ["stratum", "method", "RMSE", "RMSE_adw", "change", "ci", "p_holm"], rows)
 
     rows = []
-    for stratum in ("overall", "heavy"):
+    for stratum in ("overall", "rainstorm_or_above"):
         cells = [row for row in fusion if row["stratum"] == stratum]
         cells.sort(key=lambda r: -r["relative_improvement"])
         for row in cells:
@@ -555,7 +555,7 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
     rows = []
     for anchor in ANCHORS:
         for method in ("raw", "tps", "auto", "blend_agrenv_mgwr"):
-            for threshold in (2.5, 8.0, 16.0):
+            for threshold in (2.0, 4.0, 8.0, 20.0):
                 cells = {m: one(detection, product=anchor, method=method, threshold=threshold, metric=m)
                          for m in ("POD", "FAR", "CSI")}
                 if cells["CSI"] is None:
@@ -574,7 +574,7 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
     write_table("merge_weights", ["scheme", "product", "intercept", "FY4B", "GPM", "GSMaP", "GPM_range", "fell_back"],
                 rows)
 
-    # The agreement axis carries nine weights per fold; they stay in blend_weights.csv. The report shows the
+    # The agreement axis carries fifteen weights per fold; they stay in blend_weights.csv. The report shows the
     # single constant weight, which is the one a reader can interpret.
     rows = [[row["product"], fmt(row["lambda_mean"], 2), f"{row['lambda_min']:.1f}–{row['lambda_max']:.1f}",
              fmt(pct(row["mean_inner_improvement"]), 1, True)]
