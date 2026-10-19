@@ -6,6 +6,7 @@ using Dates
 using LinearAlgebra
 using Random
 using Statistics
+using MixedGWR: INTENSITY_RANGES
 
 export DEMExperimentConfig, bh_adjust, terrain_screen, spatial_variability_test
 export mixed_gwr_predict, multiscale_gwr_predict, select_mixed_bandwidth

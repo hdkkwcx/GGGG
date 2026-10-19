@@ -69,3 +69,19 @@ function complete_time_mask(arrays::AbstractMatrix...)
 	end
 	return mask
 end
+
+
+# Hourly rain-intensity classes (mm/h), the one scheme every report stratifies by. Lower-bound
+# inclusive: no rain < 0.1, light [0.1, 2), moderate [2, 4), heavy [4, 8), rainstorm [8, 20),
+# severe rainstorm >= 20. Moved here from `SatelliteTemporalEvaluation` so the benchmark, its
+# diagnostics and the satellite evaluation cannot drift apart again.
+const INTENSITY_BOUNDS = [0.1, 2.0, 4.0, 8.0, 20.0]
+const INTENSITY_CLASSES = ["no_rain", "light", "moderate", "heavy", "rainstorm", "severe_rainstorm"]
+
+"""Hourly intensity class index: 0 no rain, 1 light, ..., 5 severe rainstorm; -1 for a non-finite value."""
+intensity_class(value::Real) = isfinite(value) ? searchsortedlast(INTENSITY_BOUNDS, value) : -1
+
+"""`(name, lower, upper)` per class, lower-bound inclusive, from `INTENSITY_BOUNDS`."""
+const INTENSITY_RANGES = [(INTENSITY_CLASSES[k],
+	k == 1 ? -Inf : INTENSITY_BOUNDS[k - 1],
+	k > length(INTENSITY_BOUNDS) ? Inf : INTENSITY_BOUNDS[k]) for k in eachindex(INTENSITY_CLASSES)]

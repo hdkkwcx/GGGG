@@ -1,4 +1,5 @@
 using Test, DataFrames, Dates, Random, Statistics
+using MixedGWR
 
 include(joinpath(@__DIR__, "..", "src", "load_modules.jl"))
 load_standalone_modules("SatelliteTemporalEvaluation")
@@ -11,6 +12,15 @@ hourly_axis(day::Date, n::Int) = [DateTime(day) + Hour(9 + h) for h in 0:(n - 1)
     @test STE.intensity_class.([0.0, 0.09, 0.1, 1.99, 2.0, 3.99, 4.0, 8.0, 19.99, 20.0, 150.0]) ==
         [0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 5]
     @test STE.intensity_class(NaN) == -1
+    # The reporting ranges every module stratifies by agree with the class index at every bound.
+    @test STE.intensity_class === MixedGWR.intensity_class
+    @test length(MixedGWR.INTENSITY_RANGES) == length(STE.INTENSITY_CLASSES)
+    for (k, (name, lower, upper)) in enumerate(MixedGWR.INTENSITY_RANGES)
+        @test name == STE.INTENSITY_CLASSES[k]
+        k > 1 && @test lower == MixedGWR.INTENSITY_RANGES[k - 1][3]
+        isfinite(lower) && @test STE.intensity_class(lower) == k - 1
+        isfinite(upper) && @test STE.intensity_class(prevfloat(upper)) == k - 1
+    end
     @test STE.season_of(Date(2023, 2, 28)) == "DJF"
     @test STE.season_of(Date(2023, 3, 1)) == "MAM"
     @test STE.season_of(Date(2023, 12, 1)) == "DJF"

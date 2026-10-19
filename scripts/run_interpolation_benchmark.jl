@@ -260,7 +260,7 @@ function benchmark_config(
         # `[1.0]` is the historical unshrunk correction; the ladder costs no extra model fits.
         residual_shrinkage_candidates=residual_shrinkage ?
             [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] : [1.0],
-        event_thresholds=[0.1, 2.5, 8.0, 16.0],
+        event_thresholds=copy(INTENSITY_BOUNDS),
         bootstrap_reps=legacy_dem ? (smoke ? 200 : 2000) : joint_bootstrap_reps,
     )
 end

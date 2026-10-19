@@ -20,6 +20,7 @@ export fitted, fitted!
 
 export cor
 export metric_continuous, metric_event, common_valid_mask, complete_time_mask
+export INTENSITY_BOUNDS, INTENSITY_CLASSES, INTENSITY_RANGES, intensity_class
 
 Base.Matrix(x::Vector) = reshape(x, length(x), 1)
 

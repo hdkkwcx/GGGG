@@ -41,8 +41,8 @@ const BOOTSTRAP_REPS = 1000
 # A band with fewer training cells than this takes the pooled fit instead of its own.
 const MIN_BAND_CELLS = 500
 const DISTANCE_EDGES = [20.0, 50.0]
-const STRATA = [("all", -Inf, Inf), ("no_rain", -Inf, 0.1), ("light", 0.1, 2.5),
-    ("moderate", 2.5, 8.0), ("heavy", 8.0, Inf)]
+# The reporting classes, then the claim gates' >= 8 and 2.5-8 mm/h ranges.
+const STRATA = [("all", -Inf, Inf); INTENSITY_RANGES; collect(CLAIM_GATE_STRATA)]
 
 """The `MGERConfig` the full benchmark run used, so the common station/time grid matches."""
 function study_config(outdir::AbstractString)
@@ -345,7 +345,7 @@ function score_rows(scheme, name, family, prediction, table, meta, reference, sa
         ref_rmse = sqrt(mean(abs2, reference[mask] .- y[mask]))
         adw_rmse = sqrt(mean(abs2, table["adw"][mask] .- y[mask]))
         ci_low, ci_high = NaN, NaN
-        if label in ("all", "heavy")
+        if label in ("all", "8_plus")
             s_t, n_t = daily_sse(prediction, table, meta, mask)
             s_r, _ = daily_sse(reference, table, meta, mask)
             gains = [begin

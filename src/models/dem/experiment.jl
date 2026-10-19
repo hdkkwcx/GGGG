@@ -25,14 +25,11 @@ function _append_metrics!(
     residual_truth = Yobs - Ysat
     corrected = max.(Ysat + residual_prediction, 0.0)
     eligible = isfinite.(Yobs) .& isfinite.(Ysat)
-    strata = (
-        ("all", eligible),
-        ("wet", eligible .& (Yobs .>= threshold)),
-        ("no_rain", eligible .& (Yobs .< 0.1)),
-        ("light", eligible .& (Yobs .>= 0.1) .& (Yobs .< 2.5)),
-        ("moderate", eligible .& (Yobs .>= 2.5) .& (Yobs .< 8.0)),
-        ("heavy", eligible .& (Yobs .>= 8.0)),
-    )
+    strata = [
+        ("all", eligible);
+        ("wet", eligible .& (Yobs .>= threshold));
+        [(name, eligible .& (Yobs .>= lower) .& (Yobs .< upper)) for (name, lower, upper) in INTENSITY_RANGES]
+    ]
     for (name, eligible_mask) in strata
         bitmask = BitMatrix(eligible_mask .& isfinite.(residual_prediction))
         eligible_n = count(eligible_mask)

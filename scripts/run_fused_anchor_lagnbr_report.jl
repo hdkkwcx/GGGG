@@ -49,9 +49,9 @@ const CORRECTION_METHODS = [
 # Fixed rather than picked from the results, so the anchor comparison is not each anchor's luckiest.
 const PANEL_METHODS = ["raw", "residual_gwr", "mgwr", "auto", "blend_mgwr", "blend_agrenv_mgwr"]
 const VS_ADW_METHODS = ["residual_gwr", "mgwr", "auto", "blend_mgwr", "blend_agrenv_mgwr"]
-const STRATA = [("all", -Inf, Inf), ("no_rain", -Inf, 0.1), ("light", 0.1, 2.5),
-    ("moderate", 2.5, 8.0), ("heavy", 8.0, Inf)]
-const EVENT_THRESHOLDS = [0.1, 2.5, 8.0, 16.0]
+# The reporting classes, then the claim gates' >= 8 and 2.5-8 mm/h ranges.
+const STRATA = [("all", -Inf, Inf); INTENSITY_RANGES; collect(CLAIM_GATE_STRATA)]
+const EVENT_THRESHOLDS = INTENSITY_BOUNDS
 
 """The `MGERConfig` the full benchmark run used, so the common station/time grid matches."""
 function study_config(outdir::AbstractString)
