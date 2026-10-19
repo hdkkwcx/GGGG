@@ -266,9 +266,13 @@ test asserts every incumbent metric row is identical with them on):
 Blended methods are scored on the shared mask but never join `MASK_METHODS`, so they cannot move
 another method's denominator.
 
-`--gpm-uncal` is different: it swaps a product rather than adding methods. It scores uncalibrated
-IMERG (`GPM_uncal`, built by `scripts/prepare_gpm_uncal_inputs.jl`) in place of calibrated `GPM`,
-and the run writes to its own `_gpmuncal` output directory.
+The GPM product is a swap rather than added methods. The CLI now scores uncalibrated IMERG
+(`GPM_uncal`, built by `scripts/prepare_gpm_uncal_inputs.jl`) by default, because calibrated IMERG
+Final is adjusted to GPCC gauges and GSMaP operational is not. `--gpm-cal` scores calibrated `GPM`
+instead; `--gpm-uncal` is still accepted as a no-op. The `_gpmuncal` output suffix stays keyed on
+the uncalibrated product, so a default run lands in a `_gpmuncal` directory and every calibrated
+output keeps its historical name. `benchmark_config`'s `gpm_uncal` keyword still defaults to
+`false`, so the verify scripts that call it reproduce the calibrated baselines.
 
 ### Loading `src/` from a script or test
 
