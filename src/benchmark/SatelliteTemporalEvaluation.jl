@@ -21,8 +21,8 @@ Conventions every function relies on:
   every product already aligned to the gauges (`HeavyRainEvents.align_to_reference`).
 - A `mask` names the cells a *sample* scores: those where the gauge and every product in the sample are
   finite, so every product in a sample is scored on identical cells.
-- Hourly classes (`INTENSITY_BOUNDS`) are lower-bound inclusive: no rain < 0.1, light [0.1, 2),
-  moderate [2, 4), heavy [4, 8), rainstorm [8, 20), severe rainstorm >= 20 mm/h.
+- Hourly classes (`INTENSITY_BOUNDS`, from `MixedGWR`) are lower-bound inclusive: no rain < 0.1,
+  light [0.1, 2), moderate [2, 4), heavy [4, 8), rainstorm [8, 20), severe rainstorm >= 20 mm/h.
 - The gauge record is quantised to 0.5 mm: its "light" hours are 0.5, 1.0 or 1.5 mm and it cannot
   show 0.1-0.5 mm. Where a satellite threshold matters, a `_res` variant repeats the calculation at the
   gauge resolution `GAUGE_RESOLUTION_MM`.
@@ -32,7 +32,7 @@ Conventions every function relies on:
 module SatelliteTemporalEvaluation
 
 using DataFrames, Dates, Random, Statistics
-using MixedGWR: metric_continuous, metric_event
+using MixedGWR: metric_continuous, metric_event, INTENSITY_BOUNDS, INTENSITY_CLASSES, intensity_class
 using Main.HeavyRainEvents: met_day, _tied_ranks
 
 export WET_MM, GAUGE_RESOLUTION_MM, INTENSITY_BOUNDS, INTENSITY_CLASSES, SEASONS, FALSE_ALARM_BINS
@@ -45,15 +45,10 @@ export regional_mean_series, aggregate_series, series_metrics, regional_series_t
 
 const WET_MM = 0.1
 const GAUGE_RESOLUTION_MM = 0.5
-const INTENSITY_BOUNDS = [0.1, 2.0, 4.0, 8.0, 20.0]
-const INTENSITY_CLASSES = ["no_rain", "light", "moderate", "heavy", "rainstorm", "severe_rainstorm"]
 const SEASONS = ["MAM", "JJA", "SON", "DJF"]
 const SEASON_LABELS = ["all"; SEASONS]
 const FALSE_ALARM_BINS = ["no_rain", "below_gauge_resolution", "light_resolved", "moderate", "heavy",
     "rainstorm", "severe_rainstorm"]
-
-"""Hourly intensity class index: 0 no rain, 1 light, ..., 5 severe rainstorm; -1 for a non-finite value."""
-intensity_class(value::Real) = isfinite(value) ? searchsortedlast(INTENSITY_BOUNDS, value) : -1
 
 """Meteorological season of a date."""
 function season_of(day::Date)

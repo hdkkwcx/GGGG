@@ -4,6 +4,10 @@ const BENCHMARK_METHODS = [
     "residual_gwr", "mixed_gwr", "mgwr", "auto",
 ]
 const TRADITIONAL_METHODS = ["idw", "adw", "tps"]
+# The pre-registered claim gates' rain ranges (mm/h): RMSE must improve >= 5% on `8_plus` and may
+# degrade <= 2% on `2.5_8`. These are fixed numeric ranges, deliberately not the reporting classes
+# (`MixedGWR.INTENSITY_RANGES`), so the claim stays what was registered whatever the classes are.
+const CLAIM_GATE_STRATA = (("2.5_8", 2.5, 8.0), ("8_plus", 8.0, Inf))
 # Hyperparameter-free reference predictors, estimated from training stations only. They are
 # reported so a method's RMSE can be read as skill rather than as a bare number: on hourly
 # precipitation ~93% of station-hours are dry, so a large part of any RMSE is simply how hard
@@ -279,7 +283,7 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # `[1.0]` disables shrinkage and reproduces the historical unshrunk behaviour exactly.
     residual_shrinkage_candidates::Vector{Float64} =
         [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    event_thresholds::Vector{Float64} = [0.1, 2.5, 8.0, 16.0]
+    event_thresholds::Vector{Float64} = copy(INTENSITY_BOUNDS)
     bootstrap_reps::Int = 2000
 end
 

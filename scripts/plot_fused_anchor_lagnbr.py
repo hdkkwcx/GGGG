@@ -63,9 +63,11 @@ ANCHORED = ["raw", "residual_gwr", "mixed_gwr", "mgwr", "auto", "blend_residual_
             "blend_mgwr", "blend_agrenv_residual_gwr", "blend_agrenv_mixed_gwr", "blend_agrenv_mgwr"]
 ALL_METHODS = ["raw", "idw", "adw", "tps", "gwr"] + ANCHORED[1:]
 VS_ADW_METHODS = ["residual_gwr", "mgwr", "auto", "blend_mgwr", "blend_agrenv_mgwr"]
-STRATA = [("all", "All hours"), ("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2.5"),
-          ("moderate", "Moderate\n2.5–8"), ("heavy", "Heavy\n≥ 8")]
-STRATUM_NAMES = {"all": "all", "no_rain": "dry", "light": "light", "moderate": "moderate", "heavy": "heavy"}
+STRATA = [("all", "All hours"), ("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2"),
+          ("moderate", "Moderate\n2–4"), ("heavy", "Heavy\n4–8"), ("rainstorm", "Rainstorm\n8–20"),
+          ("severe_rainstorm", "Severe\n≥ 20")]
+STRATUM_NAMES = {"all": "all", "no_rain": "dry", "light": "light", "moderate": "moderate", "heavy": "heavy",
+                 "rainstorm": "rainstorm", "severe_rainstorm": "severe rainstorm", "2.5_8": "2.5–8", "8_plus": "≥ 8"}
 TERMS = ["intercept", "fy4b", "gpm", "gsmap", "fy4b_lag1", "gpm_lag1", "gsmap_lag1", "fy4b_lead1", "gpm_lead1",
          "gsmap_lead1", "fy4b_nbr8", "gpm_nbr8", "gsmap_nbr8"]
 ENVELOPE = ["0.1–2.5", "2.5–8", "≥ 8"]
@@ -514,17 +516,17 @@ def report_tables(summary, comparison, anchors, anchor_tests, vs_adw, detection,
             for method in ("raw", "residual_gwr", "mgwr", "auto", "blend_mgwr", "blend_agrenv_mgwr"):
                 test = one(anchor_tests, scheme=scheme, product=anchor, method=method)
                 rmse = {s: one(anchors, scheme=scheme, product=anchor, method=method, stratum=s)["RMSE"]
-                        for s in ("all", "moderate", "heavy")}
-                rows.append([scheme, anchor, method, fmt(rmse["all"], 4), fmt(rmse["moderate"], 3),
-                             fmt(rmse["heavy"], 2),
+                        for s in ("all", "2.5_8", "8_plus")}
+                rows.append([scheme, anchor, method, fmt(rmse["all"], 4), fmt(rmse["2.5_8"], 3),
+                             fmt(rmse["8_plus"], 2),
                              "–" if test is None else fmt(pct(test["relative_improvement"]), 2, True),
                              "–" if test is None else fmt(pct(test["ci_low"]), 2, True),
                              "–" if test is None else fmt(pct(test["ci_high"]), 2, True)])
         adw = {s: one(anchors, scheme=scheme, product="gauge_only", method="adw", stratum=s)["RMSE"]
-               for s in ("all", "moderate", "heavy")}
-        rows.append([scheme, "gauge_only", "adw", fmt(adw["all"], 4), fmt(adw["moderate"], 3), fmt(adw["heavy"], 2),
+               for s in ("all", "2.5_8", "8_plus")}
+        rows.append([scheme, "gauge_only", "adw", fmt(adw["all"], 4), fmt(adw["2.5_8"], 3), fmt(adw["8_plus"], 2),
                      "–", "–", "–"])
-    write_table("lagnbr_anchors", ["scheme", "anchor", "method", "RMSE", "RMSE_moderate", "RMSE_heavy", "vs_ols",
+    write_table("lagnbr_anchors", ["scheme", "anchor", "method", "RMSE", "RMSE_2p5_8", "RMSE_ge8", "vs_ols",
                                    "ci_low", "ci_high"], rows)
 
     write_table("lagnbr_vs_adw", ["scheme", "product", "method", "stratum", "RMSE_adw", "RMSE_method", "gain",
@@ -562,12 +564,12 @@ def report_tables(summary, comparison, anchors, anchor_tests, vs_adw, detection,
     write_table("lagnbr_bands", ["band", "label", "cells", "fell_back", "intercept", "sum_t", "sum_lag", "sum_lead",
                                  "sum_nbr"], rows)
 
-    write_table("lagnbr_claim", ["product", "RMSE_residual_gwr", "overall_gain", "paired_significant", "heavy_gain",
-                                 "heavy_ci_low", "moderate_degradation", "coverage", "coverage_ok", "events_ok",
+    write_table("lagnbr_claim", ["product", "RMSE_residual_gwr", "overall_gain", "paired_significant", "ge8_gain",
+                                 "ge8_ci_low", "ge2p5lt8_degradation", "coverage", "coverage_ok", "events_ok",
                                  "supported"],
                 [[r["product"], fmt(r["RMSE_residual_gwr"], 4), fmt(pct(r["overall_relative_improvement"]), 2, True),
-                  "yes" if r["paired_significant"] else "no", fmt(pct(r["heavy_relative_improvement"]), 2, True),
-                  fmt(pct(r["heavy_relative_ci_low"]), 2, True), fmt(pct(r["moderate_relative_degradation"]), 2, True),
+                  "yes" if r["paired_significant"] else "no", fmt(pct(r["ge8_relative_improvement"]), 2, True),
+                  fmt(pct(r["ge8_relative_ci_low"]), 2, True), fmt(pct(r["ge2p5lt8_relative_degradation"]), 2, True),
                   fmt(r["common_coverage"], 3), "yes" if r["coverage_acceptable"] else "no",
                   "yes" if r["event_not_degraded"] else "no", "yes" if r["product_supported"] else "no"]
                  for r in claim])

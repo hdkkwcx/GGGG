@@ -31,9 +31,10 @@ function build_hurdle_context(
 )
     wet_threshold = cfg.mger.rain_threshold
     # `HurdleGWRConfig` requires `first(intensity_breaks) == wet_threshold`, sorted and unique.
-    # Deriving the breaks from the benchmark's own event thresholds keeps the occurrence table
-    # binned the same way the categorical scores are.
-    breaks = sort(unique(vcat(wet_threshold, filter(>(wet_threshold), cfg.event_thresholds))))
+    # The breaks used to follow `cfg.event_thresholds`; they are pinned to the model's own default
+    # now that the event thresholds track the reporting classes, so this model is unchanged.
+    breaks = sort(unique(vcat(wet_threshold,
+        filter(>(wet_threshold), HurdleGWRConfig().intensity_breaks))))
     return (; times, wet_threshold, intensity_breaks=breaks, diagnostics,
         scheme, product, fold, repeat)
 end
