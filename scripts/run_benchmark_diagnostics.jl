@@ -24,8 +24,11 @@ const DEFAULT_RUN = joinpath(
 )
 const NULLS = ["zero", "train_clim", "hour_field_mean"]
 
-"""Rebuild the exact common station/time grid the full benchmark run used."""
-function load_common_data(outdir::AbstractString)
+"""
+Rebuild the exact common station/time grid the full benchmark run used. `gpm_uncal` swaps in
+uncalibrated IMERG, as `run_interpolation_benchmark.jl` does for its `_gpmuncal` runs.
+"""
+function load_common_data(outdir::AbstractString; gpm_uncal::Bool=false)
     cfg = MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
@@ -33,7 +36,9 @@ function load_common_data(outdir::AbstractString)
             "FY4B" => joinpath(
                 STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
             ),
-            "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv"),
+            (gpm_uncal ?
+                "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
+                "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv")),
             "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
         ),
         outdir=outdir,
@@ -50,7 +55,8 @@ function main(args=ARGS)
     outdir = benchmark_diagnostics_outdir(ROOT, run_dir)
 
     println("Reading benchmark run: $run_dir")
-    products, ids, product_data = load_common_data(outdir)
+    products, ids, product_data = load_common_data(outdir;
+        gpm_uncal=endswith(basename(rstrip(run_dir, '/')), "_gpmuncal"))
     println("Common grid: $(length(ids)) stations x " *
         "$(length(product_data[first(products)].times)) hours")
 
