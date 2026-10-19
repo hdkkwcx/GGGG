@@ -113,8 +113,9 @@ function benchmark_config(
     # GWR-family-versus-adw gap says too.
     bw_adaptive = local_grid ? [8.0, 12.0, 16.0, 20.0, 30.0, 50.0, 80.0, 120.0] :
         (smoke ? [30.0, 80.0] : [30.0, 50.0, 80.0, 120.0])
-    # --gpm-uncal swaps calibrated IMERG for its uncalibrated (`precipitationUncal`) field, built by
-    # `prepare_gpm_uncal_inputs.jl`. Only a full-year file exists; smoke is clipped to June like FY4B.
+    # `gpm_uncal` (the CLI default) swaps calibrated IMERG for its uncalibrated
+    # (`precipitationUncal`) field, built by `prepare_gpm_uncal_inputs.jl`. Only a full-year file
+    # exists; smoke is clipped to June like FY4B.
     gpm = gpm_uncal ?
         "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
         "GPM" => joinpath(
@@ -376,8 +377,14 @@ function main(args=ARGS)
     # Add stack_mgwr: a banded non-negative stack of mgwr, adw, the anchor, tps and mgwr's/adw's
     # t-1/t+1 predictions, fitted on the inner split. See `STACK_FEATURES`.
     stacked_blend = "--stacked-blend" in args
-    # Score uncalibrated IMERG (`GPM_uncal`) in place of the calibrated `GPM` product.
-    gpm_uncal = "--gpm-uncal" in args
+    # GPM defaults to uncalibrated IMERG (`GPM_uncal`): calibrated IMERG Final is monthly-adjusted
+    # to GPCC gauges and GSMaP operational is not, so scoring the calibrated one gave GPM a gauge
+    # head start. --gpm-cal scores calibrated IMERG as `GPM`; --gpm-uncal is kept, now a no-op.
+    # `benchmark_config`'s keyword still defaults to calibrated, so the verify scripts keep
+    # reproducing the baselines they were written against.
+    "--gpm-cal" in args && "--gpm-uncal" in args &&
+        throw(ArgumentError("--gpm-cal and --gpm-uncal are mutually exclusive"))
+    gpm_uncal = !("--gpm-cal" in args)
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
