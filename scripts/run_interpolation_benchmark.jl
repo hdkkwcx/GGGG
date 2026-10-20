@@ -361,21 +361,29 @@ function main(args=ARGS)
     unsupported_local_target = "--legacy-unsupported-zero" in args ? :zero : :missing
     # The residual family takes the satellite as a fixed offset, so a satellite false alarm reaches
     # its prediction in full. --satellite-wet-blend reports blended counterparts that lean toward
-    # `adw` where the satellite reports rain, with the weight chosen inside the training fold.
+    # `adw` where the satellite reports rain, with the weight chosen inside the training fold
+    # (`blend_selection.csv`). Like every opt-in flag below it leaves each incumbent metric row
+    # unchanged: blended methods are scored on the shared mask but never join `MASK_METHODS`.
     satellite_wet_blend = "--satellite-wet-blend" in args
     # A second blending rule, keyed on how many *independent* products call a cell wet rather than
-    # on the target product's own magnitude. Reported beside the constant rule, not instead of it.
+    # on the target product's own magnitude (`blend_agrenv_*`, one weight per band of wet-product
+    # count x their maximum). Reported beside the constant rule, not instead of it.
     blend_axes = "--blend-axis" in args || any(startswith("--blend-axis="), args) ?
         [:constant, parse_blend_axis(args)] : Symbol[:constant]
     # Add MERGED_OLS and MERGED_MEAN: products whose anchor is a fusion of the three real ones,
-    # fitted per fold on training stations only. See `SatelliteFusion` for why both variants exist.
+    # fitted per fold on training stations only (`fused_anchor_selection.csv`), so a held-out gauge
+    # never reaches its own anchor. Needs --nested-covariates. See `SatelliteFusion` for why both
+    # variants exist.
     fused_anchor = "--fused-anchor" in args
     # Add MERGED_OLS_LAGNBR: the least-squares fusion widened with each product's t-1/t+1 values and
-    # its mean over the nearest stations, fitted per agreement-envelope band. Separate from
-    # --fused-anchor so that flag keeps meaning exactly MERGED_OLS and MERGED_MEAN.
+    # its mean over the 8 nearest stations, fitted per agreement-envelope band
+    # (`fused_anchor_grouped_coefficients.csv`). Separate from --fused-anchor so that flag keeps
+    # meaning exactly MERGED_OLS and MERGED_MEAN.
     fused_anchor_lagnbr = "--fused-anchor-lagnbr" in args
     # Add stack_mgwr: a banded non-negative stack of mgwr, adw, the anchor, tps and mgwr's/adw's
-    # t-1/t+1 predictions, fitted on the inner split. See `STACK_FEATURES`.
+    # t-1/t+1 predictions, one weight vector per (agreement-envelope band) x (distance to nearest
+    # training gauge), fitted on the inner split over the full record (`stack_selection.csv`).
+    # See `STACK_FEATURES`; found by `scripts/screen_blend_mgwr_improvements.jl`.
     stacked_blend = "--stacked-blend" in args
     # GPM defaults to uncalibrated IMERG (`GPM_uncal`): calibrated IMERG Final is monthly-adjusted
     # to GPCC gauges and GSMaP operational is not, so scoring the calibrated one gave GPM a gauge
@@ -390,7 +398,8 @@ function main(args=ARGS)
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
         fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
-        "Joint dynamic models are compute intensive; use julia -t auto for parallel hourly fits",
+        "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
+        "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
     )
     nested_covariates && @warn(
         "Nested per-fold covariate selection reruns variable selection for every " *
