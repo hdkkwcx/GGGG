@@ -1,3 +1,10 @@
+# Single-threaded and fully seeded, yet `ci_high` in `paired_comparisons.csv` can still move in its
+# last one or two digits between otherwise identical runs (seen against the hour-fit perf pass,
+# b822d78). The cause is upstream: the threaded prediction path reorders some sum and shifts the
+# `residual_gwr` predictions by a sub-ULP. Only this file shows it because RMSE here is summed per
+# day (<=526 terms) before resampling, where 1 ULP is a large share of the sum; pooled over the full
+# ~2.6M cells elsewhere it rounds away. A last-digit-only `ci_high` move (never `ci_low`, never the
+# RMSE/delta columns) is this benign non-associativity, not a regression.
 function _daily_bootstrap_delta(
     rng::AbstractRNG, times::Vector{DateTime}, y_obs::Matrix{Float64},
     baseline::Matrix{Float64}, gwr::Matrix{Float64}, mask::BitMatrix, reps::Int,
