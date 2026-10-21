@@ -1,0 +1,67 @@
+# Where every figure in paper/figures/ and every table in paper_plan.typ comes from.
+# `scripts/check_paper_provenance.py` reads this file and checks each entry:
+#   - `source` exists, and the `paper` copy is byte-identical to it (figures only);
+#   - every `provenance` file records git_dirty=false (and git_dirty_at_end / report_git_dirty
+#     =false where present), so a commit reproduces it;
+#   - every input_sha256:<path> a run recorded still matches that file in data/.
+# Paths are relative to the repository root. Update an entry when a figure is re-copied from a
+# different output.
+
+[[item]]
+label = "Fig. 2 (RQ1 event maps)"
+paper = "paper/figures/fig02_event_maps.png"
+source = "output/heavy_rain_events_gpm_gsmap/figures/fig0_event_overview.png"
+provenance = [
+    "output/heavy_rain_events_gpm_gsmap/figures/plot_provenance.csv",
+    "output/heavy_rain_events_gpm_gsmap/provenance.csv",
+]
+
+[[item]]
+label = "Fig. 3 (RQ1 event metrics; planned, not yet in the text)"
+paper = "paper/figures/fig03_event_metrics.png"
+source = "output/heavy_rain_events_gpm_gsmap/figures/fig5_metric_summary.png"
+provenance = [
+    "output/heavy_rain_events_gpm_gsmap/figures/plot_provenance.csv",
+    "output/heavy_rain_events_gpm_gsmap/provenance.csv",
+]
+
+[[item]]
+label = "Fig. 4 (RQ2 intensity classes by season)"
+paper = "paper/figures/fig04a_intensity_season.png"
+source = "output/satellite_temporal_evaluation/figures_gpm_gsmap/fig2_intensity_classes_gpm_gsmap_full.png"
+provenance = [
+    "output/satellite_temporal_evaluation/figures_gpm_gsmap/plot_provenance.csv",
+    "output/satellite_temporal_evaluation/provenance.csv",
+]
+
+[[item]]
+label = "Fig. 6 (RQ3 fusion methods)"
+paper = "paper/figures/fig06b_fusion_methods.png"
+source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/figures_gpm_gsmap/fusion_fig3_methods_by_anchor.png"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/figures_gpm_gsmap/plot_provenance.csv",
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+]
+
+[[item]]
+label = "Fig. 7 (RQ3 where fusion helps; planned, not yet in the text)"
+paper = "paper/figures/fig07_where_fusion_helps.png"
+source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/figures_gpm_gsmap/fusion_fig4_where_it_helps.png"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/figures_gpm_gsmap/plot_provenance.csv",
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+]
+
+# Typed into paper_plan.typ from method_summary.csv of the two fusion reports: the IMERG Uncal rows
+# and, for the GPM (Final) rows, the IMERG Final sensitivity run.
+[[item]]
+label = "Table 3 (RQ3 fusion)"
+source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/method_summary.csv"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
+]
