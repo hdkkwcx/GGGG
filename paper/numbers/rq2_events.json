@@ -1,0 +1,59 @@
+{
+ "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal/event_timing_summary.csv",
+ "source_sha256": "019a8a5ec6906a8cfedda19f34d36fc75ac684f0186df0519472ae532297cfbb",
+ "rows": [
+  {
+   "product": "GPM_uncal",
+   "event_class": "moderate",
+   "POD": "+87",
+   "centroid": "-0.4"
+  },
+  {
+   "product": "GPM_uncal",
+   "event_class": "heavy",
+   "POD": "+93",
+   "centroid": "-0.1"
+  },
+  {
+   "product": "GPM_uncal",
+   "event_class": "rainstorm",
+   "POD": "+93",
+   "centroid": "0.1"
+  },
+  {
+   "product": "GPM_uncal",
+   "event_class": "severe_rainstorm",
+   "POD": "+97",
+   "centroid": "0.4"
+  },
+  {
+   "product": "GSMaP",
+   "event_class": "moderate",
+   "POD": "+90",
+   "centroid": "-0.4"
+  },
+  {
+   "product": "GSMaP",
+   "event_class": "heavy",
+   "POD": "+95",
+   "centroid": "-0.2"
+  },
+  {
+   "product": "GSMaP",
+   "event_class": "rainstorm",
+   "POD": "+94",
+   "centroid": "0.0"
+  },
+  {
+   "product": "GSMaP",
+   "event_class": "severe_rainstorm",
+   "POD": "+96",
+   "centroid": "0.3"
+  }
+ ],
+ "stats": {
+  "pod": "87–97",
+  "centroid_min": "-0.4",
+  "centroid_max": "0.4"
+ }
+}

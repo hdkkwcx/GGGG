@@ -1,0 +1,1631 @@
+{
+ "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal/intensity_class_metrics.csv",
+ "source_sha256": "48f337f757a40413c69bf4cf13b6643e4ef08e89594f6cbcb4b9461487fd0cce",
+ "rows": [
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-44",
+   "POD": "+57",
+   "hit": "+35"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "-27",
+   "POD": "+49",
+   "hit": "+41"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "-34",
+   "POD": "+80",
+   "hit": "+19"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-48",
+   "POD": "+86",
+   "hit": "+19"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-73",
+   "POD": "+82",
+   "hit": "+9"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-87",
+   "POD": "+85",
+   "hit": "+1"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-44",
+   "POD": "+58",
+   "hit": "+37"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "-25",
+   "POD": "+50",
+   "hit": "+43"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "-34",
+   "POD": "+82",
+   "hit": "+19"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-50",
+   "POD": "+86",
+   "hit": "+18"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-74",
+   "POD": "+82",
+   "hit": "+9"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-86",
+   "POD": "+86",
+   "hit": "+1"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-43",
+   "POD": "+56",
+   "hit": "+35"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "-28",
+   "POD": "+47",
+   "hit": "+40"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "-33",
+   "POD": "+79",
+   "hit": "+19"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-45",
+   "POD": "+85",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-72",
+   "POD": "+83",
+   "hit": "+9"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-89",
+   "POD": "+86",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-46",
+   "POD": "+57",
+   "hit": "+38"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "-38",
+   "POD": "+50",
+   "hit": "+44"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "-43",
+   "POD": "+79",
+   "hit": "+17"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-46",
+   "POD": "+87",
+   "hit": "+18"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-76",
+   "POD": "+80",
+   "hit": "+7"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-88",
+   "POD": "+81",
+   "hit": "+2"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-50",
+   "POD": "+59",
+   "hit": "+40"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "-36",
+   "POD": "+52",
+   "hit": "+47"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "-45",
+   "POD": "+81",
+   "hit": "+18"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-58",
+   "POD": "+85",
+   "hit": "+14"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-81",
+   "POD": "+76",
+   "hit": "+4"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-88",
+   "POD": "+80",
+   "hit": "+2"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-43",
+   "POD": "+56",
+   "hit": "+36"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "-39",
+   "POD": "+48",
+   "hit": "+42"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "-41",
+   "POD": "+78",
+   "hit": "+17"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-38",
+   "POD": "+88",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-71",
+   "POD": "+85",
+   "hit": "+8"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-88",
+   "POD": "+84",
+   "hit": "+2"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-43",
+   "POD": "+69",
+   "hit": "+37"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "+12",
+   "POD": "+62",
+   "hit": "+48"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "-24",
+   "POD": "+80",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-50",
+   "POD": "+83",
+   "hit": "+19"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-73",
+   "POD": "+82",
+   "hit": "+9"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-87",
+   "POD": "+86",
+   "hit": "+1"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-42",
+   "POD": "+71",
+   "hit": "+38"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "+18",
+   "POD": "+64",
+   "hit": "+50"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "-21",
+   "POD": "+83",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-51",
+   "POD": "+85",
+   "hit": "+18"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-74",
+   "POD": "+81",
+   "hit": "+9"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-86",
+   "POD": "+86",
+   "hit": "+1"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-44",
+   "POD": "+67",
+   "hit": "+37"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "+7",
+   "POD": "+60",
+   "hit": "+48"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "-26",
+   "POD": "+78",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-49",
+   "POD": "+82",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-73",
+   "POD": "+82",
+   "hit": "+10"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-89",
+   "POD": "+86",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-34",
+   "POD": "+63",
+   "hit": "+41"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "-22",
+   "POD": "+55",
+   "hit": "+48"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "-32",
+   "POD": "+84",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-44",
+   "POD": "+89",
+   "hit": "+20"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-66",
+   "POD": "+87",
+   "hit": "+11"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-84",
+   "POD": "+88",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-34",
+   "POD": "+65",
+   "hit": "+42"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "-21",
+   "POD": "+58",
+   "hit": "+50"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "-33",
+   "POD": "+85",
+   "hit": "+19"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-43",
+   "POD": "+90",
+   "hit": "+21"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-64",
+   "POD": "+91",
+   "hit": "+12"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-83",
+   "POD": "+89",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-34",
+   "POD": "+61",
+   "hit": "+40"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "-23",
+   "POD": "+53",
+   "hit": "+46"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "-29",
+   "POD": "+83",
+   "hit": "+22"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-46",
+   "POD": "+87",
+   "hit": "+19"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-68",
+   "POD": "+84",
+   "hit": "+10"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-86",
+   "POD": "+86",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-92",
+   "POD": "+11",
+   "hit": "+10"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "-92",
+   "POD": "+10",
+   "hit": "+10"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "-91",
+   "POD": "+31",
+   "hit": "+1"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-96",
+   "POD": "+32",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-100",
+   "POD": "+5",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-92",
+   "POD": "+12",
+   "hit": "+10"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "-92",
+   "POD": "+11",
+   "hit": "+11"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "-91",
+   "POD": "+31",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-96",
+   "POD": "+32",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-92",
+   "POD": "+10",
+   "hit": "+9"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "-92",
+   "POD": "+9",
+   "hit": "+9"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "-91",
+   "POD": "+31",
+   "hit": "+1"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-95",
+   "POD": "+38",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-100",
+   "POD": "+17",
+   "hit": "0"
+  },
+  {
+   "product": "GPM_uncal",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-nan",
+   "POD": "-nan",
+   "hit": "-nan"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-11",
+   "POD": "+60",
+   "hit": "+34"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "+16",
+   "POD": "+52",
+   "hit": "+40"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "+8",
+   "POD": "+81",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-17",
+   "POD": "+87",
+   "hit": "+20"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-59",
+   "POD": "+85",
+   "hit": "+12"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-80",
+   "POD": "+89",
+   "hit": "+6"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-11",
+   "POD": "+60",
+   "hit": "+34"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "+17",
+   "POD": "+52",
+   "hit": "+40"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "+6",
+   "POD": "+81",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-18",
+   "POD": "+87",
+   "hit": "+18"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-60",
+   "POD": "+84",
+   "hit": "+12"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-78",
+   "POD": "+90",
+   "hit": "+8"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-8",
+   "POD": "+60",
+   "hit": "+34"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "+18",
+   "POD": "+53",
+   "hit": "+40"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "+11",
+   "POD": "+81",
+   "hit": "+17"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-16",
+   "POD": "+88",
+   "hit": "+22"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-58",
+   "POD": "+86",
+   "hit": "+12"
+  },
+  {
+   "product": "GSMaP",
+   "season": "all",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-84",
+   "POD": "+87",
+   "hit": "+4"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-5",
+   "POD": "+62",
+   "hit": "+35"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "+23",
+   "POD": "+55",
+   "hit": "+40"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "+2",
+   "POD": "+83",
+   "hit": "+20"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-29",
+   "POD": "+90",
+   "hit": "+26"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-69",
+   "POD": "+86",
+   "hit": "+8"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-62",
+   "POD": "+90",
+   "hit": "+18"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-4",
+   "POD": "+61",
+   "hit": "+35"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "+27",
+   "POD": "+55",
+   "hit": "+40"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "+4",
+   "POD": "+82",
+   "hit": "+18"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-35",
+   "POD": "+87",
+   "hit": "+20"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-69",
+   "POD": "+83",
+   "hit": "+9"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-55",
+   "POD": "+90",
+   "hit": "+25"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-5",
+   "POD": "+63",
+   "hit": "+36"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "+21",
+   "POD": "+55",
+   "hit": "+40"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "+1",
+   "POD": "+84",
+   "hit": "+21"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-24",
+   "POD": "+92",
+   "hit": "+32"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-70",
+   "POD": "+89",
+   "hit": "+6"
+  },
+  {
+   "product": "GSMaP",
+   "season": "MAM",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-82",
+   "POD": "+92",
+   "hit": "+2"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-16",
+   "POD": "+68",
+   "hit": "+33"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "+52",
+   "POD": "+60",
+   "hit": "+44"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "+15",
+   "POD": "+80",
+   "hit": "+14"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-18",
+   "POD": "+84",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-59",
+   "POD": "+84",
+   "hit": "+13"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-82",
+   "POD": "+89",
+   "hit": "+5"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-15",
+   "POD": "+69",
+   "hit": "+34"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "+55",
+   "POD": "+61",
+   "hit": "+45"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "+17",
+   "POD": "+81",
+   "hit": "+15"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-14",
+   "POD": "+85",
+   "hit": "+15"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-60",
+   "POD": "+83",
+   "hit": "+12"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-81",
+   "POD": "+90",
+   "hit": "+6"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-16",
+   "POD": "+67",
+   "hit": "+33"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "+51",
+   "POD": "+59",
+   "hit": "+44"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "+15",
+   "POD": "+78",
+   "hit": "+14"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-21",
+   "POD": "+83",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-57",
+   "POD": "+85",
+   "hit": "+14"
+  },
+  {
+   "product": "GSMaP",
+   "season": "JJA",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-84",
+   "POD": "+86",
+   "hit": "+5"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "+5",
+   "POD": "+66",
+   "hit": "+39"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "+20",
+   "POD": "+60",
+   "hit": "+47"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "+11",
+   "POD": "+85",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-5",
+   "POD": "+90",
+   "hit": "+21"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-49",
+   "POD": "+89",
+   "hit": "+15"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-82",
+   "POD": "+93",
+   "hit": "+3"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "0",
+   "POD": "+67",
+   "hit": "+41"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "+18",
+   "POD": "+61",
+   "hit": "+48"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "+4",
+   "POD": "+84",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-12",
+   "POD": "+91",
+   "hit": "+21"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-53",
+   "POD": "+90",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-82",
+   "POD": "+91",
+   "hit": "+3"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "+10",
+   "POD": "+66",
+   "hit": "+38"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "+23",
+   "POD": "+59",
+   "hit": "+45"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "+20",
+   "POD": "+85",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "+2",
+   "POD": "+90",
+   "hit": "+21"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-49",
+   "POD": "+88",
+   "hit": "+13"
+  },
+  {
+   "product": "GSMaP",
+   "season": "SON",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-85",
+   "POD": "+97",
+   "hit": "+2"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "all_wet",
+   "RB0": "-80",
+   "POD": "+18",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "light",
+   "RB0": "-79",
+   "POD": "+18",
+   "hit": "+16"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "moderate",
+   "RB0": "-84",
+   "POD": "+37",
+   "hit": "+5"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "heavy",
+   "RB0": "-95",
+   "POD": "+37",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "all",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "all_wet",
+   "RB0": "-83",
+   "POD": "+16",
+   "hit": "+14"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "light",
+   "RB0": "-81",
+   "POD": "+16",
+   "hit": "+15"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "moderate",
+   "RB0": "-88",
+   "POD": "+35",
+   "hit": "+3"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "heavy",
+   "RB0": "-95",
+   "POD": "+34",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_lt500",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "all_wet",
+   "RB0": "-77",
+   "POD": "+21",
+   "hit": "+18"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "light",
+   "RB0": "-77",
+   "POD": "+20",
+   "hit": "+19"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "moderate",
+   "RB0": "-79",
+   "POD": "+39",
+   "hit": "+7"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "heavy",
+   "RB0": "-94",
+   "POD": "+41",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "rainstorm",
+   "RB0": "-100",
+   "POD": "0",
+   "hit": "0"
+  },
+  {
+   "product": "GSMaP",
+   "season": "DJF",
+   "region": "relief_500_1000",
+   "gauge_class": "severe_rainstorm",
+   "RB0": "-nan",
+   "POD": "-nan",
+   "hit": "-nan"
+  }
+ ],
+ "stats": {
+  "loss_heavy": "59–87",
+  "hit_heavy_max": "12",
+  "relief_gap_max": "6"
+ }
+}

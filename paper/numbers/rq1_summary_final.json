@@ -1,0 +1,18 @@
+{
+ "source": "output/heavy_rain_events_gpm_gsmap/event_metrics_summary.csv",
+ "source_sha256": "48db4e120386e46007c63ed1e91eed10f8b172123907e3fa11e16f88372bbd7c",
+ "rows": [
+  {
+   "product": "GPM",
+   "r": "0.55",
+   "MB": "-2.0",
+   "RMSE": "20.5"
+  },
+  {
+   "product": "GSMaP",
+   "r": "0.55",
+   "MB": "+18.9",
+   "RMSE": "39.9"
+  }
+ ]
+}

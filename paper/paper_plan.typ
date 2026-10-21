@@ -8,6 +8,11 @@
 // in each run's benchmark_scope.csv with its Manifest.toml): ..._fusedanchor_nofy4b_gpmuncal and,
 // for the GPM (Final) rows, ..._fusedanchor_nofy4b. They reproduce the earlier uncommitted-code
 // runs (output/*_uncommitted_ef3616d) byte for byte.
+// RQ1/RQ2 and Figs. 2-4 come from clean IMERG Uncal runs at commit 3bce549, plotted at 072eef6:
+// output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal,
+// satellite_temporal_evaluation_nofy4b_gpmuncal and, for the Scope paragraph's FY4B numbers,
+// satellite_temporal_evaluation_gpmuncal. The IMERG Final runs (no _gpmuncal) reproduce the
+// earlier Final-based text.
 
 #set document(
   title: "Research plan: satellite precipitation and gauge fusion (GPM, GSMaP)",
@@ -60,6 +65,17 @@
 #let sf = load("strata_final")
 #let wu = load("merge_uncal")     // OLS merge weights
 #let wf = load("merge_final")
+#let r1 = load("rq1_summary")      // RQ1: mean over the six events, IMERG Uncal run
+#let r1f = load("rq1_summary_final")
+#let e1 = load("rq1_events")       // RQ1: scores per event
+#let e1f = load("rq1_events_final")
+#let k1 = load("rq1_cores")        // RQ1: storm-core deficit per event and product
+#let c2 = load("rq2_classes")      // RQ2: by intensity class, season and relief
+#let v2 = load("rq2_events")       // RQ2: rain-event detection and timing
+#let a2 = load("rq2_areal")        // RQ2: areal-mean series
+#let fr = load("scope_fy4b_r")     // Scope: FY4B on its own hours, IMERG Uncal run with FY4B
+#let fa = load("scope_fy4b_areal")
+#let fp = load("scope_fy4b_pod")
 #let G = "GPM_uncal"              // the primary GPM product
 #let B = "blend_agrenv_mgwr"      // MGWR + agreement blend, the headline fusion method
 #let find(rows, ..conditions) = {
@@ -80,6 +96,11 @@
 #let mag(rows, column, ..conditions) = {
   let hit = find(rows, ..conditions)
   if hit == none { text(fill: red)[?] } else [#hit.at(column).trim("+", at: start).trim("-", at: start)%]
+}
+/// A number worked out from several rows (a range, a median, a largest gap), exported under `stats`.
+#let stat(name, key) = {
+  let stats = json("numbers/" + name + ".json").at("stats", default: (:))
+  if key in stats { stats.at(key).replace("-", "−") } else { text(fill: red)[?] }
 }
 /// One Table 3 row's numbers: RMSE, r, CSI 2, vs raw (a dash on gauge-only rows) and vs ADW.
 #let t3(rows, product, method, raw: true) = (
@@ -107,13 +128,13 @@
     table.header([*RQ*], [*Question*], [*Answer so far*], [*Status*], [*Remaining*]),
     thin,
     [1], [Does the satellite place heavy rain correctly in space?],
-    [Widespread rain yes (r ≈ 0.55, both products); localized storm cores no. GSMaP far too wet.],
-    [Answered], [Rerun on IMERG Uncal],
+    [Widespread rain yes (r #val(r1, "r", product: G) GPM, #val(r1, "r", product: "GSMaP") GSMaP); localized storm cores no. GSMaP far too wet, GPM somewhat dry.],
+    [Answered], [—],
     [2], [Does it follow the hourly evolution at each intensity?],
-    [Rain is detected and timed well; peak magnitude is lost, by 60–85% at ≥ 8 mm h⁻¹.],
-    [Answered], [Landform panel in Fig. 4; rerun on IMERG Uncal],
+    [Rain is detected and timed well; peak magnitude is lost, by #stat("rq2_classes", "loss_heavy")% at ≥ 8 mm h⁻¹.],
+    [Answered], [Landform panel in Fig. 4],
     [3], [What does gauge fusion gain, with which method and product?],
-    [MGWR + blend beats raw GPM by #pct(mu, "vs_raw0", product: G, method: B) and gauges alone by #pct(mu, "vs_adw0", product: G, method: B); gain largest on heavy hours and far from gauges. GPM is the better anchor, with or without gauge calibration; fused GSMaP does not beat gauges alone.],
+    [MGWR + blend beats raw GPM by #pct(mu, "vs_raw0", product: G, method: B) and gauges alone by #pct(mu, "vs_adw0", product: G, method: B)\; gain largest on heavy hours and far from gauges. GPM is the better anchor, with or without gauge calibration; fused GSMaP does not beat gauges alone.],
     [Answered, gaps], [Choose headline method],
     rule,
   )
@@ -142,8 +163,8 @@ and what fusing them with the gauges gains. Three questions:
   are best, and does fusion fix the moderate and heavy rain that floods depend on?
 
 *Scope.* Two products, GPM IMERG and GSMaP. FY4B is left out: on its own hours it scores worst even
-when no product is gauge-calibrated (hourly r 0.23 vs 0.37–0.43, areal-mean r 0.43 vs 0.66–0.83,
-wet-hour detection 0.34 vs 0.64–0.66). It enters no part of the analysis: the merged product and the
+when no product is gauge-calibrated (hourly r #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
+wet-hour detection #val(fp, "POD", product: "FY4B") vs #stat("scope_fy4b_pod", "others")). It enters no part of the analysis: the merged product and the
 agreement blend in RQ3 use GPM and GSMaP only.
 
 = Data and Methods
@@ -155,8 +176,8 @@ and mountains: by local relief from the Copernicus GLO-30 DEM, 129 are below 500
 and 11 at 1000 m or more. GPM IMERG V07 and GSMaP v8 operational (`hourlyPrecipRate`), both hourly
 at 0.1°, are sampled at the gauge pixels. The primary GPM product is IMERG Uncal, so that neither
 product carries gauge information: IMERG Final is calibrated monthly to GPCC gauge totals, GSMaP
-operational has no gauge correction. IMERG Final is kept as a sensitivity check. RQ1 and RQ2 are so
-far evaluated on IMERG Final and are still to be rerun on IMERG Uncal. Days run 08–08 Beijing time.
+operational has no gauge correction. IMERG Final is kept as a sensitivity check
+for all three questions. Days run 08–08 Beijing time.
 
 #planned[Fig. 1 — study area: relief, gauges, landform regions, location inset, river basins.]
 
@@ -189,45 +210,47 @@ the nearest training gauge.
 == RQ1 — Does the satellite place heavy rain correctly in space?
 
 *Answer so far.*
-- *Placement is similar for both products, and fair.* Mean spatial r over the six events is 0.55 for
-  GPM and GSMaP alike, 0.6–0.8 on four events. Both fail on 2022-06-26 (r ≤ 0.12), although each 8 h
-  phase of that day scores r = 0.43–0.88: the rain moved north to south, so the gauge total is nearly
+- *Placement is similar for both products, and fair.* Mean spatial r over the six events is
+  #val(r1, "r", product: G) for GPM and #val(r1, "r", product: "GSMaP") for GSMaP, #stat("rq1_events", "r_four") on four events. Both fail on 2022-06-26
+  (r ≤ #stat("rq1_events", "r_0626_max")), although each 8 h phase of that day scores r = #stat("rq1_phases", "r_0626"): the rain moved north to south, so the gauge total is nearly
   flat and varies mostly below 10 km, while the products keep a north–south gradient the gauges do
   not show.
-- *Amounts differ sharply.* GPM is nearly unbiased (MB −2.0 mm, RMSE 20.5 mm); GSMaP is wet
-  (MB +18.9 mm, RMSE 39.9 mm), up to +73 mm on 2023-08-26.
-- *Localized storm cores are missed by both* (CSI at 50 mm is 0 except GPM on 2024-07-30). Pixel
-  averaging explains only 16–43% of the core deficit. The cores fell as short bursts (median peak
-  25–27 mm h⁻¹, up to 87% of a gauge's total in three hours), which both products spread over more
-  hours at about a fifth of the peak rate. GPM's partial success on 2024-07-30 comes from its monthly
-  gauge calibration (×1.7 over the uncalibrated estimate).
+- *Amounts differ sharply.* GPM is somewhat dry (MB #val(r1, "MB", product: G) mm, RMSE #val(r1, "RMSE", product: G) mm; gauge-calibrated
+  IMERG Final #val(r1f, "MB", product: "GPM") mm); GSMaP is wet
+  (MB #val(r1, "MB", product: "GSMaP") mm, RMSE #val(r1, "RMSE", product: "GSMaP") mm), up to #val(e1, "MB0", product: "GSMaP", event_day: "2023-08-26") mm on 2023-08-26.
+- *Localized storm cores are missed by both* (CSI at 50 mm on the two localized events: GPM
+  #val(e1, "CSI50", product: G, event_day: "2023-09-10") and #val(e1, "CSI50", product: G, event_day: "2024-07-30"), GSMaP #val(e1, "CSI50", product: "GSMaP", event_day: "2023-09-10") and #val(e1, "CSI50", product: "GSMaP", event_day: "2024-07-30")). Pixel averaging explains only
+  #stat("rq1_cores", "repr_local")% of the core deficit. The cores fell as short bursts (median peaks #stat("rq1_core_gauges", "peak_0910") and
+  #stat("rq1_core_gauges", "peak_0730") mm h⁻¹, up to #stat("rq1_cores", "top3_local_max")% of a gauge's total in three hours), which both products spread
+  over more hours at #stat("rq1_cores", "peak_ratio_local") of the peak rate. Monthly gauge calibration (IMERG Final) raises GPM's
+  2024-07-30 core rain ×#val(k1, "cal", product: "GPM", event_day: "2024-07-30") and its CSI to #val(e1f, "CSI50", product: "GPM", event_day: "2024-07-30").
 
 #figure(
   image("figures/fig02_event_maps.png", width: 100%),
   caption: [Draft Fig. 2. The six heavy-rain events (columns). Top row: gauge 24 h totals (08–08 BJT).
   Lower rows: satellite minus gauge at each gauge, from the pixel sampled there; red means the satellite is
   drier, blue wetter, grey within ±10 mm. MB is the mean bias (mean of satellite − gauge over the
-  event's gauges).],
+  event's gauges). GPM is IMERG Uncal.],
 )
 
 #planned[Fig. 3 — spatial scores per event and product.]
 
-*Still to do.* Rerun on IMERG Uncal, the paper's primary GPM product; the numbers above are IMERG Final.
-
 == RQ2 — Does the satellite follow the hourly evolution at each intensity?
 
 *Answer so far.*
-- *Underestimation grows with intensity, in every season.* GPM relative bias runs from −11% (light) to
-  −38% (4–8), −68% (8–20) and −85% (≥ 20 mm h⁻¹); GSMaP from +16% to +8%, −17%, −59% and −80%. At
-  ≥ 8 mm h⁻¹ at most 13% of hours land in the right class.
+- *Underestimation grows with intensity, in every season.* GPM relative bias runs from #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "light")% (light) to
+  #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "moderate")% (2–4), #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "heavy")% (4–8), #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "rainstorm")% (8–20) and #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "severe_rainstorm")% (≥ 20 mm h⁻¹); GSMaP from #val(c2, "RB0", product: "GSMaP", season: "all", region: "all", gauge_class: "light")% to
+  #val(c2, "RB0", product: "GSMaP", season: "all", region: "all", gauge_class: "moderate")%, #val(c2, "RB0", product: "GSMaP", season: "all", region: "all", gauge_class: "heavy")%, #val(c2, "RB0", product: "GSMaP", season: "all", region: "all", gauge_class: "rainstorm")% and #val(c2, "RB0", product: "GSMaP", season: "all", region: "all", gauge_class: "severe_rainstorm")%. GPM is the drier of the two in every class. At ≥ 8 mm h⁻¹ at
+  most #stat("rq2_classes", "hit_heavy_max")% of hours land in the right class.
 - *Detection and timing are not the problem; magnitude is.* Rain events peaking at 2–4 mm h⁻¹ or more
-  are detected 88–96% of the time, and rain-centre timing errors stay within ±0.5 h.
-- *Winter is where both fail* (bias about −80%, only 14–18% of wet hours detected). Summer light rain
-  is overestimated (GPM +39%, GSMaP +52%).
+  are detected #stat("rq2_events", "pod")% of the time, and median rain-centre timing errors stay between
+  #stat("rq2_events", "centroid_min") and #stat("rq2_events", "centroid_max") h.
+- *Winter is where both fail* (bias #val(c2, "RB0", product: G, season: "DJF", region: "all", gauge_class: "all_wet")% for GPM and #val(c2, "RB0", product: "GSMaP", season: "DJF", region: "all", gauge_class: "all_wet")% for GSMaP; only #pct(c2, "POD", product: G, season: "DJF", region: "all", gauge_class: "all_wet") and #pct(c2, "POD", product: "GSMaP", season: "DJF", region: "all", gauge_class: "all_wet")
+  of wet hours detected). Summer light rain is overestimated (GPM #val(c2, "RB0", product: G, season: "JJA", region: "all", gauge_class: "light")%, GSMaP #val(c2, "RB0", product: "GSMaP", season: "JJA", region: "all", gauge_class: "light")%).
 - *Terrain matters little.* Between relief below 500 m and 500–1000 m the class biases differ by at most
-  8 percentage points, far less than between classes or seasons.
-- *Areal means are much better than points.* Hourly r is 0.83 for GPM and 0.66 for GSMaP (daily 0.91
-  and 0.80); overall bias +6% and +33%.
+  #stat("rq2_classes", "relief_gap_max") percentage points, far less than between classes or seasons.
+- *Areal means are much better than points.* Hourly r is #val(a2, "r", product: G, timescale_h: "1") for GPM and #val(a2, "r", product: "GSMaP", timescale_h: "1") for GSMaP (daily #val(a2, "r", product: G, timescale_h: "24")
+  and #val(a2, "r", product: "GSMaP", timescale_h: "24")); overall bias #val(a2, "RB0", product: G, timescale_h: "1")% and #val(a2, "RB0", product: "GSMaP", timescale_h: "1")%.
 
 #figure(
   image("figures/fig04a_intensity_season.png", width: 100%),
@@ -236,9 +259,7 @@ the nearest training gauge.
 
 #planned[Fig. 5 — rain events: detection, timing and volume by class.]
 
-*Still to do.*
-- Add the landform-region panel to Fig. 4 (the result is known; only the figure is missing).
-- Rerun on IMERG Uncal, the paper's primary GPM product; the numbers above are IMERG Final.
+*Still to do.* Add the landform-region panel to Fig. 4 (the result is known; only the figure is missing).
 
 == RQ3 — What does gauge fusion gain, with which method and which product?
 
@@ -260,14 +281,15 @@ the nearest training gauge.
   TPS and GWR are #mag(mu, "vs_adw", product: G, method: "tps") and #mag(mu, "vs_adw", product: G, method: "gwr") worse. Best fusion: MGWR + blend; MGWR alone only for heavy hours.
 - *Best product.* GPM, with neither product gauge-calibrated: lower raw error over all 2022–2024 hours
   (RMSE #val(mu, "RMSE", product: G, method: "raw") vs #val(mu, "RMSE", product: "GSMaP", method: "raw") mm h⁻¹,
-  r #val(mu, "r", product: G, method: "raw") vs #val(mu, "r", product: "GSMaP", method: "raw")). GPM's near-zero event bias and better areal timeline
-  (RQ1, RQ2) are so far measured on IMERG Final. Once fused, the two anchors are close
+  r #val(mu, "r", product: G, method: "raw") vs #val(mu, "r", product: "GSMaP", method: "raw")). In RQ1 and RQ2 GPM is the drier
+  product but has the smaller event error (RMSE #val(r1, "RMSE", product: G) vs #val(r1, "RMSE", product: "GSMaP") mm) and the better areal timeline
+  (hourly r #val(a2, "r", product: G, timescale_h: "1") vs #val(a2, "r", product: "GSMaP", timescale_h: "1")). Once fused, the two anchors are close
   (#val(mu, "RMSE", product: G, method: B) vs #val(mu, "RMSE", product: "GSMaP", method: B)), but only fused GPM beats ADW significantly. Merging gives a better raw field
   (RMSE #val(mu, "RMSE", product: "MERGED_OLS", method: "raw")) but adds almost nothing after fusion (#val(mu, "RMSE", product: "MERGED_OLS", method: B) vs #val(mu, "RMSE", product: G, method: B)); its OLS weights are
   #val(wu, "beta_gpm", product: "MERGED_OLS") for GPM and #val(wu, "beta_gsmap", product: "MERGED_OLS") for GSMaP, plus a #val(wu, "intercept", product: "MERGED_OLS") mm h⁻¹ intercept.
 - *IMERG Final gives the same fused result.* Gauge-calibrated IMERG Final has higher raw error than
   IMERG Uncal (RMSE #val(mf, "RMSE", product: "GPM", method: "raw") vs #val(mu, "RMSE", product: G, method: "raw") mm h⁻¹), but after fusion the two are level
-  (#val(mf, "RMSE", product: "GPM", method: B) vs #val(mu, "RMSE", product: G, method: B); #val(mf, "vs_adw", product: "GPM", method: B)% vs #val(mu, "vs_adw", product: G, method: B)% over ADW). On Final, MGWR alone loses more to ADW
+  (#val(mf, "RMSE", product: "GPM", method: B) vs #val(mu, "RMSE", product: G, method: B)\; #val(mf, "vs_adw", product: "GPM", method: B)% vs #val(mu, "vs_adw", product: G, method: B)% over ADW). On Final, MGWR alone loses more to ADW
   (#pct(cf, "change", product: "GPM", method: "mgwr", stratum: "overall"), against a non-significant #pct(cu, "change", product: G, method: "mgwr", stratum: "overall") on Uncal) and gains more on heavy hours
   (#pct(cf, "change", product: "GPM", method: "mgwr", stratum: "8_plus") vs #pct(cu, "change", product: G, method: "mgwr", stratum: "8_plus")). The OLS merge puts less weight on Final than on Uncal
   (#val(wf, "beta_gpm", product: "MERGED_OLS") vs #val(wu, "beta_gpm", product: "MERGED_OLS")).
@@ -323,12 +345,13 @@ Fig. 8 — raw vs fused skill per anchor, and the merge weights.]
 
 - *Point versus pixel.* A gauge samples a point, the products a 0.1° pixel. Where rain varies below
   10 km (2022-06-26, the localized cores) part of the "error" is representativeness, not product skill;
-  pixel averaging explains 16–43% of the core deficit, and the rest comes from the products spreading
+  pixel averaging explains #stat("rq1_cores", "repr_local")% of the core deficit, and the rest comes from the products spreading
   short bursts over too many hours.
 - *Gauge resolution.* The 0.5 mm quantisation limits what can be said about the lightest class.
-- *Independence of GPM.* The fusion uses IMERG Uncal, which carries no gauge information, and IMERG
-  Final gives the same fused result. RQ1 and RQ2 are still on IMERG Final, which is calibrated to GPCC
-  gauges; GPM's partial capture of the 2024-07-30 core depends on that calibration.
+- *Independence of GPM.* All three questions use IMERG Uncal, which carries no gauge information;
+  IMERG Final, calibrated monthly to GPCC gauges, gives the same fused result. Calibration matters most
+  for the storm cores: it raises GPM's 2024-07-30 core rain ×#val(k1, "cal", product: "GPM", event_day: "2024-07-30") and its CSI from
+  #val(e1, "CSI50", product: G, event_day: "2024-07-30") to #val(e1f, "CSI50", product: "GPM", event_day: "2024-07-30").
 - *Small samples.* Only 11 gauges lie at relief ≥ 1000 m, too few to interpret; heavy hours and the six
   events are few, so their intervals are wide.
 - *Residual heavy-rain deficit.* Fusion narrows but does not close the underestimation at ≥ 20 mm h⁻¹.
@@ -352,7 +375,7 @@ Fig. 8 — raw vs fused skill per anchor, and the merge weights.]
 
 == Outlook: flood forecasting
 
-RQ2 shows that raw satellite rain loses about 60–85% of the volume at 8 mm h⁻¹ and above, the input
+RQ2 shows that raw satellite rain loses #stat("rq2_classes", "loss_heavy")% of the volume at 8 mm h⁻¹ and above, the input
 flood models are most sensitive to, so raw products should not drive them. Fusion recovers part of
 this (RQ3). The planned extension: aggregate raw, gauge-only and fused fields to basin-mean rainfall
 for the gauged catchments during the six RQ1 events and the wettest seasons; correlate basin rainfall
@@ -364,8 +387,6 @@ which the project does not yet have.
 
 - Fig. 1: study-area map.
 - Fig. 4: add the landform-region panel (RQ2).
-- Rerun RQ1 and RQ2 on IMERG Uncal. `scripts/run_heavy_rain_event_evaluation.jl` and
-  `scripts/run_satellite_temporal_evaluation.jl` read only IMERG Final today.
 - Choose the headline fusion method: agreement blend or stacked combination (RQ3).
 - Fill the #refslot slots in §4.2 with papers actually read.
 - Move the diurnal-cycle results to supplementary material.

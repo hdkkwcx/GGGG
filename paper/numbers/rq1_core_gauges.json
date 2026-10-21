@@ -1,0 +1,9 @@
+{
+ "source": "output/heavy_core_diagnostics_gpmuncal/core_gauges.csv",
+ "source_sha256": "6499bb10ede7b57a03c846abdccae6452190f263ac89dd16c790505991502dba",
+ "rows": [],
+ "stats": {
+  "peak_0910": "27",
+  "peak_0730": "26"
+ }
+}

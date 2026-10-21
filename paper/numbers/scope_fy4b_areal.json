@@ -1,0 +1,21 @@
+{
+ "source": "output/satellite_temporal_evaluation_gpmuncal/regional_series_metrics.csv",
+ "source_sha256": "9099180612c0a975a44481dbe21ea2f35fbba4b97c8f60387dfabc1e7df38a78",
+ "rows": [
+  {
+   "product": "FY4B",
+   "r": "0.43"
+  },
+  {
+   "product": "GPM_uncal",
+   "r": "0.83"
+  },
+  {
+   "product": "GSMaP",
+   "r": "0.66"
+  }
+ ],
+ "stats": {
+  "others": "0.66–0.83"
+ }
+}
