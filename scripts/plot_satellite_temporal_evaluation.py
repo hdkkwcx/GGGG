@@ -1,7 +1,8 @@
 """Draw the satellite temporal-evaluation figures.
 
 Reads the CSVs written by `scripts/run_satellite_temporal_evaluation.jl` (and the landform diagnostics
-of `scripts/prepare_station_landform.jl`) and writes PNG (300 dpi) and PDF figures to
+of `scripts/prepare_station_landform.jl`, always from `output/satellite_temporal_evaluation/landform/`;
+the landform figure is skipped with a warning when they are absent) and writes PNG (300 dpi) and PDF figures to
 `output/satellite_temporal_evaluation/figures/`:
 
     py -3.13 scripts/plot_satellite_temporal_evaluation.py
@@ -193,7 +194,12 @@ def dots(ax, x, values, color, lo=None, hi=None, hollow=None, size=22, marker="o
 
 
 def fig1_landform() -> None:
-    landform_dir = RUN_DIR / "landform"
+    # `prepare_station_landform.jl` writes these diagnostics to this one folder, whichever run is drawn.
+    landform_dir = ROOT / "output" / "satellite_temporal_evaluation" / "landform"
+    if not (landform_dir / "relief_blocks.csv").is_file():
+        print(f"warning: skipping fig1_landform_regions: no landform diagnostics in {landform_dir} "
+              "(run scripts/prepare_station_landform.jl, which needs GDAL and GMT)", file=sys.stderr)
+        return
     blocks = read_rows(landform_dir / "relief_blocks.csv")
     change = read_rows(landform_dir / "window_change_point.csv")
     stations = read_rows(ROOT / "data" / "processed" / "covariates" / "station_landform.csv")
