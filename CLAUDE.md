@@ -65,7 +65,7 @@ src/
   models/          standalone modules: the estimators, plus CovariateGroups (shared vocabulary)
   benchmark/       the InterpolationBenchmark fragments + standalone evaluation/diagnostic modules
   mger/            the MGERPipeline fragments + MGERDataPrep
-  util/            TableIO only — domain-free plumbing shared across tiers
+  util/            TableIO, RunProvenance — domain-free plumbing shared across tiers
 ```
 
 Three loading disciplines:
@@ -143,3 +143,10 @@ using Main.BenchmarkDiagnostics
   function names and parameters unless the task needs a change, and never delete existing
   functionality. If you notice other problems, point them out instead of fixing them.
 - Prefer simple, concise implementations that match the surrounding code.
+- A script whose outputs reach the paper records its provenance: `start_provenance` first thing in
+  `main` (git state, Julia version, `Manifest.toml`, a SHA-256 for every input file) and
+  `finish_provenance!` into `provenance.csv` at the end (`src/util/RunProvenance.jl`). Its plot
+  script calls `write_plot_provenance` (`scripts/plot_provenance.py`). A figure copied into
+  `paper/figures/` gets an entry in `paper/sources.toml`, and
+  `python scripts/check_paper_provenance.py` checks the whole paper. Runs for the paper start from
+  a clean tree.

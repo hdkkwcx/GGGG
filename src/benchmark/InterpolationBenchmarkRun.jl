@@ -52,7 +52,7 @@ end
 function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     mkpath(cfg.mger.outdir)
     # Read before any work: the code that runs is the code checked out now, not at the end.
-    provenance = _start_provenance(cfg.mger.outdir)
+    provenance = _start_provenance(cfg)
     station_meta = load_station_meta(cfg.mger.station_meta_path;
         station_id_col=cfg.mger.station_id_col, lon_col=cfg.mger.lon_col, lat_col=cfg.mger.lat_col)
     source_products, ids, product_data = load_global_common_product_data(cfg.mger)

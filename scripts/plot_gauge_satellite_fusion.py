@@ -7,6 +7,9 @@ into `Interim_results/` so the Typst report compiles from that folder alone:
     py -3.13 scripts/plot_gauge_satellite_fusion.py
     py -3.13 scripts/plot_gauge_satellite_fusion.py --gpm-gsmap
 
+The plotting environment is pinned in `scripts/requirements-plot.txt`
+(`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.
+
 `--gpm-gsmap` keeps only the GPM, GSMaP and OLS-merged anchors (FY4B's OLS weight is ~0.03, while it is a
 third of the equal-weight merge), writes to `figures_gpm_gsmap/`, and copies nothing into `Interim_results/`.
 
@@ -27,9 +30,7 @@ from __future__ import annotations
 
 import csv
 import json
-import platform
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -41,6 +42,8 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
+
+from plot_provenance import write_plot_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
@@ -672,25 +675,6 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
                 [["run_directory", Path(source).name]] + [[row["key"], str(row["value"])] for row in provenance])
 
 
-def write_plot_provenance() -> None:
-    """Which code and libraries drew FIG_DIR, beside the figures, since the run's own provenance
-    describes the benchmark and not this script."""
-    def git(*args: str) -> str:
-        try:
-            return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True,
-                                  check=True).stdout.strip()
-        except (OSError, subprocess.CalledProcessError):
-            return "unavailable"
-
-    porcelain = git("status", "--porcelain")
-    rows = [["git_commit", git("rev-parse", "HEAD")],
-            ["git_dirty", porcelain if porcelain == "unavailable" else str(porcelain != "").lower()],
-            ["python", platform.python_version()], ["matplotlib", mpl.__version__], ["numpy", np.__version__]]
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    with open(FIG_DIR / "plot_provenance.csv", "w", newline="", encoding="utf-8") as handle:
-        csv.writer(handle).writerows([["key", "value"], *rows])
-
-
 def main() -> None:
     summary = read_rows(RUN_DIR / "method_summary.csv")
     stratified = read_rows(RUN_DIR / "stratified_summary.csv")
@@ -708,7 +692,7 @@ def main() -> None:
     fig4_where(stratified, detection)
     fig5_products(anchor_metrics, comparison, coefficients)
     fig6_robustness(summary, stratified)
-    write_plot_provenance()
+    write_plot_provenance(FIG_DIR, ROOT)
     if GPM_GSMAP_ONLY or GPM != "GPM" or not HAS_FY4B:
         return
 

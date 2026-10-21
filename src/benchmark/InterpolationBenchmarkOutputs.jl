@@ -400,8 +400,13 @@ function _write_benchmark_outputs(
         rank_stability, auto_selection=DataFrame(auto_selection_rows))
 end
 
+# Two levels up: this file lives in `src/benchmark/`. Derived rather than configured - `src/`
+# must not read fixed absolute paths, and the process working directory is whatever the calling
+# script was launched from.
+const _REPO_ROOT = normpath(joinpath(@__DIR__, "..", ".."))
+
 """
-Which code produced this run, as `scope` rows.
+Which code produced this run, as `scope` rows: `RunProvenance.git_provenance` for this checkout.
 
 `benchmark_scope.csv` recorded the CV scope and nothing about provenance, so a published run
 could be dated but not attributed. `git_dirty` is the load-bearing one: a clean tree means
@@ -410,51 +415,30 @@ difference between a citable baseline and a plausible one. `run_interpolation_be
 it at the start, through `_start_provenance`: read at the end, a run launched on uncommitted
 edits that were committed while it ran recorded itself as clean. `git_dirty_at_end` is the
 second reading.
-
-Every call is wrapped. A missing git, a checkout that is not a repository, or an ownership check
-that refuses records `"unavailable"` rather than aborting a run that takes hours.
 """
-function _git_provenance()
-    # Two levels up: this file lives in `src/benchmark/`. Derived rather than configured —
-    # `src/` must not read fixed absolute paths, and the process working directory is whatever
-    # the calling script was launched from.
-    root = normpath(joinpath(@__DIR__, "..", ".."))
-    run_git(args::Vector{String}) = try
-        String(strip(read(pipeline(`git -C $root $args`; stderr=devnull), String)))
-    catch
-        nothing
+_git_provenance() = DataFrame(git_provenance(_REPO_ROOT))
+
+"""Every input file `cfg` reads: the gauges, the satellite products, and the covariate tables."""
+function _benchmark_input_paths(cfg::InterpolationBenchmarkConfig)
+    mger = cfg.mger
+    paths = String[mger.station_meta_path, mger.obs_hourly_wide_path]
+    append!(paths, [mger.sat_paths[product] for product in sort(collect(keys(mger.sat_paths)))])
+    cfg.terrain_path === nothing || push!(paths, cfg.terrain_path)
+    joint = cfg.joint_covariates
+    if joint !== nothing
+        joint.spec_path === nothing || push!(paths, joint.spec_path)
+        push!(paths, joint.terrain_path)
+        append!(paths, [joint.era5_paths[year_value] for year_value in sort(collect(keys(joint.era5_paths)))])
+        joint.ndvi_path === nothing || push!(paths, joint.ndvi_path)
     end
-    commit = run_git(["rev-parse", "HEAD"])
-    branch = run_git(["rev-parse", "--abbrev-ref", "HEAD"])
-    porcelain = run_git(["status", "--porcelain"])
-    return DataFrame(
-        key=["git_commit", "git_branch", "git_dirty"],
-        value=[
-            something(commit, "unavailable"),
-            something(branch, "unavailable"),
-            porcelain === nothing ? "unavailable" : string(!isempty(porcelain)),
-        ],
-    )
+    return paths
 end
 
 """
-The provenance rows a run records at its start: `_git_provenance`, plus the Julia version and
-the SHA-256 of the active environment's `Manifest.toml`, which is copied into `outdir`.
-
-`Manifest.toml` is gitignored, so `git_commit` alone does not fix the package versions a run
-resolved. A missing manifest or project records `"unavailable"`, as `_git_provenance` does.
+The provenance rows a run records at its start (`RunProvenance.start_provenance`): the git state,
+the Julia version, the SHA-256 of the active `Manifest.toml` (copied into the run directory, since
+it is gitignored), and the SHA-256 of every file in `_benchmark_input_paths`, since `data/` is
+outside git.
 """
-function _start_provenance(outdir::AbstractString)
-    project = Base.active_project()
-    manifest = project === nothing ? nothing : joinpath(dirname(project), "Manifest.toml")
-    manifest_sha = if manifest !== nothing && isfile(manifest)
-        cp(manifest, joinpath(outdir, "Manifest.toml"); force=true)
-        bytes2hex(open(sha256, manifest))
-    else
-        "unavailable"
-    end
-    return vcat(_git_provenance(), DataFrame(
-        key=["julia_version", "manifest_sha256"],
-        value=[string(VERSION), manifest_sha],
-    ))
-end
+_start_provenance(cfg::InterpolationBenchmarkConfig) = DataFrame(
+    start_provenance(_REPO_ROOT, cfg.mger.outdir; inputs=_benchmark_input_paths(cfg)))
