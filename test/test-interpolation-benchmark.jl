@@ -1454,6 +1454,11 @@ end
         common_mask_scope = only(scope.value[scope.key .== "common_evaluation_mask"])
         @test common_mask_scope == "true across all eight methods"
         @test only(scope.value[scope.key .== "repeated_cv_partitions"]) == "1"
+        # Provenance is read at the start, and the manifest it hashes is copied beside the run.
+        @test all(in(scope.key), ("git_commit", "git_dirty", "git_dirty_at_end", "julia_version", "manifest_sha256"))
+        manifest_sha = only(scope.value[scope.key .== "manifest_sha256"])
+        manifest_sha == "unavailable" ||
+            @test bytes2hex(open(sha256, joinpath(outdir, "Manifest.toml"))) == manifest_sha
 
         # Two partitions: rows are stamped per repeat and the spread tables are populated.
         repeat_outdir = joinpath(temp_dir, "benchmark_repeats")

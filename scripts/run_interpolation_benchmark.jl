@@ -28,6 +28,7 @@ function benchmark_config(
     unsupported_local_target::Symbol=:missing, satellite_wet_blend::Bool=false,
     blend_axes::Vector{Symbol}=[:constant], fused_anchor::Bool=false,
     fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
+    fy4b::Bool=true,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
     nested_covariates && legacy_dem && throw(ArgumentError(
@@ -75,6 +76,8 @@ function benchmark_config(
             (fused_anchor ? "_fusedanchor" : "") *
             (fused_anchor_lagnbr ? "_fusedlagnbr" : "") *
             (stacked_blend ? "_stackblend" : "") *
+            # Before `_gpmuncal`, which the report scripts detect with `endswith`.
+            (fy4b ? "" : "_nofy4b") *
             (gpm_uncal ? "_gpmuncal" : "") *
             (repeats > 1 ? "_repeats$(repeats)" : ""),
     )
@@ -123,21 +126,25 @@ function benchmark_config(
             smoke ? "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv" :
                 "hubei_gpm_hourly_2022_2024_full_aligned.csv",
         )
+    sat_paths = Dict(
+        gpm,
+        "GSMaP" => joinpath(
+            STUDY_DATA,
+            smoke ? "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv" :
+                "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
+        ),
+    )
+    # `fy4b=false` (the CLI default) leaves FY4B out of every product-derived step at once: the
+    # merges, the agreement-envelope and stack bands, and the common time grid all read
+    # `sat_paths`. Smoke reads the full-year FY4B file too; `analysis_start`/`analysis_end` clip it
+    # to June.
+    fy4b && (sat_paths["FY4B"] = joinpath(
+        STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
+    ))
     mger = MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
-        sat_paths=Dict(
-            # Smoke reads the full-year file too; `analysis_start`/`analysis_end` clip it to June.
-            "FY4B" => joinpath(
-                STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-            ),
-            gpm,
-            "GSMaP" => joinpath(
-                STUDY_DATA,
-                smoke ? "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv" :
-                    "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
-            ),
-        ),
+        sat_paths=sat_paths,
         outdir=outdir,
         kernels=smoke ? [GAUSSIAN, BISQUARE] :
             [GAUSSIAN, EXPONENTIAL, BISQUARE, TRICUBE, BOXCAR],
@@ -155,8 +162,10 @@ function benchmark_config(
         # FY4B's off-season NC files rarely form a strict-complete hour (near-zero in
         # Nov/Dec and Jan-Mar), so the common-time count grows from 8069 (Jun-Sep only)
         # to 13471, not to a full 3-year hourly count. Both were re-measured on the dataset
-        # rebuilt 2026-09-02; on the grid before it they were 8067 and 11426.
-        expected_common_time_count=smoke ? nothing : 13471,
+        # rebuilt 2026-09-02; on the grid before it they were 8067 and 11426. Without FY4B,
+        # GPM (either IMERG field) and GSMaP cover every hour of 2022-2024: 26304, measured
+        # 2026-10-20.
+        expected_common_time_count=smoke ? nothing : (fy4b ? 13471 : 26304),
     )
     schemes = smoke && !with_random ? [:balanced_spatial] : [:balanced_spatial, :random]
     dem = legacy_dem ? DEMTerrainExperiment.DEMExperimentConfig(
@@ -393,10 +402,16 @@ function main(args=ARGS)
     "--gpm-cal" in args && "--gpm-uncal" in args &&
         throw(ArgumentError("--gpm-cal and --gpm-uncal are mutually exclusive"))
     gpm_uncal = !("--gpm-cal" in args)
+    # FY4B is left out by default (output suffix `_nofy4b`): the paper studies GPM and GSMaP only,
+    # and with FY4B loaded it still entered the merges and the agreement-envelope bands, and its
+    # strict-completeness QC cut the common grid to 13471 mostly warm-season hours. --with-fy4b
+    # restores it. `benchmark_config`'s keyword still defaults to keeping FY4B, for the verify
+    # scripts.
+    fy4b = "--with-fy4b" in args
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
-        fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal)
+        fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -419,6 +434,7 @@ function main(args=ARGS)
         "fused_anchor_lagnbr=$fused_anchor_lagnbr, " *
         "stacked_blend=$stacked_blend, " *
         "gpm_uncal=$gpm_uncal, " *
+        "fy4b=$fy4b, " *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
     println("Finished: $(nrow(result.metrics)) metric rows, $(nrow(result.scans)) scan rows")

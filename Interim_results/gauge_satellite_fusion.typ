@@ -88,6 +88,7 @@
 )
 #let anchor-label = (FY4B: "FY4B", GPM: "GPM", GSMaP: "GSMaP", MERGED_MEAN: "Merged (equal)",
   MERGED_OLS: "Merged (OLS)", "Gauges only": "Gauges only")
+#let stratum-label = (overall: "All", "2.5_8": "2.5–8 mm/h", "8_plus": "≥ 8 mm/h")
 
 // ---------------------------------------------------------------------------------------------
 // Title
@@ -127,7 +128,7 @@ The supervisor asked three things, and they structure this report:
 - *Period.* January 2022 – December 2024, restricted to the *13,471 hours* on which all three products are available. FY4B's strict completeness sets this grid, so the comparison is between products on identical hours.
 - *Validation.* Five-fold cross-validation by *station*. The primary scheme holds out spatially compact groups of gauges (balanced spatial folds), so a held-out gauge is typically ~24 km from the nearest training gauge — the situation of an ungauged area. A random station split, where a held-out gauge keeps its neighbours, is reported as a secondary check (@sec-robustness).
 - *No selection sees a held-out gauge.* Every hyperparameter (kernel, bandwidth, IDW power and neighbours, TPS smoothing, the residual shrinkage and the blending weights) is tuned on an inner spatial split of the training gauges. Covariates (ERA5-Land, MODIS NDVI and DEM terrain) are selected inside every training fold by permutation tests. The OLS merge weights are also fitted inside every fold.
-- *Metrics.* RMSE, MAE, bias and Pearson r over all station-hours; POD, FAR and CSI at 0.1, 2.5, 8 and 16 mm/h (hit when both gauge and estimate reach the threshold). Rain-intensity strata follow the gauge: dry < 0.1, light 0.1–2.5, moderate 2.5–8, heavy ≥ 8 mm/h. These are the benchmark's strata and differ from the temporal-evaluation report's intensity classes.
+- *Metrics.* RMSE, MAE, bias and Pearson r over all station-hours; POD, FAR and CSI at 0.1, 2, 4, 8 and 20 mm/h (hit when both gauge and estimate reach the threshold). Rain-intensity classes follow the gauge and are the temporal-evaluation report's: dry < 0.1, light 0.1–2, moderate 2–4, heavy 4–8, rainstorm 8–20, severe rainstorm ≥ 20 mm/h. "Heavy hours" in the bootstrap comparisons are every hour ≥ 8 mm/h (the claim-gate range), and a second gate covers 2.5–8 mm/h.
 - *Uncertainty.* Paired day-block bootstrap (2,000 replicates): whole days are resampled for both methods together. P-values are Holm-corrected across the whole family of comparisons in a table, not only within one row.
 
 #block(breakable: false)[
@@ -181,14 +182,14 @@ Whether the satellite adds to the gauges is a different question and the answer 
     align: (left, left, right, right, right, right, right, right, right, right),
     stroke: none,
     inset: (x: 4pt, y: 2.4pt),
-    table.header(rule, [*Anchor*], [*Method*], [*RMSE*], [*MAE*], [*Bias*], [*r*], [*CSI 2.5*], [*CSI 8*],
+    table.header(rule, [*Anchor*], [*Method*], [*RMSE*], [*MAE*], [*Bias*], [*r*], [*CSI 2*], [*CSI 8*],
       [*vs raw*], [*vs ADW*], thin),
     ..for anchor in ("FY4B", "GPM", "GSMaP", "MERGED_MEAN", "MERGED_OLS") {
       let rows = overall.filter(row => row.anchor == anchor and row.method in benefit-methods)
       (
         table.cell(rowspan: rows.len(), anchor-label.at(anchor)),
         ..for row in rows {
-          (row.method, row.RMSE, row.MAE, row.Bias.replace("-", "−"), row.r, row.at("CSI2.5"), row.CSI8,
+          (row.method, row.RMSE, row.MAE, row.Bias.replace("-", "−"), row.r, row.CSI2, row.CSI8,
             row.vs_raw.replace("-", "−") + "%", row.vs_adw.replace("-", "−") + "%")
         },
         thin,
@@ -200,7 +201,7 @@ Whether the satellite adds to the gauges is a different question and the answer 
 
 == Best interpolation method <sec-interpolation>
 
-Among the gauge-only methods ADW is best overall (@fig-interpolation, @tab-interpolation). IDW is almost the same estimator and trails it by #pct(ranking, "change", stratum: "overall", method: M.idw), a difference that is significant only because 3 million paired cells make it so. TPS (#pct(ranking, "change", stratum: "overall", method: M.tps)) and GWR on coordinates (#pct(ranking, "change", stratum: "overall", method: M.gwr)) are clearly worse. TPS is the one gauge-only method that does better than ADW on heavy hours (#pct(ranking, "change", stratum: "heavy", method: M.tps)): a spline smooths less than a weighted average and keeps more of a storm's peak.
+Among the gauge-only methods ADW is best overall (@fig-interpolation, @tab-interpolation). IDW is almost the same estimator and trails it by #pct(ranking, "change", stratum: "overall", method: M.idw), a difference that is significant only because 3 million paired cells make it so. TPS (#pct(ranking, "change", stratum: "overall", method: M.tps)) and GWR on coordinates (#pct(ranking, "change", stratum: "overall", method: M.gwr)) are clearly worse. TPS is the one gauge-only method that does better than ADW on heavy hours (#pct(ranking, "change", stratum: "8_plus", method: M.tps)): a spline smooths less than a weighted average and keeps more of a storm's peak.
 
 #figure(
   image("figures/fusion_fig2_interpolators.png", width: 100%),
@@ -215,7 +216,7 @@ Among the gauge-only methods ADW is best overall (@fig-interpolation, @tab-inter
     stroke: none,
     inset: (x: 5pt, y: 2.4pt),
     table.header(rule, [*Hours*], [*Method*], [*RMSE*], [*ADW*], [*Change*], [*95% CI*], [*Holm p*], thin),
-    ..ranking.map(row => (row.stratum, row.method, row.RMSE, row.RMSE_adw, row.change.replace("-", "−") + "%",
+    ..ranking.map(row => (stratum-label.at(row.stratum), row.method, row.RMSE, row.RMSE_adw, row.change.replace("-", "−") + "%",
       ci(row.ci), row.p_holm)).flatten(),
     rule,
   ),
@@ -228,8 +229,8 @@ Among the gauge-only methods ADW is best overall (@fig-interpolation, @tab-inter
 @fig-fusion shows every fusion method on every anchor against ADW. Three patterns hold throughout:
 
 - *MGWR is the strongest GWR variant* on every anchor. Residual and mixed GWR are nearly identical: in 32 of the 50 fold cells the covariate screening assigned no global role, which makes the two the same model (`run_status.csv`, column `duplicate_of`).
-- *Unblended fusion wins on heavy hours but loses overall* on the single products. On heavy hours every configuration beats ADW, by up to #pct(fusion, "change", stratum: "heavy", anchor: "MERGED_MEAN", method: M.mgwr) (MGWR on the equal merge). Over all hours the same models lose, and @sec-where shows where: on dry and light hours, where a satellite false alarm enters the correction as a fixed offset.
-- *The blend is what makes fusion pay overall.* Leaning toward ADW where the satellite reports rain removes most of the dry-hour loss, at the price of part of the heavy-hour gain: on GPM, MGWR's heavy-hour improvement of #pct(fusion, "change", stratum: "heavy", anchor: "GPM", method: M.mgwr) becomes #pct(fusion, "change", stratum: "heavy", anchor: "GPM", method: M.bmgwr) once blended.
+- *Unblended fusion wins on heavy hours but loses overall* on the single products. On heavy hours every configuration beats ADW, by up to #pct(fusion, "change", stratum: "8_plus", anchor: "MERGED_MEAN", method: M.mgwr) (MGWR on the equal merge). Over all hours the same models lose, and @sec-where shows where: on dry and light hours, where a satellite false alarm enters the correction as a fixed offset.
+- *The blend is what makes fusion pay overall.* Leaning toward ADW where the satellite reports rain removes most of the dry-hour loss, at the price of part of the heavy-hour gain: on GPM, MGWR's heavy-hour improvement of #pct(fusion, "change", stratum: "8_plus", anchor: "GPM", method: M.mgwr) becomes #pct(fusion, "change", stratum: "8_plus", anchor: "GPM", method: M.bmgwr) once blended.
 
 @tab-fusion-top lists the strongest configurations. Their confidence intervals overlap widely, so the order among them is not meaningful; what is clear is that all of them are ahead of ADW.
 
@@ -277,7 +278,7 @@ The blending weights are stable across folds (@tab-blends): on the single produc
 
 @fig-where breaks the comparison with ADW down.
 
-- *By intensity.* The in-fold GWR choice loses heavily on dry hours (GPM: #pct(where, "change", anchor: "GPM", method: M.infold, group: "rain_intensity", level: "no_rain")) and light hours (#pct(where, "change", anchor: "GPM", method: M.infold, group: "rain_intensity", level: "light")) and gains on heavy hours (#pct(where, "change", anchor: "GPM", method: M.infold, group: "rain_intensity", level: "heavy")). The blend removes the dry-hour loss (#pct(where, "change", anchor: "GPM", method: M.amgwr, group: "rain_intensity", level: "no_rain")) and keeps a smaller heavy-hour gain (#pct(where, "change", anchor: "GPM", method: M.amgwr, group: "rain_intensity", level: "heavy")).
+- *By intensity.* The in-fold GWR choice loses heavily on dry hours (GPM: #pct(where, "change", anchor: "GPM", method: M.infold, group: "rain_intensity", level: "no_rain")) and light hours (#pct(where, "change", anchor: "GPM", method: M.infold, group: "rain_intensity", level: "light")) and gains on hours ≥ 8 mm/h (#pct(where, "change", anchor: "GPM", method: M.infold, group: "claim_gate", level: "8_plus")). The blend removes the dry-hour loss (#pct(where, "change", anchor: "GPM", method: M.amgwr, group: "rain_intensity", level: "no_rain")) and keeps a smaller gain on hours ≥ 8 mm/h (#pct(where, "change", anchor: "GPM", method: M.amgwr, group: "claim_gate", level: "8_plus")).
 - *By distance.* The blend's advantage over ADW grows with the distance from the held-out gauge to the nearest training gauge on every anchor; on the OLS merge from #pct(where, "change", anchor: "MERGED_OLS", method: M.amgwr, group: "nearest_train_km", level: "0_20") within 20 km to #pct(where, "change", anchor: "MERGED_OLS", method: M.amgwr, group: "nearest_train_km", level: "50_100") at 50–100 km. Close to other gauges interpolation is hard to beat; far from them the satellite field carries information the network does not.
 - *Detection.* At ≥ 8 mm/h raw GPM and GSMaP detect as well as ADW (ΔCSI #val(detection, "delta", anchor: "GPM", method: M.raw, threshold: "8") and #val(detection, "delta", anchor: "GSMaP", method: M.raw, threshold: "8")), raw FY4B worse (#val(detection, "delta", anchor: "FY4B", method: M.raw, threshold: "8")). The in-fold GWR choice improves on ADW most clearly there (@tab-detection; ΔCSI #val(detection, "delta", anchor: "GPM", method: M.infold, threshold: "8") on GPM, #val(detection, "delta", anchor: "GSMaP", method: M.infold, threshold: "8") on GSMaP); the blend keeps only part of that gain (#val(detection, "delta", anchor: "GPM", method: M.amgwr, threshold: "8") and #val(detection, "delta", anchor: "GSMaP", method: M.amgwr, threshold: "8")) in exchange for its overall RMSE gain.
 
@@ -395,7 +396,7 @@ Under random CV (@fig-robustness, @tab-robustness) a held-out gauge keeps its ne
 
 = Answers
 
-+ *Benefit of integration.* Against the satellite alone the gain is large and certain: #span(overall, "vs_raw", row => row.method == M.amgwr and row.anchor in ("FY4B", "GPM", "GSMaP"))% lower RMSE for the three products with the blended MGWR, much higher correlation and near-zero bias. Against gauges alone it is smaller but real where it matters: the blended MGWR beats ADW by #span(fusion, "change", row => row.stratum == "overall" and row.method == M.amgwr and row.anchor != "FY4B")% overall on GPM, GSMaP and both merges, and by more the further a location is from the gauge network. Unblended fusion gains most on heavy hours (up to #pct(fusion, "change", stratum: "heavy", anchor: "MERGED_MEAN", method: M.mgwr)) but loses over all hours. Close to dense gauges, interpolation alone is about as good.
++ *Benefit of integration.* Against the satellite alone the gain is large and certain: #span(overall, "vs_raw", row => row.method == M.amgwr and row.anchor in ("FY4B", "GPM", "GSMaP"))% lower RMSE for the three products with the blended MGWR, much higher correlation and near-zero bias. Against gauges alone it is smaller but real where it matters: the blended MGWR beats ADW by #span(fusion, "change", row => row.stratum == "overall" and row.method == M.amgwr and row.anchor != "FY4B")% overall on GPM, GSMaP and both merges, and by more the further a location is from the gauge network. Unblended fusion gains most on heavy hours (up to #pct(fusion, "change", stratum: "8_plus", anchor: "MERGED_MEAN", method: M.mgwr)) but loses over all hours. Close to dense gauges, interpolation alone is about as good.
 + *Best methods.* Interpolation: ADW. Fusion: MGWR residual correction blended toward ADW where the satellite reports rain. Among unblended models MGWR is best, but without the blend no single-product fusion beats ADW overall.
 + *Best product.* GPM is the best single product and FY4B the weakest. Integrating all three through a gauge-fitted OLS merge gives the strongest anchor; the advantage after blending is small but significant. If only one product can be used, use GPM.
 
@@ -426,7 +427,7 @@ Benchmark run, under `output/`:
   #raw(prov("run_directory"))
 ]
 
-Commit #raw(prov("git_commit")) on branch #raw(prov("git_branch")). The run records uncommitted changes as #prov("git_dirty"): the only differences from the commit were untracked files that appeared in `Interim_results/` while the run was in progress (the heavy-rain spatial report and its figures); no tracked file differed, so the commit fully determines the code that ran. Every pooled metric is identical to the 2026-09-07 run of the same configuration and, for the twelve methods they share, to the 2026-09-11 run on master.
+Commit #raw(prov("git_commit")) on branch #raw(prov("git_branch")). The run records uncommitted changes as #prov("git_dirty").
 
 ```sh
 julia -t 4 --project=. scripts/run_interpolation_benchmark.jl full --nested-covariates \
@@ -442,7 +443,7 @@ py -3.13 scripts/plot_gauge_satellite_fusion.py
   inset: (x: 5pt, y: 2.4pt),
   table.header(rule, [*File in* `output/gauge_satellite_fusion/`], [*Content*], thin),
   [`method_summary.csv`], [overall and detection skill per scheme, anchor and method],
-  [`stratified_summary.csv`], [skill by rain intensity, distance to the nearest training gauge and year],
+  [`stratified_summary.csv`], [skill by rain intensity class, claim-gate range, distance to the nearest training gauge and year],
   [`fusion_vs_gauge_only.csv`], [every fusion configuration against ADW with bootstrap intervals],
   [`interpolation_ranking.csv`], [interpolators against each other],
   [`anchor_metrics.csv` \ `anchor_comparison.csv`], [anchors on identical cells, and against GPM],

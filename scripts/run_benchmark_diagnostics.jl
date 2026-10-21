@@ -27,25 +27,26 @@ const NULLS = ["zero", "train_clim", "hour_field_mean"]
 """
 Rebuild the exact common station/time grid the full benchmark run used. `gpm_uncal` swaps in
 uncalibrated IMERG, as `run_interpolation_benchmark.jl` does for its `_gpmuncal` runs.
+`fy4b=false` leaves FY4B out, as it does for its `_nofy4b` runs.
 """
-function load_common_data(outdir::AbstractString; gpm_uncal::Bool=false)
+function load_common_data(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=true)
     cfg = MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
         sat_paths=Dict(
-            "FY4B" => joinpath(
-                STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-            ),
             (gpm_uncal ?
                 "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
                 "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv")),
             "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
+            (fy4b ? ["FY4B" => joinpath(
+                STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
+            )] : Pair{String,String}[])...,
         ),
         outdir=outdir,
         rain_threshold=0.1,
         analysis_start=DateTime(2022, 1, 1, 9),
         analysis_end=DateTime(2025, 1, 1, 8),
-        expected_common_time_count=13471,
+        expected_common_time_count=fy4b ? 13471 : 26304,
     )
     return load_global_common_product_data(cfg)
 end
@@ -55,8 +56,9 @@ function main(args=ARGS)
     outdir = benchmark_diagnostics_outdir(ROOT, run_dir)
 
     println("Reading benchmark run: $run_dir")
+    run_name = basename(rstrip(run_dir, '/'))
     products, ids, product_data = load_common_data(outdir;
-        gpm_uncal=endswith(basename(rstrip(run_dir, '/')), "_gpmuncal"))
+        gpm_uncal=endswith(run_name, "_gpmuncal"), fy4b=!occursin("_nofy4b", run_name))
     println("Common grid: $(length(ids)) stations x " *
         "$(length(product_data[first(products)].times)) hours")
 

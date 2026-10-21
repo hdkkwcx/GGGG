@@ -500,7 +500,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "MGWR",
   "RMSE": "13.546",
@@ -510,7 +510,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "MGWR",
   "RMSE": "13.645",
@@ -520,7 +520,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "Residual GWR",
   "RMSE": "13.752",
@@ -530,7 +530,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "Mixed GWR",
   "RMSE": "13.755",
@@ -540,7 +540,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "Mixed GWR",
   "RMSE": "13.779",
@@ -550,7 +550,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "Residual GWR",
   "RMSE": "13.780",
@@ -560,7 +560,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "MGWR",
   "RMSE": "13.860",
@@ -570,7 +570,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "MGWR",
   "RMSE": "13.879",
@@ -580,7 +580,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "MGWR + ADW blend",
   "RMSE": "13.977",
@@ -590,7 +590,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "MGWR + agreement blend",
   "RMSE": "14.012",
@@ -600,7 +600,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "Mixed GWR",
   "RMSE": "14.032",
@@ -610,7 +610,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "Residual GWR",
   "RMSE": "14.049",
@@ -620,7 +620,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "Mixed GWR",
   "RMSE": "14.055",
@@ -630,7 +630,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "Residual GWR",
   "RMSE": "14.055",
@@ -640,7 +640,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "MGWR",
   "RMSE": "14.246",
@@ -650,7 +650,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "MGWR + ADW blend",
   "RMSE": "14.161",
@@ -660,7 +660,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "MGWR + agreement blend",
   "RMSE": "14.173",
@@ -670,7 +670,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "Residual GWR + ADW blend",
   "RMSE": "14.191",
@@ -680,7 +680,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "Mixed GWR + ADW blend",
   "RMSE": "14.191",
@@ -690,7 +690,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "Mixed GWR + agreement blend",
   "RMSE": "14.216",
@@ -700,7 +700,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "Residual GWR + agreement blend",
   "RMSE": "14.216",
@@ -710,7 +710,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "Residual GWR + ADW blend",
   "RMSE": "14.263",
@@ -720,7 +720,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "Mixed GWR + ADW blend",
   "RMSE": "14.264",
@@ -730,7 +730,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "Residual GWR + agreement blend",
   "RMSE": "14.266",
@@ -740,7 +740,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "Mixed GWR + agreement blend",
   "RMSE": "14.268",
@@ -750,7 +750,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "MGWR + agreement blend",
   "RMSE": "14.379",
@@ -760,7 +760,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "MGWR + agreement blend",
   "RMSE": "14.325",
@@ -770,7 +770,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "MGWR + ADW blend",
   "RMSE": "14.430",
@@ -780,7 +780,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "Mixed GWR",
   "RMSE": "14.440",
@@ -790,7 +790,7 @@
   "p_holm_family": "0.027"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "MGWR + ADW blend",
   "RMSE": "14.365",
@@ -800,7 +800,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "Residual GWR",
   "RMSE": "14.513",
@@ -810,7 +810,7 @@
   "p_holm_family": "0.120"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "MGWR + agreement blend",
   "RMSE": "14.428",
@@ -820,7 +820,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "MGWR + ADW blend",
   "RMSE": "14.429",
@@ -830,7 +830,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "Mixed GWR + agreement blend",
   "RMSE": "14.436",
@@ -840,7 +840,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "Mixed GWR + ADW blend",
   "RMSE": "14.443",
@@ -850,7 +850,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "Residual GWR + agreement blend",
   "RMSE": "14.444",
@@ -860,7 +860,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "Mixed GWR + agreement blend",
   "RMSE": "14.555",
@@ -870,7 +870,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "Residual GWR + ADW blend",
   "RMSE": "14.471",
@@ -880,7 +880,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "Mixed GWR + ADW blend",
   "RMSE": "14.579",
@@ -890,7 +890,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "Residual GWR + agreement blend",
   "RMSE": "14.588",
@@ -900,7 +900,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "Residual GWR + agreement blend",
   "RMSE": "14.501",
@@ -910,7 +910,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "Mixed GWR + agreement blend",
   "RMSE": "14.501",
@@ -920,7 +920,7 @@
   "p_holm_family": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "Residual GWR + ADW blend",
   "RMSE": "14.625",
@@ -930,7 +930,7 @@
   "p_holm_family": "0.010"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "Mixed GWR + ADW blend",
   "RMSE": "14.608",
@@ -940,7 +940,7 @@
   "p_holm_family": "0.168"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "Residual GWR + ADW blend",
   "RMSE": "14.609",
@@ -950,7 +950,7 @@
   "p_holm_family": "0.168"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GPM",
   "method": "GWR (gauges only)",
   "RMSE": "15.006",
@@ -960,7 +960,7 @@
   "p_holm_family": "0.168"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "GSMaP",
   "method": "GWR (gauges only)",
   "RMSE": "15.006",
@@ -970,7 +970,7 @@
   "p_holm_family": "0.168"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "FY4B",
   "method": "GWR (gauges only)",
   "RMSE": "14.984",
@@ -980,7 +980,7 @@
   "p_holm_family": "0.168"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_MEAN",
   "method": "GWR (gauges only)",
   "RMSE": "14.984",
@@ -990,7 +990,7 @@
   "p_holm_family": "0.168"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "anchor": "MERGED_OLS",
   "method": "GWR (gauges only)",
   "RMSE": "14.984",

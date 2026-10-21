@@ -1,4 +1,5 @@
 using CSV, DataFrames, Dates, LinearAlgebra, Random, Statistics
+using SHA: sha256
 using MixedGWR
 
 # Every standalone module is loaded through the shared loader, which puts exactly one copy of

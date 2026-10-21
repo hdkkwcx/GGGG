@@ -27,7 +27,7 @@
   "p_holm": "0.000"
  },
  {
-  "stratum": "moderate",
+  "stratum": "2.5_8",
   "method": "IDW",
   "RMSE": "2.652",
   "RMSE_adw": "2.633",
@@ -36,7 +36,7 @@
   "p_holm": "0.000"
  },
  {
-  "stratum": "moderate",
+  "stratum": "2.5_8",
   "method": "TPS",
   "RMSE": "2.714",
   "RMSE_adw": "2.633",
@@ -45,7 +45,7 @@
   "p_holm": "0.060"
  },
  {
-  "stratum": "moderate",
+  "stratum": "2.5_8",
   "method": "GWR (gauges only)",
   "RMSE": "2.710",
   "RMSE_adw": "2.633",
@@ -54,7 +54,7 @@
   "p_holm": "0.012"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "method": "IDW",
   "RMSE": "14.741",
   "RMSE_adw": "14.741",
@@ -63,7 +63,7 @@
   "p_holm": "1.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "method": "TPS",
   "RMSE": "14.483",
   "RMSE_adw": "14.741",
@@ -72,7 +72,7 @@
   "p_holm": "0.000"
  },
  {
-  "stratum": "heavy",
+  "stratum": "8_plus",
   "method": "GWR (gauges only)",
   "RMSE": "14.881",
   "RMSE_adw": "14.741",
