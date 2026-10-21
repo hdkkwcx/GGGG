@@ -123,6 +123,10 @@ using Main.BenchmarkDiagnostics
 - By default the CLI scores uncalibrated IMERG (`GPM_uncal`, output suffix `_gpmuncal`).
   `--gpm-cal` scores calibrated `GPM` instead. `benchmark_config`'s `gpm_uncal` keyword still
   defaults to `false`, so the verify scripts reproduce the calibrated baselines.
+- By default the CLI also leaves FY4B out (output suffix `_nofy4b`, before `_gpmuncal`). That
+  removes it from the merges and the agreement-envelope bands, and widens the common grid from
+  FY4B's 13,471 hours to all 26,304 hours of 2022–2024. `--with-fy4b` restores it.
+  `benchmark_config`'s `fy4b` keyword still defaults to `true`, for the verify scripts.
 - `hurdle_gwr` (`InterpolationBenchmarkHurdle.jl`) is deliberately disabled and absent from
   `BENCHMARK_RUNS`.
 
