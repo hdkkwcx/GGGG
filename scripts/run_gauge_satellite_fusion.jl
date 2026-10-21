@@ -32,14 +32,21 @@ const DEFAULT_RUN = joinpath(
     "interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_" *
         "blendagrenv_fusedanchor",
 )
-const OUTDIR = joinpath(ROOT, "output", "gauge_satellite_fusion")
+# A `_gpmuncal` run (uncalibrated IMERG, `GPM_uncal`) or a `_nofy4b` run (no FY4B) writes beside
+# the calibrated report.
+report_outdir(gpm_uncal::Bool, fy4b::Bool=true) = joinpath(ROOT, "output",
+    "gauge_satellite_fusion" * (fy4b ? "" : "_nofy4b") * (gpm_uncal ? "_gpmuncal" : ""))
 const SCHEME = "balanced_spatial"
 const SEED = 20260913
 const BOOTSTRAP_REPS = 2000
 
-const SINGLE_PRODUCTS = ["FY4B", "GPM", "GSMaP"]
 const MERGED_PRODUCTS = ["MERGED_MEAN", "MERGED_OLS"]
-const ANCHORS = vcat(SINGLE_PRODUCTS, MERGED_PRODUCTS)
+"""
+The anchors a run scored, with `gpm` the run's IMERG product (`GPM` or `GPM_uncal`) and `fy4b`
+whether the run loaded FY4B.
+"""
+anchor_products(gpm::AbstractString, fy4b::Bool=true) =
+    vcat(fy4b ? ["FY4B"] : String[], [gpm, "GSMaP"], MERGED_PRODUCTS)
 const INTERPOLATORS = ["idw", "adw", "tps", "gwr"]
 const FUSION_METHODS = [
     "residual_gwr", "mixed_gwr", "mgwr",
@@ -55,23 +62,29 @@ const EVENT_THRESHOLDS = INTENSITY_BOUNDS
 # pooled RMSE in every earlier run, and the blends' fallback.
 const REFERENCE = "adw"
 
-"""The `MGERConfig` the full benchmark run used, so the common station/time grid matches."""
-function study_config(outdir::AbstractString)
+"""
+The `MGERConfig` the full benchmark run used, so the common station/time grid matches. `gpm_uncal`
+swaps in uncalibrated IMERG, as `run_interpolation_benchmark.jl` does for its `_gpmuncal` runs.
+`fy4b=false` leaves FY4B out, as it does for its `_nofy4b` runs.
+"""
+function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=true)
     return MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
         sat_paths=Dict(
-            "FY4B" => joinpath(
-                STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-            ),
-            "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv"),
+            (gpm_uncal ?
+                "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
+                "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv")),
             "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
+            (fy4b ? ["FY4B" => joinpath(
+                STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
+            )] : Pair{String,String}[])...,
         ),
         outdir=outdir,
         rain_threshold=0.1,
         analysis_start=DateTime(2022, 1, 1, 9),
         analysis_end=DateTime(2025, 1, 1, 8),
-        expected_common_time_count=13471,
+        expected_common_time_count=fy4b ? 13471 : 26304,
     )
 end
 
@@ -112,9 +125,12 @@ function method_summary(pooled::DataFrame)
     return sort!(DataFrame(rows), [:scheme, :product, :method])
 end
 
-"""Accuracy by rain intensity, distance to the nearest training gauge and year, beside `adw`."""
+"""
+Accuracy by rain intensity class, claim-gate range, distance to the nearest training gauge and year,
+beside `adw`.
+"""
 function stratified_summary(pooled::DataFrame)
-    groups = ("rain_intensity", "nearest_train_km", "year")
+    groups = ("rain_intensity", "claim_gate", "nearest_train_km", "year")
     table = filter(row -> row.group in groups && row.scheme == SCHEME && row.n > 0, pooled)
     reference = Dict((row.product, row.group, row.level) => row.RMSE
                      for row in eachrow(table) if row.method == REFERENCE)
@@ -159,13 +175,13 @@ end
 Paired day-block bootstrap of RMSE for the interpolators against each other, on one product's mask.
 
 Interpolators never read the satellite, so their predictions are the same whichever product
-directory they are read from; only the evaluation mask differs. GPM's is used because GPM and
-GSMaP share it and it is the larger of the two masks.
+directory they are read from; only the evaluation mask differs. GPM's (`gpm`) is used because GPM
+and GSMaP share it and it is the larger of the two masks.
 """
-function interpolation_ranking(cfg, grid, predictions, mask)
+function interpolation_ranking(cfg, grid, predictions, mask, gpm)
     rows = NamedTuple[]
     for method in ("adw", "gwr")
-        for row in paired_bootstrap_rows(cfg, SCHEME, "GPM", grid.times, grid.Y_obs,
+        for row in paired_bootstrap_rows(cfg, SCHEME, gpm, grid.times, grid.Y_obs,
                 predictions, mask; method, pairwise_mask=true)
             row.baseline == row.method && continue
             push!(rows, row)
@@ -177,34 +193,33 @@ end
 """
 The anchors compared with each other on the cells every one of them was scored on.
 
-Each derived product's mask needs all three source products finite, and each single product's mask
-needs its own, so the five `common_evaluation_mask.csv` files describe five different populations.
+Each derived product's mask needs every source product finite, and each single product's mask
+needs its own, so the `anchors`' `common_evaluation_mask.csv` files describe different populations.
 Their intersection is the one population on which "which anchor is better" has an answer. Within it,
-every anchor is bootstrapped against GPM - the best single product - with the same method on both
-sides.
+every anchor is bootstrapped against GPM (`gpm`) - the best single product - with the same method on
+both sides.
 """
-function anchor_comparison(cfg, grid, anchor_predictions, masks, nearest_distance)
-    shared = reduce(.&, (masks[product] for product in ANCHORS))
+function anchor_comparison(cfg, grid, anchor_predictions, masks, nearest_distance, gpm, anchors)
+    shared = reduce(.&, (masks[product] for product in anchors))
     metric_rows = NamedTuple[]
     bootstrap_rows = NamedTuple[]
-    reference = anchor_predictions["GPM"][REFERENCE]
     for method in vcat(PANEL_METHODS, [REFERENCE])
-        for (product_index, product) in enumerate(ANCHORS)
+        for (product_index, product) in enumerate(anchors)
             haskey(anchor_predictions[product], method) || continue
-            method == REFERENCE && product != "GPM" && continue
+            method == REFERENCE && product != gpm && continue
             prediction = anchor_predictions[product][method]
             append_stratified_metrics!(metric_rows, SCHEME,
                 method == REFERENCE ? "gauge_only" : product, method, grid.times, grid.Y_obs,
                 prediction, BitMatrix(shared), nearest_distance, EVENT_THRESHOLDS)
-            (method == REFERENCE || product == "GPM") && continue
-            baseline = anchor_predictions["GPM"][method]
+            (method == REFERENCE || product == gpm) && continue
+            baseline = anchor_predictions[gpm][method]
             test_mask = BitMatrix(shared .& .!isnan.(baseline) .& .!isnan.(prediction))
             deltas = _daily_bootstrap_delta(MersenneTwister(SEED + 100 * product_index),
                 grid.times, grid.Y_obs, baseline, prediction, test_mask, BOOTSTRAP_REPS)
             base_rmse = metric_continuous(grid.Y_obs, baseline; mask=test_mask).RMSE
             method_rmse = metric_continuous(grid.Y_obs, prediction; mask=test_mask).RMSE
             push!(bootstrap_rows, (;
-                method, baseline_product="GPM", product, n=count(test_mask),
+                method, baseline_product=gpm, product, n=count(test_mask),
                 RMSE_baseline=base_rmse, RMSE_product=method_rmse,
                 relative_improvement=(base_rmse - method_rmse) / base_rmse,
                 relative_ci_low=quantile(deltas, 0.025) / base_rmse,
@@ -230,9 +245,9 @@ storm's peak away, and `metric_event` counts that as a miss. The intervals come 
 whole days' contingency counts, so they carry the same weather-system dependence the RMSE
 intervals do.
 """
-function detection_skill(grid, product_predictions, masks)
+function detection_skill(grid, product_predictions, masks, anchors)
     rows = NamedTuple[]
-    for (product_index, product) in enumerate(ANCHORS)
+    for (product_index, product) in enumerate(anchors)
         predictions = product_predictions[product]
         baseline = predictions[REFERENCE]
         methods = vcat(PANEL_METHODS, ["idw", "tps", "gwr"])
@@ -268,7 +283,7 @@ end
 
 """Fold-to-fold range of the merged anchors' fusion weights."""
 function merged_anchor_coefficients(selection::DataFrame)
-    columns = [:intercept, :beta_fy4b, :beta_gpm, :beta_gsmap]
+    columns = [:intercept; filter(name -> startswith(String(name), "beta_"), propertynames(selection))]
     return combine(groupby(selection, [:scheme, :product, :variant]),
         :fell_back => sum => :folds_fell_back,
         [column => mean => Symbol(column, "_mean") for column in columns]...,
@@ -288,33 +303,41 @@ blend_weights(selection::DataFrame) = combine(
 function main(args=ARGS)
     run_dir = isempty(args) ? DEFAULT_RUN : abspath(args[1])
     isdir(run_dir) || error("benchmark output directory not found: $run_dir")
+    # The suffixes `run_interpolation_benchmark.jl` gives runs that scored uncalibrated IMERG, and
+    # runs that left FY4B out.
+    run_name = basename(rstrip(run_dir, '/'))
+    gpm_uncal = endswith(run_name, "_gpmuncal")
+    fy4b = !occursin("_nofy4b", run_name)
+    gpm = gpm_uncal ? "GPM_uncal" : "GPM"
+    anchors = anchor_products(gpm, fy4b)
+    outdir = report_outdir(gpm_uncal, fy4b)
     diagnostics_dir = joinpath(ROOT, "output", "benchmark_diagnostics", basename(run_dir))
     comparisons_path = joinpath(diagnostics_dir, "paired_comparisons_by_method.csv")
     isfile(comparisons_path) || error(
         "no $comparisons_path; run scripts/run_claim_reassessment.jl $run_dir first")
-    mkpath(OUTDIR)
-    write(joinpath(OUTDIR, "source_run.txt"), run_dir * "\n")
+    mkpath(outdir)
+    write(joinpath(outdir, "source_run.txt"), run_dir * "\n")
 
     pooled = _pooled(CSV.read(joinpath(run_dir, "metrics_pooled.csv"), DataFrame;
         types=Dict(:level => String)))
-    write_csv_atomic(joinpath(OUTDIR, "method_summary.csv"), method_summary(pooled))
-    write_csv_atomic(joinpath(OUTDIR, "stratified_summary.csv"), stratified_summary(pooled))
-    write_csv_atomic(joinpath(OUTDIR, "fusion_vs_gauge_only.csv"),
+    write_csv_atomic(joinpath(outdir, "method_summary.csv"), method_summary(pooled))
+    write_csv_atomic(joinpath(outdir, "stratified_summary.csv"), stratified_summary(pooled))
+    write_csv_atomic(joinpath(outdir, "fusion_vs_gauge_only.csv"),
         fusion_vs_gauge_only(CSV.read(comparisons_path, DataFrame)))
-    write_csv_atomic(joinpath(OUTDIR, "merged_anchor_coefficients.csv"), merged_anchor_coefficients(
+    write_csv_atomic(joinpath(outdir, "merged_anchor_coefficients.csv"), merged_anchor_coefficients(
         CSV.read(joinpath(run_dir, "fused_anchor_selection.csv"), DataFrame)))
-    write_csv_atomic(joinpath(OUTDIR, "blend_weights.csv"), blend_weights(
+    write_csv_atomic(joinpath(outdir, "blend_weights.csv"), blend_weights(
         CSV.read(joinpath(run_dir, "blend_selection.csv"), DataFrame)))
     scope = CSV.read(joinpath(run_dir, "benchmark_scope.csv"), DataFrame)
-    write_csv_atomic(joinpath(OUTDIR, "source_provenance.csv"),
+    write_csv_atomic(joinpath(outdir, "source_provenance.csv"),
         filter(:key => in(("git_commit", "git_branch", "git_dirty")), scope))
     println("Wrote the tables read off the run's own outputs")
 
     # The rest re-scores stored predictions, which needs the observations on the run's grid.
     # `load_global_common_product_data` writes its QC table into `outdir`, so it points here.
-    mger = study_config(OUTDIR)
+    mger = study_config(outdir; gpm_uncal, fy4b)
     _, ids, product_data = load_global_common_product_data(mger)
-    grid = product_data["GPM"]
+    grid = product_data[gpm]
     cfg = InterpolationBenchmarkConfig(mger=mger, bootstrap_reps=BOOTSTRAP_REPS, seed=20260627)
     scheme_dir = joinpath(run_dir, SCHEME)
     station_meta = load_station_meta(mger.station_meta_path;
@@ -325,25 +348,25 @@ function main(args=ARGS)
 
     masks = Dict(product => read_mask_matrix(
         joinpath(scheme_dir, lowercase(product), "common_evaluation_mask.csv"), ids)
-        for product in ANCHORS)
+        for product in anchors)
     methods = unique(vcat(PANEL_METHODS, INTERPOLATORS))
     predictions = Dict(product => load_methods(joinpath(scheme_dir, lowercase(product)), ids, methods)
-        for product in ANCHORS)
-    println("Loaded predictions for $(join(ANCHORS, ", "))")
+        for product in anchors)
+    println("Loaded predictions for $(join(anchors, ", "))")
 
-    ranking = interpolation_ranking(cfg, grid, predictions["GPM"], masks["GPM"])
-    write_csv_atomic(joinpath(OUTDIR, "interpolation_ranking.csv"), ranking)
+    ranking = interpolation_ranking(cfg, grid, predictions[gpm], masks[gpm], gpm)
+    write_csv_atomic(joinpath(outdir, "interpolation_ranking.csv"), ranking)
     println("Wrote interpolation_ranking.csv")
 
     anchor_metrics, anchor_tests, shared_cells = anchor_comparison(
-        cfg, grid, predictions, masks, nearest_distance)
-    write_csv_atomic(joinpath(OUTDIR, "anchor_metrics.csv"), anchor_metrics)
-    write_csv_atomic(joinpath(OUTDIR, "anchor_comparison.csv"), anchor_tests)
+        cfg, grid, predictions, masks, nearest_distance, gpm, anchors)
+    write_csv_atomic(joinpath(outdir, "anchor_metrics.csv"), anchor_metrics)
+    write_csv_atomic(joinpath(outdir, "anchor_comparison.csv"), anchor_tests)
     println("Wrote the anchor comparison on $shared_cells shared cells")
 
-    write_csv_atomic(joinpath(OUTDIR, "detection_skill_bootstrap.csv"),
-        detection_skill(grid, predictions, masks))
-    println("Wrote detection_skill_bootstrap.csv to $OUTDIR")
+    write_csv_atomic(joinpath(outdir, "detection_skill_bootstrap.csv"),
+        detection_skill(grid, predictions, masks, anchors))
+    println("Wrote detection_skill_bootstrap.csv to $outdir")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

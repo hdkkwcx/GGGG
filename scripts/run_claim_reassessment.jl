@@ -63,23 +63,29 @@ function assessed_products(run_dir::AbstractString, scheme_dir::AbstractString)
     return sort(present)
 end
 
-"""The `MGERConfig` the full benchmark run used, so the common station/time grid matches."""
-function study_config(outdir::AbstractString)
+"""
+The `MGERConfig` the full benchmark run used, so the common station/time grid matches. `gpm_uncal`
+swaps in uncalibrated IMERG, as `run_interpolation_benchmark.jl` does for its `_gpmuncal` runs.
+`fy4b=false` leaves FY4B out, as it does for its `_nofy4b` runs.
+"""
+function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=true)
     return MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
         sat_paths=Dict(
-            "FY4B" => joinpath(
-                STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-            ),
-            "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv"),
+            (gpm_uncal ?
+                "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
+                "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv")),
             "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
+            (fy4b ? ["FY4B" => joinpath(
+                STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
+            )] : Pair{String,String}[])...,
         ),
         outdir=outdir,
         rain_threshold=0.1,
         analysis_start=DateTime(2022, 1, 1, 9),
         analysis_end=DateTime(2025, 1, 1, 8),
-        expected_common_time_count=13471,
+        expected_common_time_count=fy4b ? 13471 : 26304,
     )
 end
 
@@ -130,7 +136,9 @@ function main(args=ARGS)
     run_dir = isempty(args) ? DEFAULT_RUN : abspath(args[1])
     outdir = benchmark_diagnostics_outdir(ROOT, run_dir)
 
-    mger = study_config(outdir)
+    run_name = basename(rstrip(run_dir, '/'))
+    mger = study_config(outdir; gpm_uncal=endswith(run_name, "_gpmuncal"),
+        fy4b=!occursin("_nofy4b", run_name))
     # The three products with files define the common station/time grid, which every product in
     # the run shares - a derived product is built on that grid by construction. Which products to
     # *assess* is a separate question, answered from the run's own outputs below.

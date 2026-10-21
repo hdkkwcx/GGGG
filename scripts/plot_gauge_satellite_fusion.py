@@ -10,6 +10,11 @@ into `Interim_results/` so the Typst report compiles from that folder alone:
 `--gpm-gsmap` keeps only the GPM, GSMaP and OLS-merged anchors (FY4B's OLS weight is ~0.03, while it is a
 third of the equal-weight merge), writes to `figures_gpm_gsmap/`, and copies nothing into `Interim_results/`.
 
+A report on a run that scored uncalibrated IMERG (`GPM_uncal`, from `output/gauge_satellite_fusion_gpmuncal/`)
+draws that product in GPM's place and also copies nothing into `Interim_results/`, which reports the
+calibrated run. A report on a run without FY4B (`output/gauge_satellite_fusion_nofy4b*/`) drops the FY4B
+anchor and merge weight, and likewise copies nothing into `Interim_results/`.
+
 Colour carries one job per figure. Anchors (FY4B, GPM, GSMaP and the two merges) sit on axes, never on
 colour, so the five of them never compete for categorical slots. Where colour marks how much the gauges
 and satellites are combined, it is an ordinal ramp: hollow grey for the raw satellite field, a dashed ink
@@ -42,6 +47,18 @@ RUN_DIR = Path(ARGS[0]) if len(ARGS) > 0 else ROOT / "output" / "gauge_satellite
 FIG_DIR = RUN_DIR / ("figures_gpm_gsmap" if GPM_GSMAP_ONLY else "figures")
 REPORT_DIR = Path(ARGS[1]) if len(ARGS) > 1 else ROOT / "Interim_results"
 
+
+def _products() -> set[str]:
+    """The products the run scored."""
+    with open(RUN_DIR / "method_summary.csv", newline="", encoding="utf-8") as handle:
+        return {row["product"] for row in csv.DictReader(handle)}
+
+
+PRODUCTS = _products()
+# The run's IMERG product: `GPM_uncal` when it scored uncalibrated IMERG, otherwise `GPM`.
+GPM = "GPM_uncal" if "GPM_uncal" in PRODUCTS else "GPM"
+HAS_FY4B = "FY4B" in PRODUCTS
+
 SURFACE = "#fcfcfb"
 INK = "#0b0b0b"
 INK_SECONDARY = "#52514e"
@@ -54,8 +71,10 @@ DIVERGING = LinearSegmentedColormap.from_list(
     "better_worse", ["#b52f2f", "#e34948", "#ef8d8c", "#f0efec", "#86b6ef", "#3987e5", "#1c5cab"])
 
 SCHEME = "balanced_spatial"
-ANCHORS = ["GPM", "GSMaP", "MERGED_OLS"] if GPM_GSMAP_ONLY else ["FY4B", "GPM", "GSMaP", "MERGED_MEAN", "MERGED_OLS"]
-ANCHOR_LABELS = {"FY4B": "FY4B", "GPM": "GPM", "GSMaP": "GSMaP", "MERGED_MEAN": "Merged\n(equal)",
+ANCHORS = [anchor for anchor in ([GPM, "GSMaP", "MERGED_OLS"] if GPM_GSMAP_ONLY else
+                                  ["FY4B", GPM, "GSMaP", "MERGED_MEAN", "MERGED_OLS"]) if anchor in PRODUCTS]
+ANCHOR_LABELS = {"FY4B": "FY4B", "GPM": "GPM", "GPM_uncal": "GPM\n(uncal)", "GSMaP": "GSMaP",
+                 "MERGED_MEAN": "Merged\n(equal)",
                  "MERGED_OLS": "Merged\n(OLS)"}
 FUSION_METHODS = ["residual_gwr", "mixed_gwr", "mgwr", "blend_residual_gwr", "blend_mixed_gwr", "blend_mgwr",
                   "blend_agrenv_residual_gwr", "blend_agrenv_mixed_gwr", "blend_agrenv_mgwr"]
@@ -71,10 +90,13 @@ METHOD_LABELS = {
 }
 # The integration ladder, in order. Raw and ADW are drawn as references, not as coloured series.
 LADDER = [("auto", ORDINAL_BLUES[1]), ("blend_agrenv_mgwr", ORDINAL_BLUES[3])]
-INTENSITY = [("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2.5"), ("moderate", "Moderate\n2.5–8"),
-             ("heavy", "Heavy\n≥ 8")]
+# The six classes of `INTENSITY_CLASSES` (src/core/metrics.jl), lower-bound inclusive.
+INTENSITY = [("no_rain", "Dry\n< 0.1"), ("light", "Light\n0.1–2"), ("moderate", "Moderate\n2–4"),
+             ("heavy", "Heavy\n4–8"), ("rainstorm", "Rainstorm\n8–20"), ("severe_rainstorm", "Severe\n≥ 20")]
+# The claim-gate range the bootstrap tables stratify by (`CLAIM_GATE_STRATA`): every hour ≥ 8 mm/h.
+GATES = [("8_plus", "≥ 8")]
 DISTANCE = [("0_20", "< 20 km"), ("20_50", "20–50 km"), ("50_100", "50–100 km")]
-THRESHOLDS = [0.1, 2.5, 8.0, 16.0]
+THRESHOLDS = [0.1, 2.0, 4.0, 8.0, 20.0]
 
 mpl.rcParams.update({
     "font.family": "sans-serif",
@@ -177,7 +199,7 @@ def pct(x: float) -> float:
 
 
 BENEFIT_PANELS = [("RMSE", "RMSE (mm/h) · lower is better"), ("r", "Correlation r · higher is better"),
-                  ("CSI_2.5", "CSI at 2.5 mm/h · higher is better"), ("CSI_8.0", "CSI at 8 mm/h · higher is better")]
+                  ("CSI_2.0", "CSI at 2 mm/h · higher is better"), ("CSI_8.0", "CSI at 8 mm/h · higher is better")]
 
 
 def fig1_benefit(summary: list[dict]) -> None:
@@ -211,7 +233,7 @@ def fig1_benefit(summary: list[dict]) -> None:
 
 def fig2_interpolators(ranking: list[dict], summary: list[dict]) -> None:
     fig = plt.figure(figsize=(10.0, 3.2))
-    strata = [("overall", "All hours"), ("moderate", "Moderate hours (2.5–8 mm/h)"), ("heavy", "Heavy hours (≥ 8 mm/h)")]
+    strata = [("overall", "All hours"), ("2.5_8", "Hours 2.5–8 mm/h"), ("8_plus", "Heavy hours (≥ 8 mm/h)")]
     pairs = [("idw", "adw"), ("tps", "adw"), ("gwr", "adw")]
     width = 0.19
     for panel, (stratum, label) in enumerate(strata):
@@ -244,7 +266,7 @@ def fig2_interpolators(ranking: list[dict], summary: list[dict]) -> None:
     clean_axis(ax)
     interpolators = ["idw", "adw", "tps", "gwr"]
     for index, method in enumerate(interpolators):
-        values = [value(summary, f"CSI_{t}", scheme=SCHEME, product="GPM", method=method) for t in THRESHOLDS]
+        values = [value(summary, f"CSI_{t}", scheme=SCHEME, product=GPM, method=method) for t in THRESHOLDS]
         ax.scatter(np.arange(len(THRESHOLDS)) + (index - 1.5) * 0.17, values, s=20, color=SERIES[index],
                    edgecolors=SURFACE, linewidths=0.8, zorder=3)
     ax.set_xticks(range(len(THRESHOLDS)))
@@ -273,7 +295,7 @@ def fig3_heatmap(fusion: list[dict]) -> None:
     for g, (heading, methods) in enumerate(FUSION_GROUPS):
         for k, method in enumerate(methods):
             rows.append((gap + g * (len(methods) + gap) + k, method, heading if k == 0 else None))
-    panels = [("overall", "(a) All hours"), ("heavy", "(b) Heavy hours (≥ 8 mm h⁻¹)")]
+    panels = [("overall", "(a) All hours"), ("8_plus", "(b) Heavy hours (≥ 8 mm/h)")]
     for index, (stratum, label) in enumerate(panels):
         ax = fig.add_axes([0.15 + index * 0.37, 0.12, 0.32, 0.6])
         for y, method, heading in rows:
@@ -409,7 +431,7 @@ def fig5_products(anchor_metrics: list[dict], comparison: list[dict], coefficien
     ax = fig.add_axes([0.1, 0.16, 0.47, 0.3])
     clean_axis(ax, "x")
     ax.axvline(0, color=INK, linestyle=(0, (3, 2)), linewidth=0.9, zorder=1)
-    others = [anchor for anchor in ANCHORS if anchor != "GPM"]
+    others = [anchor for anchor in ANCHORS if anchor != GPM]
     methods = [("raw", MUTED, True), ("auto", ORDINAL_BLUES[1], False), ("blend_agrenv_mgwr", ORDINAL_BLUES[3], False)]
     for row_index, anchor in enumerate(others):
         for offset, (method, color, hollow) in zip((-0.22, 0.0, 0.22), methods):
@@ -423,8 +445,10 @@ def fig5_products(anchor_metrics: list[dict], comparison: list[dict], coefficien
                        linewidths=1.0 if hollow else 0.8)
     ax.set_yticks(range(len(others)))
     ax.set_yticklabels([ANCHOR_LABELS[a].replace("\n", " ") for a in reversed(others)], fontsize=6)
-    ax.set_xlabel("RMSE change vs the same method on GPM (%) · right is better", fontsize=6)
-    ax.set_title("Each anchor against GPM, same method on both sides, 95% bootstrap intervals", loc="left", pad=3)
+    gpm_label = ANCHOR_LABELS[GPM].replace("\n", " ")
+    ax.set_xlabel(f"RMSE change vs the same method on {gpm_label} (%) · right is better", fontsize=6)
+    ax.set_title(f"Each anchor against {gpm_label}, same method on both sides, 95% bootstrap intervals", loc="left",
+                 pad=3)
     handles = [Line2D([], [], linestyle="none", marker="o", markersize=5, markerfacecolor=SURFACE if h else c,
                       markeredgecolor=c if h else SURFACE, label=METHOD_LABELS[m]) for m, c, h in methods]
     ax.legend(handles=handles, frameon=False, fontsize=6, loc="upper left", bbox_to_anchor=(0.0, -0.13), ncol=3)
@@ -432,8 +456,9 @@ def fig5_products(anchor_metrics: list[dict], comparison: list[dict], coefficien
     ax = fig.add_axes([0.66, 0.16, 0.32, 0.3])
     clean_axis(ax)
     ols = one(coefficients, scheme=SCHEME, product="MERGED_OLS")
-    names = [("intercept", "Intercept"), ("beta_fy4b", "FY4B"), ("beta_gpm", "GPM"), ("beta_gsmap", "GSMaP")]
-    if GPM_GSMAP_ONLY:
+    names = [("intercept", "Intercept"), ("beta_fy4b", "FY4B"), (f"beta_{GPM.lower()}", ANCHOR_LABELS[GPM]),
+             ("beta_gsmap", "GSMaP")]
+    if GPM_GSMAP_ONLY or not HAS_FY4B:
         names = [name for name in names if name[0] != "beta_fy4b"]
     if ols is not None:
         for index, (key, _) in enumerate(names):
@@ -447,7 +472,7 @@ def fig5_products(anchor_metrics: list[dict], comparison: list[dict], coefficien
     ax.set_xticklabels([label for _, label in names], fontsize=6)
     ax.set_title("OLS merge weights: mean (dot) and range over the 5 folds (band)", loc="left", pad=3)
     ax.set_ylabel("Weight (intercept in mm/h)", fontsize=6)
-    question = "should GPM and GSMaP be merged?" if GPM_GSMAP_ONLY else "should all three be merged?"
+    question = "should all three be merged?" if HAS_FY4B and not GPM_GSMAP_ONLY else "should GPM and GSMaP be merged?"
     fig.suptitle(f"Which satellite product, or {question}", x=0.02, ha="left", fontsize=9, y=0.985)
     save(fig, "fusion_fig5_products")
 
@@ -529,13 +554,13 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
             if row is None:
                 continue
             rows.append([anchor, METHOD_LABELS[method], fmt(row["RMSE"]), fmt(row["MAE"]), fmt(row["Bias"], signed=True),
-                         fmt(row["r"]), fmt(row["CSI_0.1"]), fmt(row["CSI_2.5"]), fmt(row["CSI_8.0"]),
+                         fmt(row["r"]), fmt(row["CSI_0.1"]), fmt(row["CSI_2.0"]), fmt(row["CSI_8.0"]),
                          fmt(pct(row["RMSE_improvement_vs_raw"]), 1, True), fmt(pct(row["RMSE_improvement_vs_adw"]), 1, True)])
-    write_table("overall_metrics", ["anchor", "method", "RMSE", "MAE", "Bias", "r", "CSI0.1", "CSI2.5", "CSI8",
+    write_table("overall_metrics", ["anchor", "method", "RMSE", "MAE", "Bias", "r", "CSI0.1", "CSI2", "CSI8",
                                     "vs_raw", "vs_adw"], rows)
 
     rows = []
-    for stratum in ("overall", "moderate", "heavy"):
+    for stratum in ("overall", "2.5_8", "8_plus"):
         for other in ("idw", "tps", "gwr"):
             if other == "gwr":
                 row = one(ranking, method="gwr", baseline="adw", stratum=stratum)
@@ -555,7 +580,7 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
     write_table("interpolation_ranking", ["stratum", "method", "RMSE", "RMSE_adw", "change", "ci", "p_holm"], rows)
 
     rows = []
-    for stratum in ("overall", "heavy"):
+    for stratum in ("overall", "8_plus"):
         cells = [row for row in fusion if row["stratum"] == stratum]
         cells.sort(key=lambda r: -r["relative_improvement"])
         for row in cells:
@@ -587,7 +612,7 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
     rows = []
     for anchor in ANCHORS:
         for method in ("raw", "tps", "auto", "blend_agrenv_mgwr"):
-            for threshold in (2.5, 8.0, 16.0):
+            for threshold in (2.0, 8.0, 20.0):
                 cells = {m: one(detection, product=anchor, method=method, threshold=threshold, metric=m)
                          for m in ("POD", "FAR", "CSI")}
                 if cells["CSI"] is None:
@@ -600,8 +625,9 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
     write_table("detection_skill", ["anchor", "method", "threshold", "POD", "FAR", "CSI", "CSI_adw", "delta", "ci"], rows)
 
     rows = [[row["scheme"], row["product"], fmt(row["intercept_mean"]), fmt(row["beta_fy4b_mean"]),
-             fmt(row["beta_gpm_mean"]), fmt(row["beta_gsmap_mean"]),
-             f"{row['beta_gpm_min']:.2f}–{row['beta_gpm_max']:.2f}", str(int(row["folds_fell_back"]))]
+             fmt(row[f"beta_{GPM.lower()}_mean"]), fmt(row["beta_gsmap_mean"]),
+             f"{row[f'beta_{GPM.lower()}_min']:.2f}–{row[f'beta_{GPM.lower()}_max']:.2f}",
+             str(int(row["folds_fell_back"]))]
             for row in coefficients if row["product"] == "MERGED_OLS"]
     write_table("merge_weights", ["scheme", "product", "intercept", "FY4B", "GPM", "GSMaP", "GPM_range", "fell_back"],
                 rows)
@@ -616,7 +642,7 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
     rows = []
     for anchor in ANCHORS:
         for method in ("auto", "mgwr", "blend_mgwr", "blend_agrenv_mgwr"):
-            for group, levels in (("rain_intensity", INTENSITY), ("nearest_train_km", DISTANCE)):
+            for group, levels in (("rain_intensity", INTENSITY), ("claim_gate", GATES), ("nearest_train_km", DISTANCE)):
                 for level, _ in levels:
                     change = value(stratified, "RMSE_improvement_vs_adw", product=anchor, method=method, group=group,
                                    level=level)
@@ -661,7 +687,7 @@ def main() -> None:
     fig4_where(stratified, detection)
     fig5_products(anchor_metrics, comparison, coefficients)
     fig6_robustness(summary, stratified)
-    if GPM_GSMAP_ONLY:
+    if GPM_GSMAP_ONLY or GPM != "GPM" or not HAS_FY4B:
         return
 
     (REPORT_DIR / "figures").mkdir(parents=True, exist_ok=True)
