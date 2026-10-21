@@ -1,0 +1,12 @@
+{
+ "source": "output/gauge_satellite_fusion_nofy4b_gpmuncal/merged_anchor_coefficients.csv",
+ "source_sha256": "445a9bbfe24e3dd8e4c01e4af753e88e9f97be83b88d7c68ec554bfc7a00c1c4",
+ "rows": [
+  {
+   "product": "MERGED_OLS",
+   "intercept": "0.04",
+   "beta_gpm": "0.49",
+   "beta_gsmap": "0.15"
+  }
+ ]
+}

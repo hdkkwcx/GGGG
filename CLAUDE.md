@@ -149,4 +149,6 @@ using Main.BenchmarkDiagnostics
   script calls `write_plot_provenance` (`scripts/plot_provenance.py`). A figure copied into
   `paper/figures/` gets an entry in `paper/sources.toml`, and
   `python scripts/check_paper_provenance.py` checks the whole paper. Runs for the paper start from
-  a clean tree.
+  a clean tree. The paper never types a result: a cited number gets a `[[table]]` block in
+  `paper/sources.toml`, `python scripts/export_paper_numbers.py` writes it to `paper/numbers/`, and
+  `paper_plan.typ` reads it with `val` / `pct`.

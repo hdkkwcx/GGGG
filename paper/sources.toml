@@ -54,14 +54,148 @@ provenance = [
     "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
 ]
 
-# Typed into paper_plan.typ from method_summary.csv of the two fusion reports: the IMERG Uncal rows
-# and, for the GPM (Final) rows, the IMERG Final sensitivity run.
-[[item]]
-label = "Table 3 (RQ3 fusion)"
+# Numbers the paper cites. `scripts/export_paper_numbers.py` writes each block to
+# paper/numbers/<name>.json, which paper_plan.typ reads; the check re-exports them and fails on any
+# difference. `values` maps an output name to [source column, format]: 3f / 2f decimals, or
+# pct1 / pct0, a fraction as a signed percentage. Uncal blocks are the primary run, Final blocks the
+# IMERG Final sensitivity run.
+
+[[table]]
+name = "methods_uncal"
+label = "Table 3 and RQ3 text: pooled metrics (IMERG Uncal)"
 source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/method_summary.csv"
 provenance = [
     "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv",
     "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+]
+keys = ["product", "method"]
+[table.where]
+scheme = "balanced_spatial"
+method = ["adw", "idw", "tps", "gwr", "raw", "mgwr", "blend_agrenv_mgwr"]
+[table.values]
+RMSE = ["RMSE", "3f"]
+r = ["r", "3f"]
+CSI2 = ["CSI_2.0", "3f"]
+vs_raw = ["RMSE_improvement_vs_raw", "pct1"]
+vs_adw = ["RMSE_improvement_vs_adw", "pct1"]
+vs_raw0 = ["RMSE_improvement_vs_raw", "pct0"]
+vs_adw0 = ["RMSE_improvement_vs_adw", "pct0"]
+
+[[table]]
+name = "vs_adw_uncal"
+label = "RQ3 text: bootstrap comparisons with ADW (IMERG Uncal)"
+source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/fusion_vs_gauge_only.csv"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+]
+keys = ["product", "method", "stratum"]
+[table.where]
+method = ["mgwr", "blend_agrenv_mgwr"]
+[table.values]
+change = ["relative_improvement", "pct1"]
+p_holm = ["pvalue_holm_family", "2f"]
+
+[[table]]
+name = "strata_uncal"
+label = "RQ3 text: gain over ADW by intensity and distance (IMERG Uncal)"
+source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/stratified_summary.csv"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+]
+keys = ["product", "method", "group", "level"]
+[table.where]
+scheme = "balanced_spatial"
+method = ["mgwr", "blend_agrenv_mgwr"]
+group = ["rain_intensity", "nearest_train_km"]
+[table.values]
+change = ["RMSE_improvement_vs_adw", "pct1"]
+change0 = ["RMSE_improvement_vs_adw", "pct0"]
+
+[[table]]
+name = "merge_uncal"
+label = "RQ3 text: OLS merge weights (IMERG Uncal)"
+source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/merged_anchor_coefficients.csv"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+]
+keys = ["product"]
+[table.where]
+scheme = "balanced_spatial"
+product = "MERGED_OLS"
+[table.values]
+intercept = ["intercept_mean", "2f"]
+beta_gpm = ["beta_gpm_uncal_mean", "2f"]
+beta_gsmap = ["beta_gsmap_mean", "2f"]
+
+[[table]]
+name = "methods_final"
+label = "Table 3 and RQ3 text: pooled metrics (IMERG Final)"
+source = "output/gauge_satellite_fusion_nofy4b/method_summary.csv"
+provenance = [
     "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
     "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
 ]
+keys = ["product", "method"]
+[table.where]
+scheme = "balanced_spatial"
+method = ["adw", "idw", "tps", "gwr", "raw", "mgwr", "blend_agrenv_mgwr"]
+[table.values]
+RMSE = ["RMSE", "3f"]
+r = ["r", "3f"]
+CSI2 = ["CSI_2.0", "3f"]
+vs_raw = ["RMSE_improvement_vs_raw", "pct1"]
+vs_adw = ["RMSE_improvement_vs_adw", "pct1"]
+vs_raw0 = ["RMSE_improvement_vs_raw", "pct0"]
+vs_adw0 = ["RMSE_improvement_vs_adw", "pct0"]
+
+[[table]]
+name = "vs_adw_final"
+label = "RQ3 text: bootstrap comparisons with ADW (IMERG Final)"
+source = "output/gauge_satellite_fusion_nofy4b/fusion_vs_gauge_only.csv"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
+]
+keys = ["product", "method", "stratum"]
+[table.where]
+method = ["mgwr", "blend_agrenv_mgwr"]
+[table.values]
+change = ["relative_improvement", "pct1"]
+p_holm = ["pvalue_holm_family", "2f"]
+
+[[table]]
+name = "strata_final"
+label = "RQ3 text: gain over ADW by intensity and distance (IMERG Final)"
+source = "output/gauge_satellite_fusion_nofy4b/stratified_summary.csv"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
+]
+keys = ["product", "method", "group", "level"]
+[table.where]
+scheme = "balanced_spatial"
+method = ["mgwr", "blend_agrenv_mgwr"]
+group = ["rain_intensity", "nearest_train_km"]
+[table.values]
+change = ["RMSE_improvement_vs_adw", "pct1"]
+change0 = ["RMSE_improvement_vs_adw", "pct0"]
+
+[[table]]
+name = "merge_final"
+label = "RQ3 text: OLS merge weights (IMERG Final)"
+source = "output/gauge_satellite_fusion_nofy4b/merged_anchor_coefficients.csv"
+provenance = [
+    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
+]
+keys = ["product"]
+[table.where]
+scheme = "balanced_spatial"
+product = "MERGED_OLS"
+[table.values]
+intercept = ["intercept_mean", "2f"]
+beta_gpm = ["beta_gpm_mean", "2f"]
+beta_gsmap = ["beta_gsmap_mean", "2f"]
