@@ -7,6 +7,9 @@ of `scripts/prepare_station_landform.jl`) and writes PNG (300 dpi) and PDF figur
     py -3.13 scripts/plot_satellite_temporal_evaluation.py
     py -3.13 scripts/plot_satellite_temporal_evaluation.py --gpm-gsmap
 
+The plotting environment is pinned in `scripts/requirements-plot.txt`
+(`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.
+
 `--gpm-gsmap` draws only the `gpm_gsmap_full` sample, and only the figures that carry no FY4B series, into
 `figures_gpm_gsmap/`; it adds the intensity-class figure split by landform region.
 
@@ -33,6 +36,8 @@ import numpy as np
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
+
+from plot_provenance import write_plot_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN_DIR = ROOT / "output" / "satellite_temporal_evaluation"
@@ -682,6 +687,7 @@ def main() -> None:
     for sample in SAMPLE_PRODUCTS:
         fig8_scorecard(metrics, events, diurnal_scores, station_summary, sample)
     fig9_regional_series(regional)
+    write_plot_provenance(FIG_DIR, ROOT)
 
 
 if __name__ == "__main__":

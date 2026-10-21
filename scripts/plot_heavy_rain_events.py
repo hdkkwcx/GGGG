@@ -6,6 +6,9 @@ and PDF figures to `output/heavy_rain_events/figures/`:
     py -3.13 scripts/plot_heavy_rain_events.py
     py -3.13 scripts/plot_heavy_rain_events.py --gpm-gsmap
 
+The plotting environment is pinned in `scripts/requirements-plot.txt`
+(`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.
+
 `--gpm-gsmap` draws the FY4B-free run instead, from and to `output/heavy_rain_events_gpm_gsmap/`.
 
 The gauge-point maps (fig1) and station error maps (fig2) are the primary spatial comparison.
@@ -34,6 +37,8 @@ import numpy as np
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.lines import Line2D
+
+from plot_provenance import write_plot_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
@@ -568,6 +573,7 @@ def main() -> None:
     fig4_scatter(events, stations, metrics)
     fig5_metric_summary(events, metrics)
     fig6_taylor(events, metrics)
+    write_plot_provenance(FIG_DIR, ROOT)
 
 
 if __name__ == "__main__":
