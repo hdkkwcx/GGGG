@@ -152,3 +152,8 @@ using Main.BenchmarkDiagnostics
   a clean tree. The paper never types a result: a cited number gets a `[[table]]` block in
   `paper/sources.toml`, `python scripts/export_paper_numbers.py` writes it to `paper/numbers/`, and
   `paper_plan.typ` reads it with `val` / `pct`.
+- The RQ1/RQ2 scripts (`run_heavy_rain_event_evaluation.jl`, `run_satellite_temporal_evaluation.jl`,
+  `run_heavy_core_diagnostics.jl`) follow the benchmark's defaults: IMERG Uncal (`GPM_uncal`, suffix
+  `_gpmuncal`; `--gpm-cal` for IMERG Final), and RQ2 leaves FY4B out (suffix `_nofy4b`;
+  `--with-fy4b` restores its `all_products` sample). `--gpm-cal --with-fy4b` reproduces RQ2's
+  original run.

@@ -2,15 +2,18 @@
 
 # Why do GPM and GSMaP underestimate the heavy-rain cores of the selected events?
 #
-#   julia --project=. scripts/run_heavy_core_diagnostics.jl
+#   julia --project=. scripts/run_heavy_core_diagnostics.jl            # events of the IMERG Uncal run
+#   julia --project=. scripts/run_heavy_core_diagnostics.jl --gpm-cal  # events of the IMERG Final run
 #
-# Reads the six events chosen by `run_heavy_rain_event_evaluation.jl --gpm-gsmap`, takes the core
+# Reads the six events chosen by `run_heavy_rain_event_evaluation.jl --gpm-gsmap` (with `--gpm-cal`,
+# the events of its `--gpm-cal` run; by default those of the IMERG Uncal run), takes the core
 # gauges of each (>= 50 mm on a localized day, >= 100 mm on a widespread one), and splits each core
 # gauge's deficit into representativeness, displacement and magnitude (`HeavyCoreDiagnostics`).
 # Three products: IMERG Final and GSMaP as used in the paper, and IMERG Uncal (no monthly gauge
 # calibration), which is also on disk as the native 0.1 deg half-hourly grid - the only product
-# here whose neighbourhood can be searched off the gauge pixels. Writes CSVs to
-# output/heavy_core_diagnostics/.
+# here whose neighbourhood can be searched off the gauge pixels. The phase decomposition scores the
+# run's primary GPM product (IMERG Uncal, or IMERG Final with `--gpm-cal`) and GSMaP. Writes CSVs to
+# output/heavy_core_diagnostics[_gpmuncal]/.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -19,22 +22,28 @@ using CSV, DataFrames, Dates, Statistics, NCDatasets
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("MGERPipeline")
-load_standalone_modules("TableIO", "HeavyRainEvents", "NoRainEvaluation", "HeavyCoreDiagnostics")
+load_standalone_modules("TableIO", "RunProvenance", "HeavyRainEvents", "HeavyCoreDiagnostics")
 using Main.TableIO: write_csv_atomic
+using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.HeavyRainEvents: met_day, align_to_reference, phase_spatial_metrics, small_scale_variance_share
-using Main.NoRainEvaluation: long_to_wide_hourly
 using Main.HeavyCoreDiagnostics
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
-const EVENTS_FILE = joinpath(ROOT, "output", "heavy_rain_events_gpm_gsmap", "selected_events.csv")
-const UNCAL_STATION_DIR = joinpath(ROOT, "output", "gpm_imerg_uncal_stations_2022_2024")
+const GPM_CAL = "--gpm-cal" in ARGS
+# The GPM product the phase decomposition scores, as in `run_heavy_rain_event_evaluation.jl`.
+const PRIMARY_GPM = GPM_CAL ? "GPM" : "GPM_uncal"
+const EVENTS_FILE = joinpath(ROOT, "output",
+    "heavy_rain_events_gpm_gsmap" * (GPM_CAL ? "" : "_gpmuncal"), "selected_events.csv")
 const UNCAL_GRID_DIR = joinpath(ROOT, "data", "raw", "gpm_imerg_v07_uncal_hubei_2022_2024")
-const OUTDIR = joinpath(ROOT, "output", "heavy_core_diagnostics")
+const OUTDIR = joinpath(ROOT, "output", "heavy_core_diagnostics" * (GPM_CAL ? "" : "_gpmuncal"))
 const ANALYSIS_START = DateTime(2022, 1, 1, 9)
 const ANALYSIS_END = DateTime(2025, 1, 1, 8)
 const PRODUCT_FILES = [
     "GPM" => "hubei_gpm_hourly_2022_2024_full_aligned.csv",
     "GSMaP" => "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
+    # The station series of IMERG Uncal, built from the same monthly extraction with the same +9 h
+    # shift as the calibrated file (`prepare_gpm_uncal_inputs.jl`).
+    "GPM_uncal" => "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv",
 ]
 const PRODUCTS = ["GPM", "GSMaP", "GPM_uncal"]
 const CORE_MM = Dict("localized" => 50.0, "widespread" => 100.0)
@@ -61,21 +70,6 @@ function load_inputs()
     return obs_times, obs_ids, Y_obs, products, lonlat
 end
 
-"""IMERG Uncal at the gauges for the months the events touch (UTC hour start + 9 h = BJT hour ending)."""
-function load_uncalibrated_gpm(obs_times, obs_ids, days)
-    months = unique(Dates.format(d + Day(k), "yyyymm") for d in days for k in -1:1)
-    time, station, value = DateTime[], String[], Float64[]
-    for month in sort(months)
-        path = joinpath(UNCAL_STATION_DIR, "gpm_hubei_hourly_long_$(month).csv")
-        isfile(path) || continue
-        table = CSV.read(path, DataFrame; types=Dict(:station_id => String, :time => String))
-        append!(time, DateTime.(first.(table.time, 19)))
-        append!(station, table.station_id)
-        append!(value, [ismissing(v) ? NaN : Float64(v) for v in table.gpm_mm_h])
-    end
-    return long_to_wide_hourly(time, station, value, obs_times, obs_ids; offset_hours=9).Y
-end
-
 """
 The native IMERG Uncal 08-08 BJT total for `day` (= UTC day `day`), `(lon, lat, total[lat, lon])`.
 
@@ -83,12 +77,10 @@ Times come from the file names: the files' `time` variable declares a Julian cal
 decodes 13 days late.
 """
 function uncal_grid_total(day::Date)
-    dir = joinpath(UNCAL_GRID_DIR, string(year(day)), lpad(dayofyear(day), 3, '0'))
-    files = sort(filter(f -> occursin(Dates.format(day, "yyyymmdd") * "-S", f) && endswith(f, ".nc4"), readdir(dir)))
-    length(files) == 48 || error("expected 48 half-hourly IMERG files for $day in $dir, found $(length(files))")
     lon = lat = total = nothing
-    for file in files
-        NCDataset(joinpath(dir, file)) do ds
+    for path in uncal_grid_files(day)
+        file = basename(path)
+        NCDataset(path) do ds
             dimnames(ds["precipitationUncal"]) == ("lat", "lon", "time") || error("unexpected dimensions in $file")
             rate = Float64.(coalesce.(ds["precipitationUncal"][:, :, 1], NaN))
             if total === nothing
@@ -100,16 +92,29 @@ function uncal_grid_total(day::Date)
     return lon, lat, total
 end
 
+"""The 48 half-hourly native IMERG Uncal files of UTC day `day`, the files `uncal_grid_total` sums."""
+function uncal_grid_files(day::Date)
+    dir = joinpath(UNCAL_GRID_DIR, string(year(day)), lpad(dayofyear(day), 3, '0'))
+    files = sort(filter(f -> occursin(Dates.format(day, "yyyymmdd") * "-S", f) && endswith(f, ".nc4"), readdir(dir)))
+    length(files) == 48 || error("expected 48 half-hourly IMERG files for $day in $dir, found $(length(files))")
+    return joinpath.(dir, files)
+end
+
 nearest_cell(lon, lat, point) = (argmin(abs.(lat .- point[2])), argmin(abs.(lon .- point[1])))
 
 pick(rows, radius) = only(filter(r -> r.radius_km == radius, rows))
 
 function main()
-    println("Reading study-area hourly tables ...")
-    obs_times, obs_ids, Y_obs, products, lonlat = load_inputs()
     events = CSV.read(EVENTS_FILE, DataFrame)
     events = events[events.selected, :]
-    products["GPM_uncal"] = load_uncalibrated_gpm(obs_times, obs_ids, events.day)
+    # Before any work, so it records the code that runs: see `RunProvenance`. The inputs are every
+    # file read, the event selection and each event day's native-grid files included.
+    provenance = start_provenance(ROOT, OUTDIR; inputs=[
+        joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
+        (joinpath(STUDY_DATA, file) for (_, file) in PRODUCT_FILES)..., joinpath(STUDY_DATA, "station_meta.csv"),
+        EVENTS_FILE, (path for day in events.day for path in uncal_grid_files(day))...])
+    println("Reading study-area hourly tables ...")
+    obs_times, obs_ids, Y_obs, products, lonlat = load_inputs()
 
     point_of(i) = (lonlat[i, 1], lonlat[i, 2])
     core_rows, areal_rows, nearby_rows, hourly_rows, attribution_rows, check_rows = (NamedTuple[] for _ in 1:6)
@@ -123,7 +128,7 @@ function main()
         sat = Dict(p => total(products[p]) for p in PRODUCTS)
 
         # Phase decomposition: does a poor day-total pattern hide well-captured phases?
-        phases = phase_spatial_metrics(Y_obs, Dict(p => products[p] for p in ("GPM", "GSMaP")), lonlat, hour_idx; n_phases=N_PHASES)
+        phases = phase_spatial_metrics(Y_obs, Dict(p => products[p] for p in (PRIMARY_GPM, "GSMaP")), lonlat, hour_idx; n_phases=N_PHASES)
         insertcols!(phases, 1, :event_day => day, :event_type => event.event_type,
             :obs_small_scale_share => small_scale_variance_share(lonlat, obs))
         phases.first_hour = obs_times[phases.first_hour]
@@ -229,9 +234,10 @@ function main()
     show(summary; allrows=true, allcols=true)
     println("
 
-Spatial r per 8 h phase and over the day (GPM, GSMaP):")
+Spatial r per 8 h phase and over the day ($PRIMARY_GPM, GSMaP):")
     show(select(phase_table, :event_day, :phase, :product, :obs_share, :r, :Bias, :obs_r_lat, :est_r_lat,
         :obs_r_lon, :est_r_lon, :obs_small_scale_share); allrows=true, allcols=true)
+    write_csv_atomic(joinpath(OUTDIR, "provenance.csv"), finish_provenance!(provenance, ROOT))
     println("\n\nWrote $(OUTDIR)")
     return OUTDIR
 end
