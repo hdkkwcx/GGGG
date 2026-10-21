@@ -18,8 +18,9 @@ using CSV, DataFrames, Dates, Statistics
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("MGERPipeline")
-load_standalone_modules("TableIO", "HeavyRainEvents", "LandformClassification", "SatelliteTemporalEvaluation")
+load_standalone_modules("TableIO", "RunProvenance", "HeavyRainEvents", "LandformClassification", "SatelliteTemporalEvaluation")
 using Main.TableIO: write_csv_atomic
+using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.HeavyRainEvents: align_to_reference
 using Main.LandformClassification: RELIEF_REGIONS
 using Main.SatelliteTemporalEvaluation
@@ -115,6 +116,10 @@ function show_example_event(obs_times, obs_ids, Y_obs, products, events, scores)
 end
 
 function main()
+    # Before any work, so it records the code that runs: see `RunProvenance`. The inputs are every
+    # file `load_inputs` reads.
+    provenance = start_provenance(ROOT, OUTDIR; inputs=[joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
+        (joinpath(STUDY_DATA, file) for (_, file) in PRODUCT_FILES)..., LANDFORM_FILE])
     println("Reading hourly tables and landform regions ...")
     obs_times, obs_ids, Y_obs, products, landform = load_inputs()
     ctx = evaluation_context(obs_times, landform.relief_region; regions=RELIEF_REGIONS)
@@ -204,6 +209,7 @@ function main()
     println("\n\nDiurnal cycle, all regions:")
     show(select(diurnal_scores[diurnal_scores.region .== "all", :], :sample, :product, :season, :r_amount,
         :peak_hour_gauge, :peak_hour_diff_h, :phase_diff_h, :rel_amplitude_ratio); allrows=true, allcols=true)
+    write_csv_atomic(joinpath(OUTDIR, "provenance.csv"), finish_provenance!(provenance, ROOT))
     println("\n\nWrote $(OUTDIR)")
     return OUTDIR
 end

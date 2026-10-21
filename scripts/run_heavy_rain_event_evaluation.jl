@@ -21,8 +21,9 @@ using CSV, DataFrames, Dates, Statistics
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("MGERPipeline")
-load_standalone_modules("TableIO", "StudyArea", "HeavyRainEvents")
+load_standalone_modules("TableIO", "RunProvenance", "StudyArea", "HeavyRainEvents")
 using Main.TableIO: write_csv_atomic
+using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.StudyArea: STUDY_BOUNDS
 using Main.HeavyRainEvents
 
@@ -88,6 +89,10 @@ function summarize_metrics(metrics::DataFrame, stations::DataFrame, lonlat_by_id
 end
 
 function main()
+    # Before any work, so it records the code that runs: see `RunProvenance`. The inputs are every
+    # file `load_inputs` reads.
+    provenance = start_provenance(ROOT, OUTDIR; inputs=[joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
+        (joinpath(STUDY_DATA, file) for (_, file) in PRODUCT_FILES)..., joinpath(STUDY_DATA, "station_meta.csv")])
     println("Reading study-area hourly tables ...")
     obs_times, obs_ids, Y_obs, products, lonlat = load_inputs()
     println("  $(length(obs_ids)) gauges x $(length(obs_times)) hours, products: $(join(PRODUCTS, ", "))")
@@ -171,6 +176,7 @@ function main()
     show(select(metrics[metrics.window .== "common_hours", :],
         :event_day, :event_type, :product, :hours, :n, :r, :rho, :RMSE, :Bias, :CSI_50, :cv_ratio, :centroid_shift_km);
         allrows=true, allcols=true)
+    write_csv_atomic(joinpath(OUTDIR, "provenance.csv"), finish_provenance!(provenance, ROOT))
     println("\n\nWrote $(OUTDIR)")
     return OUTDIR
 end
