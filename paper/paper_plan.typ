@@ -4,10 +4,11 @@
 // scripts/plot_satellite_temporal_evaluation.py and scripts/plot_gauge_satellite_fusion.py
 // (the fusion figures from its FY4B-free IMERG Uncal report, output/gauge_satellite_fusion_nofy4b_gpmuncal).
 // Numbers are read from the CSVs beside those figures in output/.
-// Table 3 and Figs. 6-7 come from clean benchmark runs at commit ec320ab (git_dirty=false, recorded
-// in each run's benchmark_scope.csv with its Manifest.toml): ..._fusedanchor_nofy4b_gpmuncal and,
-// for the GPM (Final) rows, ..._fusedanchor_nofy4b. They reproduce the earlier uncommitted-code
-// runs (output/*_uncommitted_ef3616d) byte for byte.
+// Table 3 and Figs. 6-7 come from clean benchmark runs at commit 94afc78 (git_dirty=false, recorded
+// in each run's benchmark_scope.csv with its Manifest.toml and a SHA-256 for every input file):
+// ..._fusedanchor_nofy4b_gpmuncal and, for the GPM (Final) rows, ..._fusedanchor_nofy4b. They
+// reproduce the earlier runs at ec320ab (output/*_ec320ab) and on uncommitted code
+// (output/*_uncommitted_ef3616d) byte for byte.
 // RQ1/RQ2 and Figs. 2-4 come from clean IMERG Uncal runs at commit 3bce549, plotted at 072eef6:
 // output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal,
 // satellite_temporal_evaluation_nofy4b_gpmuncal and, for the Scope paragraph's FY4B numbers,
@@ -329,7 +330,7 @@ the nearest training gauge.
   RMSE in mm h⁻¹; improvements are RMSE reductions; CSI at 2 mm h⁻¹. GPM is IMERG Uncal. No row uses
   FY4B: the merge and the agreement blend are built from GPM and GSMaP only. The GPM (Final) rows are a
   sensitivity run with IMERG Final in IMERG Uncal's place, otherwise identical. Gauge-only rows are on
-  GPM's evaluation mask. Both runs are from commit `ec320ab`, with no uncommitted changes.],
+  GPM's evaluation mask. Both runs are from commit `94afc78`, with no uncommitted changes.],
 )
 
 #planned[Fig. 7 — where fusion helps: by intensity, by distance to the nearest gauge, and in CSI.
