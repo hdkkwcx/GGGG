@@ -8,8 +8,10 @@ and the matching rows with every value already formatted as the paper prints it.
 those strings and never a number typed by hand, so a rerun reaches the text by re-exporting, and
 `scripts/check_paper_provenance.py` re-exports in memory and fails on any difference.
 
-Formats: `3f` / `2f` (fixed decimals), `pct1` / `pct0` (a fraction as a signed percentage with one
-or no decimal, no sign when it rounds to zero, no `%`). Standard library only.
+Formats: `Nf` (N fixed decimals, e.g. `3f`, `0f`), `+Nf` (the same with a sign, for a value the text
+prints signed, such as a bias or a value already in percent), `pct1` / `pct0` (a fraction as a signed
+percentage with one or no decimal, no `%`). A signed format drops the sign when the value rounds to
+zero. Standard library only.
 """
 
 from __future__ import annotations
@@ -43,10 +45,11 @@ def _signed(value: float, decimals: int) -> str:
 
 def format_value(raw: str, fmt: str) -> str:
     value = float(raw)
-    if fmt in ("3f", "2f"):
-        return f"{value:.{int(fmt[0])}f}"
     if fmt in ("pct1", "pct0"):
         return _signed(100 * value, int(fmt[-1]))
+    if fmt.endswith("f") and fmt.lstrip("+")[:-1].isdigit():
+        decimals = int(fmt.lstrip("+")[:-1])
+        return _signed(value, decimals) if fmt.startswith("+") else f"{value:.{decimals}f}"
     raise ValueError(f"unknown format {fmt!r}")
 
 
