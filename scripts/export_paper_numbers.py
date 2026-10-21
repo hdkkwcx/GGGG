@@ -4,7 +4,9 @@
 
 Every `[[table]]` block in `paper/sources.toml` names a source CSV, a row filter, the key columns
 and the cited values, each with a format. Writes one JSON per block: the source path and SHA-256,
-and the matching rows with every value already formatted as the paper prints it. The paper typesets
+and the matching rows with every value already formatted as the paper prints it. A block's optional
+`[table.stats.<name>]` entries add the numbers worked out from several rows (a range, a median, a
+largest difference) under `stats`, so the paper looks those up too and computes nothing. The paper typesets
 those strings and never a number typed by hand, so a rerun reaches the text by re-exporting, and
 `scripts/check_paper_provenance.py` re-exports in memory and fails on any difference.
 
@@ -19,6 +21,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
+import statistics
 import sys
 import tomllib
 from pathlib import Path
@@ -58,6 +62,35 @@ def _matches(row: dict[str, str], where: dict) -> bool:
                for column, wanted in where.items())
 
 
+def compute_stat(rows: list[dict[str, str]], name: str, spec: dict) -> str:
+    """One `[table.stats.<name>]` entry: a statistic over the matching rows of one column, formatted.
+
+    `stat` is `min`, `max`, `median`, `range` ("min–max") or `maxgap`, the largest |a − b| between
+    levels `a` and `b` of column `key` over rows that agree on the `by` columns. `abs = true` takes
+    the size of each value first. Computed from the unrounded values; a leading `+` is dropped.
+    """
+    keep = [row for row in rows if _matches(row, spec.get("where", {}))]
+    column, fmt = spec["column"], spec["fmt"]
+
+    def show(value: float) -> str:
+        return format_value(repr(value), fmt).lstrip("+")
+
+    if spec["stat"] == "maxgap":
+        partner = {tuple(row[k] for k in spec["by"]): row for row in keep if row[spec["key"]] == spec["b"]}
+        values = [abs(float(row[column]) - float(partner[pair][column]))
+                  for row in keep if row[spec["key"]] == spec["a"]
+                  and (pair := tuple(row[k] for k in spec["by"])) in partner]
+        spec = {**spec, "stat": "max"}
+    else:
+        values = [float(row[column]) for row in keep]
+        values = [abs(value) if spec.get("abs") else value for value in values if not math.isnan(value)]
+    if not values:
+        raise ValueError(f"stat {name}: no value of {column} matches {spec.get('where')}")
+    if spec["stat"] == "range":
+        return f"{show(min(values))}–{show(max(values))}"
+    return show({"min": min, "max": max, "median": statistics.median}[spec["stat"]](values))
+
+
 def export_table(spec: dict) -> dict:
     """The JSON content of one `[[table]]` block, built from its source CSV."""
     source = ROOT / spec["source"]
@@ -67,8 +100,11 @@ def export_table(spec: dict) -> dict:
         raise ValueError(f"{spec['name']}: no row of {spec['source']} matches {spec.get('where')}")
     exported = [{**{key: row[key] for key in spec["keys"]},
                  **{name: format_value(row[column], fmt) for name, (column, fmt) in spec["values"].items()}}
-                for row in rows]
-    return {"source": spec["source"], "source_sha256": file_sha256(source), "rows": exported}
+                for row in rows] if "values" in spec else []
+    content = {"source": spec["source"], "source_sha256": file_sha256(source), "rows": exported}
+    if "stats" in spec:
+        content["stats"] = {name: compute_stat(rows, name, stat) for name, stat in spec["stats"].items()}
+    return content
 
 
 def table_specs() -> list[dict]:
