@@ -2,13 +2,13 @@
  {
   "anchor": "FY4B",
   "method": "Raw satellite",
-  "threshold": "2.5",
-  "POD": "0.232",
-  "FAR": "0.803",
-  "CSI": "0.119",
-  "CSI_adw": "0.280",
-  "delta": "-0.161",
-  "ci": "(-0.195, -0.124)"
+  "threshold": "2",
+  "POD": "0.246",
+  "FAR": "0.780",
+  "CSI": "0.132",
+  "CSI_adw": "0.315",
+  "delta": "-0.184",
+  "ci": "(-0.217, -0.148)"
  },
  {
   "anchor": "FY4B",
@@ -24,24 +24,24 @@
  {
   "anchor": "FY4B",
   "method": "Raw satellite",
-  "threshold": "16",
-  "POD": "0.090",
-  "FAR": "0.955",
-  "CSI": "0.031",
-  "CSI_adw": "0.031",
-  "delta": "+0.000",
-  "ci": "(-0.018, +0.021)"
+  "threshold": "20",
+  "POD": "0.040",
+  "FAR": "0.960",
+  "CSI": "0.020",
+  "CSI_adw": "0.015",
+  "delta": "+0.005",
+  "ci": "(-0.012, +0.021)"
  },
  {
   "anchor": "FY4B",
   "method": "TPS",
-  "threshold": "2.5",
-  "POD": "0.433",
-  "FAR": "0.554",
-  "CSI": "0.281",
-  "CSI_adw": "0.280",
-  "delta": "+0.001",
-  "ci": "(-0.010, +0.013)"
+  "threshold": "2",
+  "POD": "0.477",
+  "FAR": "0.531",
+  "CSI": "0.310",
+  "CSI_adw": "0.315",
+  "delta": "-0.005",
+  "ci": "(-0.019, +0.007)"
  },
  {
   "anchor": "FY4B",
@@ -52,29 +52,29 @@
   "CSI": "0.080",
   "CSI_adw": "0.075",
   "delta": "+0.005",
-  "ci": "(-0.010, +0.019)"
+  "ci": "(-0.009, +0.019)"
  },
  {
   "anchor": "FY4B",
   "method": "TPS",
-  "threshold": "16",
-  "POD": "0.010",
-  "FAR": "0.923",
-  "CSI": "0.009",
-  "CSI_adw": "0.031",
-  "delta": "-0.022",
-  "ci": "(-0.034, -0.009)"
+  "threshold": "20",
+  "POD": "0.004",
+  "FAR": "0.955",
+  "CSI": "0.004",
+  "CSI_adw": "0.015",
+  "delta": "-0.011",
+  "ci": "(-0.024, -0.001)"
  },
  {
   "anchor": "FY4B",
   "method": "GWR family, chosen in-fold",
-  "threshold": "2.5",
-  "POD": "0.409",
-  "FAR": "0.616",
-  "CSI": "0.247",
-  "CSI_adw": "0.280",
-  "delta": "-0.033",
-  "ci": "(-0.051, -0.015)"
+  "threshold": "2",
+  "POD": "0.448",
+  "FAR": "0.587",
+  "CSI": "0.274",
+  "CSI_adw": "0.315",
+  "delta": "-0.041",
+  "ci": "(-0.060, -0.025)"
  },
  {
   "anchor": "FY4B",
@@ -85,29 +85,29 @@
   "CSI": "0.092",
   "CSI_adw": "0.075",
   "delta": "+0.017",
-  "ci": "(-0.000, +0.034)"
+  "ci": "(-0.001, +0.034)"
  },
  {
   "anchor": "FY4B",
   "method": "GWR family, chosen in-fold",
-  "threshold": "16",
-  "POD": "0.038",
-  "FAR": "0.792",
-  "CSI": "0.034",
-  "CSI_adw": "0.031",
-  "delta": "+0.003",
-  "ci": "(-0.013, +0.018)"
+  "threshold": "20",
+  "POD": "0.013",
+  "FAR": "0.763",
+  "CSI": "0.012",
+  "CSI_adw": "0.015",
+  "delta": "-0.003",
+  "ci": "(-0.013, +0.007)"
  },
  {
   "anchor": "FY4B",
   "method": "MGWR + agreement blend",
-  "threshold": "2.5",
-  "POD": "0.389",
-  "FAR": "0.484",
-  "CSI": "0.285",
-  "CSI_adw": "0.280",
-  "delta": "+0.005",
-  "ci": "(-0.003, +0.013)"
+  "threshold": "2",
+  "POD": "0.441",
+  "FAR": "0.470",
+  "CSI": "0.317",
+  "CSI_adw": "0.315",
+  "delta": "+0.002",
+  "ci": "(-0.006, +0.011)"
  },
  {
   "anchor": "FY4B",
@@ -123,24 +123,24 @@
  {
   "anchor": "FY4B",
   "method": "MGWR + agreement blend",
-  "threshold": "16",
-  "POD": "0.024",
-  "FAR": "0.640",
-  "CSI": "0.023",
-  "CSI_adw": "0.031",
-  "delta": "-0.007",
-  "ci": "(-0.015, -0.002)"
+  "threshold": "20",
+  "POD": "0.014",
+  "FAR": "0.667",
+  "CSI": "0.013",
+  "CSI_adw": "0.015",
+  "delta": "-0.002",
+  "ci": "(-0.006, +0.002)"
  },
  {
   "anchor": "GPM",
   "method": "Raw satellite",
-  "threshold": "2.5",
-  "POD": "0.403",
-  "FAR": "0.595",
-  "CSI": "0.253",
-  "CSI_adw": "0.280",
-  "delta": "-0.026",
-  "ci": "(-0.045, -0.005)"
+  "threshold": "2",
+  "POD": "0.432",
+  "FAR": "0.566",
+  "CSI": "0.276",
+  "CSI_adw": "0.314",
+  "delta": "-0.038",
+  "ci": "(-0.058, -0.015)"
  },
  {
   "anchor": "GPM",
@@ -151,29 +151,29 @@
   "CSI": "0.086",
   "CSI_adw": "0.075",
   "delta": "+0.011",
-  "ci": "(-0.013, +0.033)"
+  "ci": "(-0.011, +0.033)"
  },
  {
   "anchor": "GPM",
   "method": "Raw satellite",
-  "threshold": "16",
-  "POD": "0.023",
-  "FAR": "0.909",
-  "CSI": "0.019",
-  "CSI_adw": "0.031",
-  "delta": "-0.012",
-  "ci": "(-0.027, +0.002)"
+  "threshold": "20",
+  "POD": "0.004",
+  "FAR": "0.972",
+  "CSI": "0.004",
+  "CSI_adw": "0.015",
+  "delta": "-0.011",
+  "ci": "(-0.022, -0.001)"
  },
  {
   "anchor": "GPM",
   "method": "TPS",
-  "threshold": "2.5",
-  "POD": "0.431",
-  "FAR": "0.554",
-  "CSI": "0.281",
-  "CSI_adw": "0.280",
-  "delta": "+0.001",
-  "ci": "(-0.009, +0.012)"
+  "threshold": "2",
+  "POD": "0.476",
+  "FAR": "0.531",
+  "CSI": "0.309",
+  "CSI_adw": "0.314",
+  "delta": "-0.005",
+  "ci": "(-0.017, +0.006)"
  },
  {
   "anchor": "GPM",
@@ -184,29 +184,29 @@
   "CSI": "0.081",
   "CSI_adw": "0.075",
   "delta": "+0.005",
-  "ci": "(-0.009, +0.019)"
+  "ci": "(-0.008, +0.019)"
  },
  {
   "anchor": "GPM",
   "method": "TPS",
-  "threshold": "16",
-  "POD": "0.011",
-  "FAR": "0.921",
-  "CSI": "0.010",
-  "CSI_adw": "0.031",
-  "delta": "-0.021",
-  "ci": "(-0.035, -0.009)"
+  "threshold": "20",
+  "POD": "0.004",
+  "FAR": "0.955",
+  "CSI": "0.004",
+  "CSI_adw": "0.015",
+  "delta": "-0.011",
+  "ci": "(-0.024, -0.001)"
  },
  {
   "anchor": "GPM",
   "method": "GWR family, chosen in-fold",
-  "threshold": "2.5",
-  "POD": "0.455",
-  "FAR": "0.540",
-  "CSI": "0.296",
-  "CSI_adw": "0.280",
-  "delta": "+0.017",
-  "ci": "(+0.000, +0.036)"
+  "threshold": "2",
+  "POD": "0.488",
+  "FAR": "0.512",
+  "CSI": "0.323",
+  "CSI_adw": "0.314",
+  "delta": "+0.008",
+  "ci": "(-0.009, +0.028)"
  },
  {
   "anchor": "GPM",
@@ -217,29 +217,29 @@
   "CSI": "0.111",
   "CSI_adw": "0.075",
   "delta": "+0.036",
-  "ci": "(+0.019, +0.053)"
+  "ci": "(+0.018, +0.053)"
  },
  {
   "anchor": "GPM",
   "method": "GWR family, chosen in-fold",
-  "threshold": "16",
-  "POD": "0.034",
-  "FAR": "0.866",
-  "CSI": "0.028",
-  "CSI_adw": "0.031",
-  "delta": "-0.003",
-  "ci": "(-0.019, +0.013)"
+  "threshold": "20",
+  "POD": "0.020",
+  "FAR": "0.873",
+  "CSI": "0.017",
+  "CSI_adw": "0.015",
+  "delta": "+0.002",
+  "ci": "(-0.009, +0.014)"
  },
  {
   "anchor": "GPM",
   "method": "MGWR + agreement blend",
-  "threshold": "2.5",
-  "POD": "0.414",
-  "FAR": "0.424",
-  "CSI": "0.317",
-  "CSI_adw": "0.280",
-  "delta": "+0.038",
-  "ci": "(+0.027, +0.048)"
+  "threshold": "2",
+  "POD": "0.466",
+  "FAR": "0.406",
+  "CSI": "0.353",
+  "CSI_adw": "0.314",
+  "delta": "+0.039",
+  "ci": "(+0.028, +0.051)"
  },
  {
   "anchor": "GPM",
@@ -255,24 +255,24 @@
  {
   "anchor": "GPM",
   "method": "MGWR + agreement blend",
-  "threshold": "16",
-  "POD": "0.022",
-  "FAR": "0.660",
-  "CSI": "0.021",
-  "CSI_adw": "0.031",
-  "delta": "-0.009",
-  "ci": "(-0.018, -0.003)"
+  "threshold": "20",
+  "POD": "0.012",
+  "FAR": "0.653",
+  "CSI": "0.012",
+  "CSI_adw": "0.015",
+  "delta": "-0.003",
+  "ci": "(-0.008, +0.002)"
  },
  {
   "anchor": "GSMaP",
   "method": "Raw satellite",
-  "threshold": "2.5",
-  "POD": "0.392",
-  "FAR": "0.634",
-  "CSI": "0.233",
-  "CSI_adw": "0.280",
-  "delta": "-0.046",
-  "ci": "(-0.067, -0.024)"
+  "threshold": "2",
+  "POD": "0.416",
+  "FAR": "0.591",
+  "CSI": "0.259",
+  "CSI_adw": "0.314",
+  "delta": "-0.055",
+  "ci": "(-0.076, -0.031)"
  },
  {
   "anchor": "GSMaP",
@@ -283,29 +283,29 @@
   "CSI": "0.080",
   "CSI_adw": "0.075",
   "delta": "+0.005",
-  "ci": "(-0.019, +0.028)"
+  "ci": "(-0.018, +0.029)"
  },
  {
   "anchor": "GSMaP",
   "method": "Raw satellite",
-  "threshold": "16",
-  "POD": "0.090",
-  "FAR": "0.944",
-  "CSI": "0.036",
-  "CSI_adw": "0.031",
-  "delta": "+0.005",
-  "ci": "(-0.016, +0.030)"
+  "threshold": "20",
+  "POD": "0.054",
+  "FAR": "0.966",
+  "CSI": "0.021",
+  "CSI_adw": "0.015",
+  "delta": "+0.006",
+  "ci": "(-0.013, +0.030)"
  },
  {
   "anchor": "GSMaP",
   "method": "TPS",
-  "threshold": "2.5",
-  "POD": "0.431",
-  "FAR": "0.554",
-  "CSI": "0.281",
-  "CSI_adw": "0.280",
-  "delta": "+0.001",
-  "ci": "(-0.010, +0.013)"
+  "threshold": "2",
+  "POD": "0.476",
+  "FAR": "0.531",
+  "CSI": "0.309",
+  "CSI_adw": "0.314",
+  "delta": "-0.005",
+  "ci": "(-0.018, +0.007)"
  },
  {
   "anchor": "GSMaP",
@@ -316,29 +316,29 @@
   "CSI": "0.081",
   "CSI_adw": "0.075",
   "delta": "+0.005",
-  "ci": "(-0.008, +0.019)"
+  "ci": "(-0.009, +0.019)"
  },
  {
   "anchor": "GSMaP",
   "method": "TPS",
-  "threshold": "16",
-  "POD": "0.011",
-  "FAR": "0.921",
-  "CSI": "0.010",
-  "CSI_adw": "0.031",
-  "delta": "-0.021",
-  "ci": "(-0.034, -0.009)"
+  "threshold": "20",
+  "POD": "0.004",
+  "FAR": "0.955",
+  "CSI": "0.004",
+  "CSI_adw": "0.015",
+  "delta": "-0.011",
+  "ci": "(-0.024, -0.000)"
  },
  {
   "anchor": "GSMaP",
   "method": "GWR family, chosen in-fold",
-  "threshold": "2.5",
-  "POD": "0.464",
-  "FAR": "0.554",
-  "CSI": "0.294",
-  "CSI_adw": "0.280",
-  "delta": "+0.015",
-  "ci": "(+0.001, +0.029)"
+  "threshold": "2",
+  "POD": "0.505",
+  "FAR": "0.520",
+  "CSI": "0.326",
+  "CSI_adw": "0.314",
+  "delta": "+0.012",
+  "ci": "(-0.003, +0.027)"
  },
  {
   "anchor": "GSMaP",
@@ -349,29 +349,29 @@
   "CSI": "0.110",
   "CSI_adw": "0.075",
   "delta": "+0.035",
-  "ci": "(+0.019, +0.052)"
+  "ci": "(+0.018, +0.051)"
  },
  {
   "anchor": "GSMaP",
   "method": "GWR family, chosen in-fold",
-  "threshold": "16",
-  "POD": "0.066",
-  "FAR": "0.855",
-  "CSI": "0.048",
-  "CSI_adw": "0.031",
-  "delta": "+0.017",
-  "ci": "(-0.007, +0.043)"
+  "threshold": "20",
+  "POD": "0.040",
+  "FAR": "0.890",
+  "CSI": "0.030",
+  "CSI_adw": "0.015",
+  "delta": "+0.015",
+  "ci": "(-0.005, +0.038)"
  },
  {
   "anchor": "GSMaP",
   "method": "MGWR + agreement blend",
-  "threshold": "2.5",
-  "POD": "0.429",
-  "FAR": "0.464",
-  "CSI": "0.313",
-  "CSI_adw": "0.280",
-  "delta": "+0.033",
-  "ci": "(+0.024, +0.042)"
+  "threshold": "2",
+  "POD": "0.483",
+  "FAR": "0.446",
+  "CSI": "0.348",
+  "CSI_adw": "0.314",
+  "delta": "+0.034",
+  "ci": "(+0.025, +0.042)"
  },
  {
   "anchor": "GSMaP",
@@ -387,24 +387,24 @@
  {
   "anchor": "GSMaP",
   "method": "MGWR + agreement blend",
-  "threshold": "16",
-  "POD": "0.032",
-  "FAR": "0.647",
-  "CSI": "0.030",
-  "CSI_adw": "0.031",
-  "delta": "-0.001",
-  "ci": "(-0.011, +0.009)"
+  "threshold": "20",
+  "POD": "0.021",
+  "FAR": "0.613",
+  "CSI": "0.020",
+  "CSI_adw": "0.015",
+  "delta": "+0.005",
+  "ci": "(-0.005, +0.017)"
  },
  {
   "anchor": "MERGED_MEAN",
   "method": "Raw satellite",
-  "threshold": "2.5",
-  "POD": "0.386",
-  "FAR": "0.642",
-  "CSI": "0.228",
-  "CSI_adw": "0.280",
-  "delta": "-0.052",
-  "ci": "(-0.075, -0.030)"
+  "threshold": "2",
+  "POD": "0.411",
+  "FAR": "0.611",
+  "CSI": "0.250",
+  "CSI_adw": "0.315",
+  "delta": "-0.065",
+  "ci": "(-0.089, -0.042)"
  },
  {
   "anchor": "MERGED_MEAN",
@@ -415,29 +415,29 @@
   "CSI": "0.084",
   "CSI_adw": "0.075",
   "delta": "+0.009",
-  "ci": "(-0.014, +0.033)"
+  "ci": "(-0.016, +0.032)"
  },
  {
   "anchor": "MERGED_MEAN",
   "method": "Raw satellite",
-  "threshold": "16",
-  "POD": "0.038",
-  "FAR": "0.840",
-  "CSI": "0.032",
-  "CSI_adw": "0.031",
-  "delta": "+0.001",
-  "ci": "(-0.027, +0.033)"
+  "threshold": "20",
+  "POD": "0.024",
+  "FAR": "0.748",
+  "CSI": "0.022",
+  "CSI_adw": "0.015",
+  "delta": "+0.007",
+  "ci": "(-0.017, +0.032)"
  },
  {
   "anchor": "MERGED_MEAN",
   "method": "TPS",
-  "threshold": "2.5",
-  "POD": "0.433",
-  "FAR": "0.554",
-  "CSI": "0.281",
-  "CSI_adw": "0.280",
-  "delta": "+0.001",
-  "ci": "(-0.009, +0.013)"
+  "threshold": "2",
+  "POD": "0.477",
+  "FAR": "0.531",
+  "CSI": "0.310",
+  "CSI_adw": "0.315",
+  "delta": "-0.005",
+  "ci": "(-0.017, +0.007)"
  },
  {
   "anchor": "MERGED_MEAN",
@@ -448,29 +448,29 @@
   "CSI": "0.080",
   "CSI_adw": "0.075",
   "delta": "+0.005",
-  "ci": "(-0.009, +0.019)"
+  "ci": "(-0.010, +0.020)"
  },
  {
   "anchor": "MERGED_MEAN",
   "method": "TPS",
-  "threshold": "16",
-  "POD": "0.010",
-  "FAR": "0.923",
-  "CSI": "0.009",
-  "CSI_adw": "0.031",
-  "delta": "-0.022",
-  "ci": "(-0.034, -0.009)"
+  "threshold": "20",
+  "POD": "0.004",
+  "FAR": "0.955",
+  "CSI": "0.004",
+  "CSI_adw": "0.015",
+  "delta": "-0.011",
+  "ci": "(-0.024, -0.001)"
  },
  {
   "anchor": "MERGED_MEAN",
   "method": "GWR family, chosen in-fold",
-  "threshold": "2.5",
-  "POD": "0.476",
-  "FAR": "0.526",
-  "CSI": "0.312",
-  "CSI_adw": "0.280",
-  "delta": "+0.031",
-  "ci": "(+0.017, +0.047)"
+  "threshold": "2",
+  "POD": "0.515",
+  "FAR": "0.500",
+  "CSI": "0.340",
+  "CSI_adw": "0.315",
+  "delta": "+0.025",
+  "ci": "(+0.009, +0.040)"
  },
  {
   "anchor": "MERGED_MEAN",
@@ -486,24 +486,24 @@
  {
   "anchor": "MERGED_MEAN",
   "method": "GWR family, chosen in-fold",
-  "threshold": "16",
-  "POD": "0.041",
-  "FAR": "0.727",
-  "CSI": "0.037",
-  "CSI_adw": "0.031",
-  "delta": "+0.006",
-  "ci": "(-0.012, +0.028)"
+  "threshold": "20",
+  "POD": "0.025",
+  "FAR": "0.718",
+  "CSI": "0.023",
+  "CSI_adw": "0.015",
+  "delta": "+0.008",
+  "ci": "(-0.008, +0.027)"
  },
  {
   "anchor": "MERGED_MEAN",
   "method": "MGWR + agreement blend",
-  "threshold": "2.5",
-  "POD": "0.441",
-  "FAR": "0.451",
-  "CSI": "0.323",
-  "CSI_adw": "0.280",
-  "delta": "+0.043",
-  "ci": "(+0.032, +0.055)"
+  "threshold": "2",
+  "POD": "0.490",
+  "FAR": "0.436",
+  "CSI": "0.355",
+  "CSI_adw": "0.315",
+  "delta": "+0.040",
+  "ci": "(+0.029, +0.052)"
  },
  {
   "anchor": "MERGED_MEAN",
@@ -514,29 +514,29 @@
   "CSI": "0.095",
   "CSI_adw": "0.075",
   "delta": "+0.021",
-  "ci": "(+0.007, +0.035)"
+  "ci": "(+0.007, +0.034)"
  },
  {
   "anchor": "MERGED_MEAN",
   "method": "MGWR + agreement blend",
-  "threshold": "16",
-  "POD": "0.029",
-  "FAR": "0.613",
-  "CSI": "0.028",
-  "CSI_adw": "0.031",
-  "delta": "-0.003",
-  "ci": "(-0.011, +0.006)"
+  "threshold": "20",
+  "POD": "0.016",
+  "FAR": "0.549",
+  "CSI": "0.016",
+  "CSI_adw": "0.015",
+  "delta": "+0.001",
+  "ci": "(-0.008, +0.011)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "Raw satellite",
-  "threshold": "2.5",
-  "POD": "0.268",
-  "FAR": "0.450",
-  "CSI": "0.220",
-  "CSI_adw": "0.280",
-  "delta": "-0.060",
-  "ci": "(-0.085, -0.034)"
+  "threshold": "2",
+  "POD": "0.305",
+  "FAR": "0.421",
+  "CSI": "0.250",
+  "CSI_adw": "0.315",
+  "delta": "-0.065",
+  "ci": "(-0.091, -0.038)"
  },
  {
   "anchor": "MERGED_OLS",
@@ -547,29 +547,29 @@
   "CSI": "0.041",
   "CSI_adw": "0.074",
   "delta": "-0.033",
-  "ci": "(-0.058, -0.009)"
+  "ci": "(-0.057, -0.007)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "Raw satellite",
-  "threshold": "16",
-  "POD": "0.003",
+  "threshold": "20",
+  "POD": "0.002",
   "FAR": "0.500",
-  "CSI": "0.003",
-  "CSI_adw": "0.030",
-  "delta": "-0.028",
-  "ci": "(-0.040, -0.015)"
+  "CSI": "0.002",
+  "CSI_adw": "0.015",
+  "delta": "-0.013",
+  "ci": "(-0.025, -0.003)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "TPS",
-  "threshold": "2.5",
-  "POD": "0.432",
-  "FAR": "0.555",
-  "CSI": "0.281",
-  "CSI_adw": "0.280",
-  "delta": "+0.001",
-  "ci": "(-0.009, +0.013)"
+  "threshold": "2",
+  "POD": "0.477",
+  "FAR": "0.532",
+  "CSI": "0.309",
+  "CSI_adw": "0.315",
+  "delta": "-0.006",
+  "ci": "(-0.018, +0.007)"
  },
  {
   "anchor": "MERGED_OLS",
@@ -580,29 +580,29 @@
   "CSI": "0.080",
   "CSI_adw": "0.074",
   "delta": "+0.005",
-  "ci": "(-0.009, +0.019)"
+  "ci": "(-0.008, +0.019)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "TPS",
-  "threshold": "16",
-  "POD": "0.010",
-  "FAR": "0.923",
-  "CSI": "0.009",
-  "CSI_adw": "0.030",
-  "delta": "-0.021",
-  "ci": "(-0.034, -0.009)"
+  "threshold": "20",
+  "POD": "0.004",
+  "FAR": "0.955",
+  "CSI": "0.004",
+  "CSI_adw": "0.015",
+  "delta": "-0.011",
+  "ci": "(-0.024, -0.001)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "GWR family, chosen in-fold",
-  "threshold": "2.5",
-  "POD": "0.401",
-  "FAR": "0.443",
-  "CSI": "0.304",
-  "CSI_adw": "0.280",
-  "delta": "+0.025",
-  "ci": "(+0.010, +0.041)"
+  "threshold": "2",
+  "POD": "0.447",
+  "FAR": "0.419",
+  "CSI": "0.338",
+  "CSI_adw": "0.315",
+  "delta": "+0.023",
+  "ci": "(+0.007, +0.040)"
  },
  {
   "anchor": "MERGED_OLS",
@@ -613,27 +613,27 @@
   "CSI": "0.080",
   "CSI_adw": "0.074",
   "delta": "+0.006",
-  "ci": "(-0.010, +0.022)"
+  "ci": "(-0.009, +0.023)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "GWR family, chosen in-fold",
-  "threshold": "16",
-  "POD": "0.018",
-  "FAR": "0.722",
-  "CSI": "0.017",
-  "CSI_adw": "0.030",
-  "delta": "-0.013",
-  "ci": "(-0.026, +0.000)"
+  "threshold": "20",
+  "POD": "0.015",
+  "FAR": "0.543",
+  "CSI": "0.014",
+  "CSI_adw": "0.015",
+  "delta": "-0.000",
+  "ci": "(-0.011, +0.013)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "MGWR + agreement blend",
-  "threshold": "2.5",
-  "POD": "0.394",
-  "FAR": "0.413",
-  "CSI": "0.308",
-  "CSI_adw": "0.280",
+  "threshold": "2",
+  "POD": "0.442",
+  "FAR": "0.393",
+  "CSI": "0.344",
+  "CSI_adw": "0.315",
   "delta": "+0.029",
   "ci": "(+0.018, +0.041)"
  },
@@ -646,17 +646,17 @@
   "CSI": "0.080",
   "CSI_adw": "0.074",
   "delta": "+0.006",
-  "ci": "(-0.004, +0.018)"
+  "ci": "(-0.004, +0.019)"
  },
  {
   "anchor": "MERGED_OLS",
   "method": "MGWR + agreement blend",
-  "threshold": "16",
-  "POD": "0.019",
-  "FAR": "0.628",
-  "CSI": "0.018",
-  "CSI_adw": "0.030",
-  "delta": "-0.012",
-  "ci": "(-0.024, -0.001)"
+  "threshold": "20",
+  "POD": "0.013",
+  "FAR": "0.558",
+  "CSI": "0.013",
+  "CSI_adw": "0.015",
+  "delta": "-0.002",
+  "ci": "(-0.008, +0.006)"
  }
 ]
