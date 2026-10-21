@@ -27,7 +27,9 @@ from __future__ import annotations
 
 import csv
 import json
+import platform
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -670,6 +672,25 @@ def report_tables(summary, stratified, ranking, fusion, anchor_metrics, comparis
                 [["run_directory", Path(source).name]] + [[row["key"], str(row["value"])] for row in provenance])
 
 
+def write_plot_provenance() -> None:
+    """Which code and libraries drew FIG_DIR, beside the figures, since the run's own provenance
+    describes the benchmark and not this script."""
+    def git(*args: str) -> str:
+        try:
+            return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True,
+                                  check=True).stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            return "unavailable"
+
+    porcelain = git("status", "--porcelain")
+    rows = [["git_commit", git("rev-parse", "HEAD")],
+            ["git_dirty", porcelain if porcelain == "unavailable" else str(porcelain != "").lower()],
+            ["python", platform.python_version()], ["matplotlib", mpl.__version__], ["numpy", np.__version__]]
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(FIG_DIR / "plot_provenance.csv", "w", newline="", encoding="utf-8") as handle:
+        csv.writer(handle).writerows([["key", "value"], *rows])
+
+
 def main() -> None:
     summary = read_rows(RUN_DIR / "method_summary.csv")
     stratified = read_rows(RUN_DIR / "stratified_summary.csv")
@@ -687,6 +708,7 @@ def main() -> None:
     fig4_where(stratified, detection)
     fig5_products(anchor_metrics, comparison, coefficients)
     fig6_robustness(summary, stratified)
+    write_plot_provenance()
     if GPM_GSMAP_ONLY or GPM != "GPM" or not HAS_FY4B:
         return
 

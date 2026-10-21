@@ -329,8 +329,11 @@ function main(args=ARGS)
     write_csv_atomic(joinpath(outdir, "blend_weights.csv"), blend_weights(
         CSV.read(joinpath(run_dir, "blend_selection.csv"), DataFrame)))
     scope = CSV.read(joinpath(run_dir, "benchmark_scope.csv"), DataFrame)
-    write_csv_atomic(joinpath(outdir, "source_provenance.csv"),
-        filter(:key => in(("git_commit", "git_branch", "git_dirty")), scope))
+    # The run's code, then this report's own: the two can be different commits.
+    report_git = filter(:key => in(("git_commit", "git_dirty")), _git_provenance())
+    write_csv_atomic(joinpath(outdir, "source_provenance.csv"), vcat(
+        filter(:key => in(("git_commit", "git_branch", "git_dirty")), scope),
+        DataFrame(key="report_" .* report_git.key, value=report_git.value)))
     println("Wrote the tables read off the run's own outputs")
 
     # The rest re-scores stored predictions, which needs the observations on the run's grid.

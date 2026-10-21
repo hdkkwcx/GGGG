@@ -163,7 +163,7 @@ function _write_benchmark_outputs(
     dem_store, joint_store, joint_scaling_tables, joint_qc_tables,
     all_metric_rows, all_scan_rows, all_bootstrap_rows, run_status_rows,
     auto_selection_rows, blend_selection_rows, fused_anchor_rows, hurdle_rows,
-    selection_fallback_cells,
+    selection_fallback_cells; provenance::DataFrame=_git_provenance(),
 )
     metrics = DataFrame(all_metric_rows)
     scans = DataFrame(all_scan_rows)
@@ -391,7 +391,10 @@ function _write_benchmark_outputs(
             ],
         ))
     end
-    append!(scope, _git_provenance())
+    append!(scope, provenance)
+    # A tree edited while the run was going: `git_dirty` above is still the code that ran.
+    end_git = _git_provenance()
+    append!(scope, DataFrame(key=["git_dirty_at_end"], value=end_git.value[end_git.key .== "git_dirty"]))
     CSV.write(joinpath(cfg.mger.outdir, "benchmark_scope.csv"), scope)
     return (; metrics, scans, bootstrap, status, claim, repeat_summary, fold_summary,
         rank_stability, auto_selection=DataFrame(auto_selection_rows))
@@ -403,7 +406,10 @@ Which code produced this run, as `scope` rows.
 `benchmark_scope.csv` recorded the CV scope and nothing about provenance, so a published run
 could be dated but not attributed. `git_dirty` is the load-bearing one: a clean tree means
 `git_commit` fully determines the code, and a dirty tree means it does not, which is the
-difference between a citable baseline and a plausible one.
+difference between a citable baseline and a plausible one. `run_interpolation_benchmark` reads
+it at the start, through `_start_provenance`: read at the end, a run launched on uncommitted
+edits that were committed while it ran recorded itself as clean. `git_dirty_at_end` is the
+second reading.
 
 Every call is wrapped. A missing git, a checkout that is not a repository, or an ownership check
 that refuses records `"unavailable"` rather than aborting a run that takes hours.
@@ -429,4 +435,26 @@ function _git_provenance()
             porcelain === nothing ? "unavailable" : string(!isempty(porcelain)),
         ],
     )
+end
+
+"""
+The provenance rows a run records at its start: `_git_provenance`, plus the Julia version and
+the SHA-256 of the active environment's `Manifest.toml`, which is copied into `outdir`.
+
+`Manifest.toml` is gitignored, so `git_commit` alone does not fix the package versions a run
+resolved. A missing manifest or project records `"unavailable"`, as `_git_provenance` does.
+"""
+function _start_provenance(outdir::AbstractString)
+    project = Base.active_project()
+    manifest = project === nothing ? nothing : joinpath(dirname(project), "Manifest.toml")
+    manifest_sha = if manifest !== nothing && isfile(manifest)
+        cp(manifest, joinpath(outdir, "Manifest.toml"); force=true)
+        bytes2hex(open(sha256, manifest))
+    else
+        "unavailable"
+    end
+    return vcat(_git_provenance(), DataFrame(
+        key=["julia_version", "manifest_sha256"],
+        value=[string(VERSION), manifest_sha],
+    ))
 end
