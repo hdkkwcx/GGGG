@@ -1458,7 +1458,9 @@ end
         @test all(in(scope.key), ("git_commit", "git_dirty", "git_dirty_at_end", "julia_version", "manifest_sha256"))
         manifest_sha = only(scope.value[scope.key .== "manifest_sha256"])
         manifest_sha == "unavailable" ||
-            @test bytes2hex(open(sha256, joinpath(outdir, "Manifest.toml"))) == manifest_sha
+            @test RunProvenance.file_sha256(joinpath(outdir, "Manifest.toml")) == manifest_sha
+        # Every input the config reads is hashed, the gauges and each satellite product included.
+        @test count(startswith("input_sha256:"), scope.key) >= 2 + length(cfg.mger.sat_paths)
 
         # Two partitions: rows are stamped per repeat and the spread tables are populated.
         repeat_outdir = joinpath(temp_dir, "benchmark_repeats")

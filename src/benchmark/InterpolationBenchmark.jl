@@ -1,5 +1,4 @@
 using CSV, DataFrames, Dates, LinearAlgebra, Random, Statistics
-using SHA: sha256
 using MixedGWR
 
 # Every standalone module is loaded through the shared loader, which puts exactly one copy of
@@ -11,7 +10,7 @@ load_pipeline("MGERPipeline")
 load_standalone_modules(
     "TraditionalInterpolation", "DEMTerrainExperiment", "JointCovariateModels",
     "ERA5VariableSelection", "NDVIVariableSelection", "JointVariableSelection",
-    "SatelliteFusion",
+    "SatelliteFusion", "RunProvenance",
 )
 
 using .TraditionalInterpolation
@@ -23,6 +22,7 @@ using .DEMTerrainExperiment: select_mixed_bandwidth, select_multiscale_bandwidth
 using .JointCovariateModels
 using .JointVariableSelection: JointSelectionConfig, select_joint_covariates
 using .SatelliteFusion
+using .RunProvenance: start_provenance, git_provenance
 
 # The benchmark's implementation is split across concern-specific files (config, fold-splitting,
 # DEM, joint-covariates, predictors, tuning, metrics, bootstrap, output writing, per-fold runs,
