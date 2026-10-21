@@ -1,0 +1,106 @@
+{
+ "source": "output/heavy_rain_events_gpm_gsmap_gpmuncal/event_metrics.csv",
+ "source_sha256": "0a6d14b8939c2c8b65315cbfae12776ac63d651580d785c3f8df0ebafda96dce",
+ "rows": [
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "r": "0.14",
+   "MB0": "+4",
+   "CSI50": "0.40"
+  },
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.02",
+   "MB0": "+23",
+   "CSI50": "0.48"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "r": "0.78",
+   "MB0": "-10",
+   "CSI50": "0.61"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.78",
+   "MB0": "+9",
+   "CSI50": "0.69"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "r": "0.66",
+   "MB0": "-8",
+   "CSI50": "0.47"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.79",
+   "MB0": "+23",
+   "CSI50": "0.58"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "r": "0.24",
+   "MB0": "-8",
+   "CSI50": "0.44"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.40",
+   "MB0": "+73",
+   "CSI50": "0.75"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "GPM_uncal",
+   "r": "0.76",
+   "MB0": "-6",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "GSMaP",
+   "r": "0.74",
+   "MB0": "-9",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2024-07-30",
+   "event_type": "localized",
+   "product": "GPM_uncal",
+   "r": "0.55",
+   "MB0": "-7",
+   "CSI50": "0.13"
+  },
+  {
+   "event_day": "2024-07-30",
+   "event_type": "localized",
+   "product": "GSMaP",
+   "r": "0.57",
+   "MB0": "-6",
+   "CSI50": "0.00"
+  }
+ ],
+ "stats": {
+  "r_four": "0.55–0.79",
+  "r_0626_max": "0.14"
+ }
+}

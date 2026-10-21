@@ -1,0 +1,30 @@
+{
+ "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal/regional_series_metrics.csv",
+ "source_sha256": "af27dbbc7ab4436e2ac6c4c94660fce155800e5e7f012508891c0cf08b25c2c2",
+ "rows": [
+  {
+   "product": "GPM_uncal",
+   "timescale_h": "1",
+   "r": "0.82",
+   "RB0": "-12"
+  },
+  {
+   "product": "GPM_uncal",
+   "timescale_h": "24",
+   "r": "0.90",
+   "RB0": "-11"
+  },
+  {
+   "product": "GSMaP",
+   "timescale_h": "1",
+   "r": "0.66",
+   "RB0": "+33"
+  },
+  {
+   "product": "GSMaP",
+   "timescale_h": "24",
+   "r": "0.80",
+   "RB0": "+34"
+  }
+ ]
+}

@@ -7,8 +7,9 @@
 # Paths are relative to the repository root. Update an entry when a figure is re-copied from a
 # different output.
 # RQ1/RQ2 entries point at the IMERG Uncal runs (`_gpmuncal`; RQ2 also `_nofy4b`), the paper's
-# primary product. Their prose numbers get [[table]] blocks when that text is rewritten from them;
-# the heavy-core diagnostics (output/heavy_core_diagnostics_gpmuncal/) are one of those sources.
+# primary product, with the heavy-core diagnostics (output/heavy_core_diagnostics_gpmuncal/) and,
+# for the Scope paragraph's FY4B numbers, the Uncal RQ2 run with FY4B
+# (output/satellite_temporal_evaluation_gpmuncal/).
 
 [[item]]
 label = "Fig. 2 (RQ1 event maps)"
@@ -59,8 +60,8 @@ provenance = [
 
 # Numbers the paper cites. `scripts/export_paper_numbers.py` writes each block to
 # paper/numbers/<name>.json, which paper_plan.typ reads; the check re-exports them and fails on any
-# difference. `values` maps an output name to [source column, format]: 3f / 2f decimals, or
-# pct1 / pct0, a fraction as a signed percentage. Uncal blocks are the primary run, Final blocks the
+# difference. `values` maps an output name to [source column, format]: Nf decimals (+Nf signed),
+# or pct1 / pct0, a fraction as a signed percentage. Uncal blocks are the primary run, Final blocks the
 # IMERG Final sensitivity run.
 
 [[table]]
@@ -202,3 +203,274 @@ product = "MERGED_OLS"
 intercept = ["intercept_mean", "2f"]
 beta_gpm = ["beta_gpm_mean", "2f"]
 beta_gsmap = ["beta_gsmap_mean", "2f"]
+
+# RQ1: the six heavy-rain events (IMERG Uncal run; the Final run for the calibration comparison).
+
+[[table]]
+name = "rq1_summary"
+label = "RQ1 text: mean over the six events (IMERG Uncal)"
+source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/event_metrics_summary.csv"
+provenance = ["output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"]
+keys = ["product"]
+[table.where]
+window = "full_day"
+statistic = "mean_over_events"
+[table.values]
+r = ["r", "2f"]
+MB = ["Bias", "+1f"]
+RMSE = ["RMSE", "1f"]
+
+[[table]]
+name = "rq1_summary_final"
+label = "RQ1 text: mean over the six events (IMERG Final)"
+source = "output/heavy_rain_events_gpm_gsmap/event_metrics_summary.csv"
+provenance = ["output/heavy_rain_events_gpm_gsmap/provenance.csv"]
+keys = ["product"]
+[table.where]
+window = "full_day"
+statistic = "mean_over_events"
+[table.values]
+r = ["r", "2f"]
+MB = ["Bias", "+1f"]
+RMSE = ["RMSE", "1f"]
+
+[[table]]
+name = "rq1_events"
+label = "RQ1 text: scores per event (IMERG Uncal)"
+source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/event_metrics.csv"
+provenance = ["output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"]
+keys = ["event_day", "event_type", "product"]
+[table.where]
+window = "full_day"
+[table.values]
+r = ["r", "2f"]
+MB0 = ["Bias", "+0f"]
+CSI50 = ["CSI_50", "2f"]
+# Over both products: the four events other than 2022-06-26 and 2023-08-26, and 2022-06-26.
+[table.stats.r_four]
+stat = "range"
+column = "r"
+fmt = "2f"
+where = { event_day = ["2022-10-03", "2023-06-17", "2023-09-10", "2024-07-30"], product = ["GPM_uncal", "GSMaP"] }
+[table.stats.r_0626_max]
+stat = "max"
+column = "r"
+fmt = "2f"
+where = { event_day = "2022-06-26", product = ["GPM_uncal", "GSMaP"] }
+
+[[table]]
+name = "rq1_events_final"
+label = "RQ1 text: scores per event (IMERG Final)"
+source = "output/heavy_rain_events_gpm_gsmap/event_metrics.csv"
+provenance = ["output/heavy_rain_events_gpm_gsmap/provenance.csv"]
+keys = ["event_day", "event_type", "product"]
+[table.where]
+window = "full_day"
+[table.values]
+r = ["r", "2f"]
+MB0 = ["Bias", "+0f"]
+CSI50 = ["CSI_50", "2f"]
+
+[[table]]
+name = "rq1_cores"
+label = "RQ1 text: storm-core deficit per event and product"
+source = "output/heavy_core_diagnostics_gpmuncal/summary.csv"
+provenance = ["output/heavy_core_diagnostics_gpmuncal/provenance.csv"]
+keys = ["event_day", "event_type", "product"]
+[table.values]
+repr = ["representativeness_share", "pct0"]
+top3 = ["median_top3_share_of_obs", "pct0"]
+peak_ratio = ["median_peak_ratio", "2f"]
+cal = ["final_over_uncal", "1f"]
+# Over the two localized events and both products (IMERG Final excluded).
+[table.stats.repr_local]
+stat = "range"
+column = "representativeness_share"
+fmt = "pct0"
+where = { event_type = "localized", product = ["GPM_uncal", "GSMaP"] }
+[table.stats.top3_local_max]
+stat = "max"
+column = "median_top3_share_of_obs"
+fmt = "pct0"
+where = { event_type = "localized", product = ["GPM_uncal", "GSMaP"] }
+[table.stats.peak_ratio_local]
+stat = "range"
+column = "median_peak_ratio"
+fmt = "2f"
+where = { event_type = "localized", product = ["GPM_uncal", "GSMaP"] }
+
+[[table]]
+name = "rq1_core_gauges"
+label = "RQ1 text: peak hourly rain at the core gauges of the localized events"
+source = "output/heavy_core_diagnostics_gpmuncal/core_gauges.csv"
+provenance = ["output/heavy_core_diagnostics_gpmuncal/provenance.csv"]
+[table.where]
+event_type = "localized"
+[table.stats.peak_0910]
+stat = "median"
+column = "obs_peak_mm_h"
+fmt = "0f"
+where = { event_day = "2023-09-10" }
+[table.stats.peak_0730]
+stat = "median"
+column = "obs_peak_mm_h"
+fmt = "0f"
+where = { event_day = "2024-07-30" }
+
+[[table]]
+name = "rq1_phases"
+label = "RQ1 text: spatial r of each 8 h phase"
+source = "output/heavy_core_diagnostics_gpmuncal/phase_decomposition.csv"
+provenance = ["output/heavy_core_diagnostics_gpmuncal/provenance.csv"]
+keys = ["event_day", "phase", "product"]
+[table.where]
+phase = ["1", "2", "3"]
+[table.values]
+r = ["r", "2f"]
+[table.stats.r_0626]
+stat = "range"
+column = "r"
+fmt = "2f"
+where = { event_day = "2022-06-26", product = ["GPM_uncal", "GSMaP"] }
+
+# RQ2: hourly evaluation over the full 2022-2024 record (IMERG Uncal run without FY4B).
+
+[[table]]
+name = "rq2_classes"
+label = "RQ2 text: scores by intensity class, season and relief"
+source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal/intensity_class_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal/provenance.csv"]
+keys = ["product", "season", "region", "gauge_class"]
+[table.where]
+sample = "gpm_gsmap_full"
+region = ["all", "relief_lt500", "relief_500_1000"]
+[table.values]
+RB0 = ["RB_pct", "+0f"]
+POD = ["POD_rain", "pct0"]
+hit = ["class_hit", "pct0"]
+# At >= 8 mm/h (the rainstorm and severe classes), all seasons, both products.
+[table.stats.loss_heavy]
+stat = "range"
+abs = true
+column = "RB_pct"
+fmt = "0f"
+where = { product = ["GPM_uncal", "GSMaP"], season = "all", region = "all", gauge_class = ["rainstorm", "severe_rainstorm"] }
+[table.stats.hit_heavy_max]
+stat = "max"
+column = "class_hit"
+fmt = "pct0"
+where = { product = ["GPM_uncal", "GSMaP"], season = "all", region = "all", gauge_class = ["rainstorm", "severe_rainstorm"] }
+# The largest class-bias difference between relief below 500 m and 500-1000 m, per product and class.
+[table.stats.relief_gap_max]
+stat = "maxgap"
+column = "RB_pct"
+fmt = "0f"
+key = "region"
+a = "relief_lt500"
+b = "relief_500_1000"
+by = ["product", "gauge_class"]
+where = { product = ["GPM_uncal", "GSMaP"], season = "all", gauge_class = ["light", "moderate", "heavy", "rainstorm", "severe_rainstorm"] }
+
+[[table]]
+name = "rq2_events"
+label = "RQ2 text: rain-event detection and timing"
+source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal/event_timing_summary.csv"
+provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal/provenance.csv"]
+keys = ["product", "event_class"]
+[table.where]
+sample = "gpm_gsmap_full"
+season = "all"
+region = "all"
+min_dry_gap_h = "3"
+event_class = ["moderate", "heavy", "rainstorm", "severe_rainstorm"]
+[table.values]
+POD = ["POD_event", "pct0"]
+centroid = ["median_centroid_error_h", "1f"]
+[table.stats.pod]
+stat = "range"
+column = "POD_event"
+fmt = "pct0"
+where = { product = ["GPM_uncal", "GSMaP"] }
+[table.stats.centroid_min]
+stat = "min"
+column = "median_centroid_error_h"
+fmt = "1f"
+where = { product = ["GPM_uncal", "GSMaP"] }
+[table.stats.centroid_max]
+stat = "max"
+column = "median_centroid_error_h"
+fmt = "1f"
+where = { product = ["GPM_uncal", "GSMaP"] }
+
+[[table]]
+name = "rq2_areal"
+label = "RQ2 text: areal-mean series"
+source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal/regional_series_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal/provenance.csv"]
+keys = ["product", "timescale_h"]
+[table.where]
+sample = "gpm_gsmap_full"
+region = "all"
+season = "all"
+timescale_h = ["1", "24"]
+[table.values]
+r = ["r", "2f"]
+RB0 = ["RB_pct", "+0f"]
+
+# Scope: FY4B against GPM and GSMaP on the hours it covers (IMERG Uncal run with FY4B).
+
+[[table]]
+name = "scope_fy4b_r"
+label = "Scope text: FY4B, median station hourly r"
+source = "output/satellite_temporal_evaluation_gpmuncal/station_correlation_summary.csv"
+provenance = ["output/satellite_temporal_evaluation_gpmuncal/provenance.csv"]
+keys = ["product"]
+[table.where]
+sample = "all_products"
+season = "all"
+region = "all"
+[table.values]
+r = ["median_r_all_hours", "2f"]
+[table.stats.others]
+stat = "range"
+column = "median_r_all_hours"
+fmt = "2f"
+where = { product = ["GPM_uncal", "GSMaP"] }
+
+[[table]]
+name = "scope_fy4b_areal"
+label = "Scope text: FY4B, areal-mean hourly r"
+source = "output/satellite_temporal_evaluation_gpmuncal/regional_series_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_gpmuncal/provenance.csv"]
+keys = ["product"]
+[table.where]
+sample = "all_products"
+region = "all"
+season = "all"
+timescale_h = "1"
+[table.values]
+r = ["r", "2f"]
+[table.stats.others]
+stat = "range"
+column = "r"
+fmt = "2f"
+where = { product = ["GPM_uncal", "GSMaP"] }
+
+[[table]]
+name = "scope_fy4b_pod"
+label = "Scope text: FY4B, wet-hour detection"
+source = "output/satellite_temporal_evaluation_gpmuncal/intensity_class_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_gpmuncal/provenance.csv"]
+keys = ["product"]
+[table.where]
+sample = "all_products"
+season = "all"
+region = "all"
+gauge_class = "all_wet"
+[table.values]
+POD = ["POD_rain", "2f"]
+[table.stats.others]
+stat = "range"
+column = "POD_rain"
+fmt = "2f"
+where = { product = ["GPM_uncal", "GSMaP"] }

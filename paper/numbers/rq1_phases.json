@@ -1,0 +1,225 @@
+{
+ "source": "output/heavy_core_diagnostics_gpmuncal/phase_decomposition.csv",
+ "source_sha256": "33a23f60c26068a5e6ceafc61e64a647a48b0b59fc5c59adb2a6d8f1a0678fdd",
+ "rows": [
+  {
+   "event_day": "2022-06-26",
+   "phase": "1",
+   "product": "GPM_uncal",
+   "r": "0.46"
+  },
+  {
+   "event_day": "2022-06-26",
+   "phase": "1",
+   "product": "GSMaP",
+   "r": "0.48"
+  },
+  {
+   "event_day": "2022-06-26",
+   "phase": "2",
+   "product": "GPM_uncal",
+   "r": "0.68"
+  },
+  {
+   "event_day": "2022-06-26",
+   "phase": "2",
+   "product": "GSMaP",
+   "r": "0.70"
+  },
+  {
+   "event_day": "2022-06-26",
+   "phase": "3",
+   "product": "GPM_uncal",
+   "r": "0.83"
+  },
+  {
+   "event_day": "2022-06-26",
+   "phase": "3",
+   "product": "GSMaP",
+   "r": "0.79"
+  },
+  {
+   "event_day": "2022-10-03",
+   "phase": "1",
+   "product": "GPM_uncal",
+   "r": "0.76"
+  },
+  {
+   "event_day": "2022-10-03",
+   "phase": "1",
+   "product": "GSMaP",
+   "r": "0.83"
+  },
+  {
+   "event_day": "2022-10-03",
+   "phase": "2",
+   "product": "GPM_uncal",
+   "r": "0.36"
+  },
+  {
+   "event_day": "2022-10-03",
+   "phase": "2",
+   "product": "GSMaP",
+   "r": "0.40"
+  },
+  {
+   "event_day": "2022-10-03",
+   "phase": "3",
+   "product": "GPM_uncal",
+   "r": "0.85"
+  },
+  {
+   "event_day": "2022-10-03",
+   "phase": "3",
+   "product": "GSMaP",
+   "r": "0.85"
+  },
+  {
+   "event_day": "2023-06-17",
+   "phase": "1",
+   "product": "GPM_uncal",
+   "r": "0.54"
+  },
+  {
+   "event_day": "2023-06-17",
+   "phase": "1",
+   "product": "GSMaP",
+   "r": "0.80"
+  },
+  {
+   "event_day": "2023-06-17",
+   "phase": "2",
+   "product": "GPM_uncal",
+   "r": "0.63"
+  },
+  {
+   "event_day": "2023-06-17",
+   "phase": "2",
+   "product": "GSMaP",
+   "r": "0.81"
+  },
+  {
+   "event_day": "2023-06-17",
+   "phase": "3",
+   "product": "GPM_uncal",
+   "r": "0.74"
+  },
+  {
+   "event_day": "2023-06-17",
+   "phase": "3",
+   "product": "GSMaP",
+   "r": "0.85"
+  },
+  {
+   "event_day": "2023-08-26",
+   "phase": "1",
+   "product": "GPM_uncal",
+   "r": "0.45"
+  },
+  {
+   "event_day": "2023-08-26",
+   "phase": "1",
+   "product": "GSMaP",
+   "r": "0.66"
+  },
+  {
+   "event_day": "2023-08-26",
+   "phase": "2",
+   "product": "GPM_uncal",
+   "r": "0.30"
+  },
+  {
+   "event_day": "2023-08-26",
+   "phase": "2",
+   "product": "GSMaP",
+   "r": "0.14"
+  },
+  {
+   "event_day": "2023-08-26",
+   "phase": "3",
+   "product": "GPM_uncal",
+   "r": "0.09"
+  },
+  {
+   "event_day": "2023-08-26",
+   "phase": "3",
+   "product": "GSMaP",
+   "r": "0.47"
+  },
+  {
+   "event_day": "2023-09-10",
+   "phase": "1",
+   "product": "GPM_uncal",
+   "r": "0.22"
+  },
+  {
+   "event_day": "2023-09-10",
+   "phase": "1",
+   "product": "GSMaP",
+   "r": "0.40"
+  },
+  {
+   "event_day": "2023-09-10",
+   "phase": "2",
+   "product": "GPM_uncal",
+   "r": "0.60"
+  },
+  {
+   "event_day": "2023-09-10",
+   "phase": "2",
+   "product": "GSMaP",
+   "r": "0.48"
+  },
+  {
+   "event_day": "2023-09-10",
+   "phase": "3",
+   "product": "GPM_uncal",
+   "r": "0.80"
+  },
+  {
+   "event_day": "2023-09-10",
+   "phase": "3",
+   "product": "GSMaP",
+   "r": "0.75"
+  },
+  {
+   "event_day": "2024-07-30",
+   "phase": "1",
+   "product": "GPM_uncal",
+   "r": "0.26"
+  },
+  {
+   "event_day": "2024-07-30",
+   "phase": "1",
+   "product": "GSMaP",
+   "r": "0.35"
+  },
+  {
+   "event_day": "2024-07-30",
+   "phase": "2",
+   "product": "GPM_uncal",
+   "r": "0.48"
+  },
+  {
+   "event_day": "2024-07-30",
+   "phase": "2",
+   "product": "GSMaP",
+   "r": "0.47"
+  },
+  {
+   "event_day": "2024-07-30",
+   "phase": "3",
+   "product": "GPM_uncal",
+   "r": "0.84"
+  },
+  {
+   "event_day": "2024-07-30",
+   "phase": "3",
+   "product": "GSMaP",
+   "r": "0.78"
+  }
+ ],
+ "stats": {
+  "r_0626": "0.46–0.83"
+ }
+}

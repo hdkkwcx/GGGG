@@ -1,0 +1,102 @@
+{
+ "source": "output/heavy_rain_events_gpm_gsmap/event_metrics.csv",
+ "source_sha256": "aab00ce0fcbe24a5fd9b14ab1ad773d9c2842a166c77a8cdac51f8b58bafa92a",
+ "rows": [
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GPM",
+   "r": "0.12",
+   "MB0": "-2",
+   "CSI50": "0.34"
+  },
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.02",
+   "MB0": "+23",
+   "CSI50": "0.48"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "GPM",
+   "r": "0.79",
+   "MB0": "-6",
+   "CSI50": "0.61"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.78",
+   "MB0": "+9",
+   "CSI50": "0.69"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "GPM",
+   "r": "0.70",
+   "MB0": "-2",
+   "CSI50": "0.61"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.79",
+   "MB0": "+23",
+   "CSI50": "0.58"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "GPM",
+   "r": "0.34",
+   "MB0": "+3",
+   "CSI50": "0.66"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "r": "0.40",
+   "MB0": "+73",
+   "CSI50": "0.75"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "GPM",
+   "r": "0.72",
+   "MB0": "-6",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "GSMaP",
+   "r": "0.74",
+   "MB0": "-9",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2024-07-30",
+   "event_type": "localized",
+   "product": "GPM",
+   "r": "0.61",
+   "MB0": "+1",
+   "CSI50": "0.26"
+  },
+  {
+   "event_day": "2024-07-30",
+   "event_type": "localized",
+   "product": "GSMaP",
+   "r": "0.57",
+   "MB0": "-6",
+   "CSI50": "0.00"
+  }
+ ]
+}

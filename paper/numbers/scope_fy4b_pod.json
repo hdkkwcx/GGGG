@@ -1,0 +1,21 @@
+{
+ "source": "output/satellite_temporal_evaluation_gpmuncal/intensity_class_metrics.csv",
+ "source_sha256": "a6d544b0f12148313f16b8919b49efd7fd25f0725bce2ce312678520aba6a526",
+ "rows": [
+  {
+   "product": "FY4B",
+   "POD": "0.34"
+  },
+  {
+   "product": "GPM_uncal",
+   "POD": "0.64"
+  },
+  {
+   "product": "GSMaP",
+   "POD": "0.66"
+  }
+ ],
+ "stats": {
+  "others": "0.64–0.66"
+ }
+}

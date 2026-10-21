@@ -1,0 +1,173 @@
+{
+ "source": "output/heavy_core_diagnostics_gpmuncal/summary.csv",
+ "source_sha256": "8f1755e62640e9feda99a2a719a09d3de32721c76be0005cb10faab10be29b84",
+ "rows": [
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GPM",
+   "repr": "+39",
+   "top3": "+75",
+   "peak_ratio": "0.27",
+   "cal": "0.8"
+  },
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "repr": "+50",
+   "top3": "+75",
+   "peak_ratio": "0.39",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "repr": "+59",
+   "top3": "+75",
+   "peak_ratio": "0.48",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "GPM",
+   "repr": "+173",
+   "top3": "+34",
+   "peak_ratio": "1.19",
+   "cal": "1.0"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "repr": "+78",
+   "top3": "+34",
+   "peak_ratio": "1.11",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "repr": "-14",
+   "top3": "+34",
+   "peak_ratio": "1.90",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "GPM",
+   "repr": "+46",
+   "top3": "+48",
+   "peak_ratio": "0.99",
+   "cal": "1.2"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "repr": "+30",
+   "top3": "+48",
+   "peak_ratio": "0.88",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "repr": "-26",
+   "top3": "+48",
+   "peak_ratio": "1.49",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "GPM",
+   "repr": "+36",
+   "top3": "+27",
+   "peak_ratio": "0.71",
+   "cal": "1.2"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "GPM_uncal",
+   "repr": "+25",
+   "top3": "+27",
+   "peak_ratio": "0.55",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "GSMaP",
+   "repr": "-22",
+   "top3": "+27",
+   "peak_ratio": "2.78",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "GPM",
+   "repr": "+17",
+   "top3": "+87",
+   "peak_ratio": "0.20",
+   "cal": "0.9"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "GPM_uncal",
+   "repr": "+18",
+   "top3": "+87",
+   "peak_ratio": "0.22",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "GSMaP",
+   "repr": "+16",
+   "top3": "+87",
+   "peak_ratio": "0.23",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2024-07-30",
+   "event_type": "localized",
+   "product": "GPM",
+   "repr": "+43",
+   "top3": "+76",
+   "peak_ratio": "0.37",
+   "cal": "1.7"
+  },
+  {
+   "event_day": "2024-07-30",
+   "event_type": "localized",
+   "product": "GPM_uncal",
+   "repr": "+25",
+   "top3": "+76",
+   "peak_ratio": "0.20",
+   "cal": "nan"
+  },
+  {
+   "event_day": "2024-07-30",
+   "event_type": "localized",
+   "product": "GSMaP",
+   "repr": "+24",
+   "top3": "+76",
+   "peak_ratio": "0.16",
+   "cal": "nan"
+  }
+ ],
+ "stats": {
+  "repr_local": "16–25",
+  "top3_local_max": "87",
+  "peak_ratio_local": "0.16–0.23"
+ }
+}
