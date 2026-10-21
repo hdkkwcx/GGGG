@@ -9,7 +9,9 @@ and PDF figures to `output/heavy_rain_events/figures/`:
 The plotting environment is pinned in `scripts/requirements-plot.txt`
 (`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.
 
-`--gpm-gsmap` draws the FY4B-free run instead, from and to `output/heavy_rain_events_gpm_gsmap/`.
+`--gpm-gsmap` draws the FY4B-free run instead, from and to `output/heavy_rain_events_gpm_gsmap/`. A run
+directory given as the first argument is drawn instead of either, e.g. the IMERG Uncal run
+`output/heavy_rain_events_gpm_gsmap_gpmuncal`; the products are read off its `event_metrics.csv`.
 
 The gauge-point maps (fig1) and station error maps (fig2) are the primary spatial comparison.
 The IDW maps (fig3) are an auxiliary view of satellite values sampled at the gauge locations, not
@@ -42,9 +44,21 @@ from plot_provenance import write_plot_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
-RUN_DIR = ROOT / "output" / ("heavy_rain_events_gpm_gsmap" if GPM_GSMAP_ONLY else "heavy_rain_events")
+ARGS = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+RUN_DIR = Path(ARGS[0]) if ARGS else ROOT / "output" / ("heavy_rain_events_gpm_gsmap" if GPM_GSMAP_ONLY else "heavy_rain_events")
 FIG_DIR = RUN_DIR / "figures"
-PRODUCTS = ["GPM", "GSMaP"] if GPM_GSMAP_ONLY else ["FY4B", "GPM", "GSMaP"]
+
+
+def _products() -> list[str]:
+    """The products the run scored, in the order FY4B, GPM, GSMaP."""
+    with open(RUN_DIR / "event_metrics.csv", newline="", encoding="utf-8") as handle:
+        scored = {row["product"] for row in csv.DictReader(handle)}
+    return [p for p in ("FY4B", "GPM", "GPM_uncal", "GSMaP") if p in scored]
+
+
+PRODUCTS = _products()
+# The run's IMERG product: `GPM_uncal` (uncalibrated, the default run) or `GPM` (`--gpm-cal`).
+GPM = "GPM_uncal" if "GPM_uncal" in PRODUCTS else "GPM"
 WINDOW = "common_hours"
 
 SURFACE = "#fcfcfb"
@@ -53,9 +67,15 @@ INK_SECONDARY = "#52514e"
 MUTED = "#898781"
 GRID = "#e1e0d9"
 AXIS = "#c3c2b7"
-PRODUCT_COLORS = {"FY4B": "#2a78d6", "GPM": "#eb6834", "GSMaP": "#1baf7a"}
+PRODUCT_COLORS = {"FY4B": "#2a78d6", "GPM": "#eb6834", "GPM_uncal": "#eb6834", "GSMaP": "#1baf7a"}
 # Shapes double-code the products so the metric summary reads without colour.
-PRODUCT_MARKERS = {"FY4B": "s", "GPM": "o", "GSMaP": "^"}
+PRODUCT_MARKERS = {"FY4B": "s", "GPM": "o", "GPM_uncal": "o", "GSMaP": "^"}
+PRODUCT_LABELS = {"GPM_uncal": "GPM (uncal)"}
+
+
+def product_label(product: str) -> str:
+    """How a product is named on a figure."""
+    return PRODUCT_LABELS.get(product, product)
 EVENT_MARKERS = ["o", "s", "^", "D", "v", "P"]
 
 
@@ -225,7 +245,7 @@ def fig1_point_maps(events, stations, metrics, bounds) -> None:
     fig, axes = plt.subplots(len(events), len(columns), figsize=(width, 11.6))
     fig.subplots_adjust(left=left, right=0.985, top=0.935, bottom=0.075, wspace=0.06, hspace=0.08)
     for i, event in enumerate(events):
-        gauge = stations[(event["day"], "GPM")]
+        gauge = stations[(event["day"], GPM)]
         for j, source in enumerate(columns):
             ax = axes[i, j]
             style_map(ax, bounds, show_x=i == len(events) - 1, show_y=j == 0)
@@ -238,7 +258,7 @@ def fig1_point_maps(events, stations, metrics, bounds) -> None:
                 points(ax, data["lon"], data["lat"], data["sat_mm"], RAIN_CMAP, RAIN_NORM)
                 annotate(ax, f"r {m['r']:.2f}\nRMSE {m['RMSE']:.0f} mm\nBias {signed(m['Bias'])} mm")
             if i == 0:
-                ax.set_title(source, pad=4)
+                ax.set_title(product_label(source), pad=4)
         row_label(axes[i, 0], event)
     fig.suptitle("Heavy-rain events: gauge-observed vs satellite precipitation at the gauge locations",
                  fontsize=9, y=0.985)
@@ -272,7 +292,7 @@ def fig0_event_overview(events, stations, metrics, bounds) -> None:
             style_map(ax, bounds, show_x=i == len(rows) - 1, show_y=k == 0)
             ax.tick_params(labelsize=6)
             if source == "Gauge":
-                gauge = stations[(event["day"], "GPM")]
+                gauge = stations[(event["day"], GPM)]
                 points(ax, gauge["lon"], gauge["lat"], gauge["obs_mm"], OVERVIEW_RAIN_CMAP, OVERVIEW_RAIN_NORM,
                        size=5.0)
                 annotate(ax, f"max\n{gauge['obs_mm'].max():.0f} mm", size=6.2)
@@ -285,7 +305,7 @@ def fig0_event_overview(events, stations, metrics, bounds) -> None:
                        size=5.0)
                 annotate(ax, f"MB\n{signed(m['Bias'])} mm", size=6.2)
             if k == 0:
-                label = "Gauge total" if source == "Gauge" else f"{source} − gauge"
+                label = "Gauge total" if source == "Gauge" else f"{product_label(source)} − gauge"
                 ax.text(-0.36, 0.5, label, transform=ax.transAxes, rotation=90, ha="center", va="center",
                         fontsize=7.5, color=INK)
     # Group labels over the widespread and localized blocks.
@@ -329,7 +349,7 @@ def fig2_error_maps(events, stations, metrics, bounds) -> None:
             points(ax, data["lon"], data["lat"], data["diff_mm"], ERROR_CMAP, ERROR_NORM)
             annotate(ax, f"Bias {signed(m['Bias'])} mm\nCRMSE {m['CRMSE']:.0f} mm")
             if i == 0:
-                ax.set_title(f"{product} − gauge", pad=4)
+                ax.set_title(f"{product_label(product)} − gauge", pad=4)
         row_label(axes[i, 0], event)
     fig.suptitle("Station-level satellite-minus-gauge error", fontsize=9, y=0.985)
     fig.text(0.5, 0.958, "Same stations and hours as the point maps; one shared scale for every panel.",
@@ -381,7 +401,7 @@ def fig3_idw_maps(events, stations, bounds) -> None:
     fig, axes = plt.subplots(len(events), len(columns), figsize=(width, 11.6))
     fig.subplots_adjust(left=left, right=0.985, top=0.905, bottom=0.075, wspace=0.06, hspace=0.08)
     for i, event in enumerate(events):
-        gauge = stations[(event["day"], "GPM")]
+        gauge = stations[(event["day"], GPM)]
         lons, lats, _ = surfaces[(event["day"], "Gauge")]
         far = nearest_gauge_km(lons, lats, gauge["lon"], gauge["lat"]) > MAX_GAUGE_DISTANCE_KM
         for j, source in enumerate(columns):
@@ -395,7 +415,7 @@ def fig3_idw_maps(events, stations, bounds) -> None:
             ax.scatter(gauge["lon"][order], gauge["lat"][order], c=values[order], cmap=RAIN_CMAP,
                        norm=RAIN_NORM, s=3.5, edgecolors=INK, linewidths=0.15, zorder=3)
             if i == 0:
-                ax.set_title(source, pad=4)
+                ax.set_title(product_label(source), pad=4)
         row_label(axes[i, 0], event)
     fig.suptitle("Auxiliary view: IDW visualization of satellite values sampled at gauge locations",
                  fontsize=9, y=0.985)
@@ -435,7 +455,7 @@ def fig4_scatter(events, stations, metrics) -> None:
             ax.set_title(f"r {m['r']:.2f}  ·  RMSE {m['RMSE']:.0f} mm\nBias {signed(m['Bias'])} mm  ·  n {int(m['n'])}",
                          loc="left", fontsize=5.8, color=INK_SECONDARY, pad=3, linespacing=1.2)
             if i == 0:
-                ax.text(0.5, 1.3, product, transform=ax.transAxes, ha="center", va="bottom", fontsize=8)
+                ax.text(0.5, 1.3, product_label(product), transform=ax.transAxes, ha="center", va="bottom", fontsize=8)
             if i == len(events) - 1:
                 ax.set_xlabel("Gauge (mm)")
             if j == 0:
@@ -493,7 +513,7 @@ def fig5_metric_summary(events, metrics) -> None:
             ax.text((first + last) / 2, 1.16, text, transform=ax.get_xaxis_transform(),
                     ha="center", va="bottom", fontsize=6.8, color=INK_SECONDARY)
     handles = [Line2D([], [], linestyle="none", marker=PRODUCT_MARKERS[p], markersize=6.5 if PRODUCT_MARKERS[p] == "^" else 5.5,
-                      markerfacecolor=PRODUCT_COLORS[p], markeredgecolor=SURFACE, label=p) for p in PRODUCTS]
+                      markerfacecolor=PRODUCT_COLORS[p], markeredgecolor=SURFACE, label=product_label(p)) for p in PRODUCTS]
     fig.legend(handles=handles, loc="upper right", ncol=len(PRODUCTS), frameon=False, fontsize=7, bbox_to_anchor=(0.99, 0.975))
     fig.suptitle("Event-scale spatial metrics by product", x=0.07, ha="left", fontsize=9, y=0.965)
     fig.text(0.07, 0.915, "Gauge-pixel pairs over each event's common hours. The solid grey line marks "
@@ -546,7 +566,7 @@ def fig6_taylor(events, metrics) -> None:
             fontsize=7, color=INK_SECONDARY)
 
     product_handles = [Line2D([], [], linestyle="none", marker="o", markersize=6, markerfacecolor=PRODUCT_COLORS[p],
-                              markeredgecolor=SURFACE, label=p) for p in PRODUCTS]
+                              markeredgecolor=SURFACE, label=product_label(p)) for p in PRODUCTS]
     event_handles = [Line2D([], [], linestyle="none", marker=marker, markersize=5.5, markerfacecolor="none",
                             markeredgecolor=INK, label=f"{e['day']} ({e['type']})")
                      for e, marker in zip(events, EVENT_MARKERS)]

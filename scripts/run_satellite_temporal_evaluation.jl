@@ -6,10 +6,13 @@
 #   julia --project=. scripts/prepare_station_landform.jl        # once: the landform regions
 #   julia --project=. scripts/run_satellite_temporal_evaluation.jl
 #
-# Scores 2022-2024 (08-08 BJT days) in two samples: `all_products`, the cells where the gauge and all
-# three products are finite (FY4B's coverage), and `gpm_gsmap_full`, the full record for GPM and GSMaP.
-# Writes CSVs to output/satellite_temporal_evaluation/; the figures are drawn from those by
-# `py -3.13 scripts/plot_satellite_temporal_evaluation.py`.
+# Scores 2022-2024 (08-08 BJT days) on `gpm_gsmap_full`, the full record for GPM and GSMaP.
+# `--with-fy4b` adds the `all_products` sample, the cells where the gauge and all three products are
+# finite (FY4B's coverage); by default FY4B is not read at all, as in `run_interpolation_benchmark.jl`.
+# GPM is uncalibrated IMERG V07 (`GPM_uncal`) by default, the paper's primary GPM product;
+# `--gpm-cal` scores gauge-calibrated IMERG Final (`GPM`) instead. Writes CSVs to
+# output/satellite_temporal_evaluation[_nofy4b][_gpmuncal]/; the figures are drawn from those by
+# `py -3.13 scripts/plot_satellite_temporal_evaluation.py <that directory>`.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -27,16 +30,25 @@ using Main.SatelliteTemporalEvaluation
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
 const LANDFORM_FILE = joinpath(ROOT, "data", "processed", "covariates", "station_landform.csv")
-const OUTDIR = joinpath(ROOT, "output", "satellite_temporal_evaluation")
+const WITH_FY4B = "--with-fy4b" in ARGS
+const GPM_CAL = "--gpm-cal" in ARGS
+# The run's IMERG product, as named in every output table.
+const GPM = GPM_CAL ? "GPM" : "GPM_uncal"
+# `_nofy4b` before `_gpmuncal`, the benchmark's order.
+const OUTDIR = joinpath(ROOT, "output",
+    "satellite_temporal_evaluation" * (WITH_FY4B ? "" : "_nofy4b") * (GPM_CAL ? "" : "_gpmuncal"))
 # The first and last hour-ending labels of the 08-08 BJT days 2022-01-01 .. 2024-12-31.
 const ANALYSIS_START = DateTime(2022, 1, 1, 9)
 const ANALYSIS_END = DateTime(2025, 1, 1, 8)
 const PRODUCT_FILES = [
-    "FY4B" => "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-    "GPM" => "hubei_gpm_hourly_2022_2024_full_aligned.csv",
+    (WITH_FY4B ? ["FY4B" => "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv"] : Pair{String,String}[])...,
+    GPM => GPM_CAL ? "hubei_gpm_hourly_2022_2024_full_aligned.csv" : "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv",
     "GSMaP" => "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
 ]
-const SAMPLES = ["all_products" => ["FY4B", "GPM", "GSMaP"], "gpm_gsmap_full" => ["GPM", "GSMaP"]]
+const SAMPLES = [
+    (WITH_FY4B ? ["all_products" => ["FY4B", GPM, "GSMaP"]] : Pair{String,Vector{String}}[])...,
+    "gpm_gsmap_full" => [GPM, "GSMaP"],
+]
 const BOOTSTRAP_REPS = 1000
 const SEED = 20260913
 const PRIMARY_DRY_GAP_H = 3        # 0.5 mm buckets tip only every few hours in drizzle
@@ -90,18 +102,21 @@ function check_invariants(coverage, metrics, confusion, event_summaries)
         sum(group.n) == n || error("confusion row $(Tuple(group[1, 1:5])) does not sum to the class n")
     end
     severe = pooled(metrics, "gpm_gsmap_full")
-    severe = only(severe[(severe.product .== "GPM") .& (severe.gauge_class .== "severe_rainstorm"), :n])
+    severe = only(severe[(severe.product .== GPM) .& (severe.gauge_class .== "severe_rainstorm"), :n])
     severe <= GAUGE_SEVERE_HOURS_UPPER_BOUND || error("more severe-rainstorm gauge hours than the raw file holds")
     primary = event_summaries[(event_summaries.min_dry_gap_h .== PRIMARY_DRY_GAP_H) .& (event_summaries.season .== "all") .&
-        (event_summaries.region .== "all") .& (event_summaries.event_class .== "all") .& (event_summaries.product .== "GPM"), :]
-    only(primary[primary.sample .== "all_products", :n_events]) <= only(primary[primary.sample .== "gpm_gsmap_full", :n_events]) ||
-        error("the three-product sample scored more GPM events than the GPM/GSMaP sample")
-    println("  invariants hold (class partition, confusion sums, severe-hour bound, event retention)")
+        (event_summaries.region .== "all") .& (event_summaries.event_class .== "all") .& (event_summaries.product .== GPM), :]
+    # Event retention compares the two samples, so it needs the FY4B one.
+    WITH_FY4B && (only(primary[primary.sample .== "all_products", :n_events]) <=
+        only(primary[primary.sample .== "gpm_gsmap_full", :n_events]) ||
+        error("the three-product sample scored more GPM events than the GPM/GSMaP sample"))
+    println("  invariants hold (class partition, confusion sums, severe-hour bound" *
+        (WITH_FY4B ? ", event retention)" : ")"))
 end
 
 """Print one scored heavy event with its hourly values, so the event scores can be checked by hand."""
 function show_example_event(obs_times, obs_ids, Y_obs, products, events, scores)
-    candidates = scores[(scores.product .== "GPM") .& (scores.event_class .== "rainstorm") .& scores.detected, :]
+    candidates = scores[(scores.product .== GPM) .& (scores.event_class .== "rainstorm") .& scores.detected, :]
     isempty(candidates) && return
     score = candidates[1:1, :]
     event = only(events[events.event_id .== only(score.event_id), :])
@@ -109,7 +124,7 @@ function show_example_event(obs_times, obs_ids, Y_obs, products, events, scores)
     columns = findfirst(==(event.window_start), obs_times):findfirst(==(event.window_stop), obs_times)
     println("\nHand-check: event $(event.event_id) at $(event.station_id), $(event.start_time) .. $(event.stop_time)")
     for j in columns
-        println("  $(obs_times[j])  gauge $(rpad(Y_obs[row, j], 6))  GPM $(round(products["GPM"][row, j]; digits=2))")
+        println("  $(obs_times[j])  gauge $(rpad(Y_obs[row, j], 6))  $GPM $(round(products[GPM][row, j]; digits=2))")
     end
     println("  scores: ", select(score, :peak_error_h, :centroid_error_h, :onset_error_h, :end_error_h,
         :volume_rel_bias, :peak_ratio, :r_event, :best_lag_h)[1, :])

@@ -10,6 +10,10 @@ Reads `paper/sources.toml` and, for every entry, checks that:
 - every `input_sha256:<path>` row a run recorded still matches that file under `data/`. A run from
   before inputs were hashed gets a note, not a failure: its code is still pinned.
 
+Every `[[table]]` block, the numbers the text cites, is also re-exported in memory
+(`export_paper_numbers.py`) and must equal its tracked `paper/numbers/<name>.json`, so a hand edit,
+a stale export or a changed source all fail.
+
 It also fails when `paper/figures/` holds a file, or `paper/paper_plan.typ` includes an image, that
 has no entry. One line per entry, then the commits involved; the exit status is nonzero if anything
 failed. Standard library only.
@@ -23,6 +27,8 @@ import re
 import sys
 import tomllib
 from pathlib import Path
+
+from export_paper_numbers import export_table, render
 
 ROOT = Path(__file__).resolve().parents[1]
 CLEAN_KEYS = ("git_dirty", "git_dirty_at_end", "report_git_dirty")
@@ -88,13 +94,27 @@ def unlisted(items: list[dict]) -> list[str]:
     return sorted((on_disk | included) - listed)
 
 
+def check_table(spec: dict, commits: dict[str, set[str]]) -> tuple[list[str], list[str]]:
+    """A `[[table]]` block: the source's provenance, then the export against the tracked JSON."""
+    problems, notes = check_item(spec, commits)
+    if problems:
+        return problems, notes
+    tracked = ROOT / "paper" / "numbers" / f"{spec['name']}.json"
+    if not tracked.is_file():
+        problems.append(f"not exported: paper/numbers/{spec['name']}.json")
+    elif tracked.read_text(encoding="utf-8") != render(export_table(spec)):
+        problems.append(f"paper/numbers/{spec['name']}.json differs from a fresh export of its source")
+    return problems, notes
+
+
 def main() -> int:
-    items = tomllib.loads((ROOT / "paper" / "sources.toml").read_text(encoding="utf-8"))["item"]
+    sources = tomllib.loads((ROOT / "paper" / "sources.toml").read_text(encoding="utf-8"))
+    items, tables = sources["item"], sources.get("table", [])
     commits: dict[str, set[str]] = {}
     failed = 0
-    width = max(len(item["label"]) for item in items)
-    for item in items:
-        problems, notes = check_item(item, commits)
+    width = max(len(entry["label"]) for entry in items + tables)
+    for item in items + tables:
+        problems, notes = (check_table if item in tables else check_item)(item, commits)
         failed += bool(problems)
         status = "FAIL: " + "; ".join(problems) if problems else "OK"
         print(f"{item['label']:<{width}}  {status}" + "".join(f"\n{'':<{width}}  note: {note}" for note in notes))
@@ -103,7 +123,7 @@ def main() -> int:
         print(f"{path:<{width}}  FAIL: no entry in paper/sources.toml")
     print("\nCommits: " + (", ".join(f"{commit} ({len(files)} files)" for commit, files in sorted(commits.items()))
                            or "none recorded"))
-    print(f"{failed} of {len(items)} entries failed" if failed else "Every entry traces to committed code.")
+    print(f"{failed} of {len(items) + len(tables)} entries failed" if failed else "Every entry traces to committed code.")
     return 1 if failed else 0
 
 

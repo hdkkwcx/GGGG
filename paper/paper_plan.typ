@@ -47,6 +47,49 @@
 // A figure planned for the paper but not shown in this plan.
 #let planned(body) = block(inset: (left: 8pt), text(size: 9pt, fill: luma(80))[_Planned:_ #body])
 
+// Every result the text cites is read from paper/numbers/*.json, never typed by hand:
+// scripts/export_paper_numbers.py exports them from the source CSVs named in paper/sources.toml, and
+// scripts/check_paper_provenance.py fails if a JSON no longer matches its source. A missing row
+// prints a red "?".
+#let load(name) = json("numbers/" + name + ".json").rows
+#let mu = load("methods_uncal")   // pooled metrics, IMERG Uncal run (Table 3)
+#let mf = load("methods_final")   // pooled metrics, IMERG Final sensitivity run
+#let cu = load("vs_adw_uncal")    // bootstrap comparisons with ADW, by stratum
+#let cf = load("vs_adw_final")
+#let su = load("strata_uncal")    // gain over ADW by rain intensity and distance to a gauge
+#let sf = load("strata_final")
+#let wu = load("merge_uncal")     // OLS merge weights
+#let wf = load("merge_final")
+#let G = "GPM_uncal"              // the primary GPM product
+#let B = "blend_agrenv_mgwr"      // MGWR + agreement blend, the headline fusion method
+#let find(rows, ..conditions) = {
+  let hits = rows.filter(row => conditions.named().pairs().all(pair => row.at(pair.at(0)) == pair.at(1)))
+  if hits.len() == 0 { none } else { hits.at(0) }
+}
+/// One value as typeset text: ASCII hyphens become minus signs.
+#let val(rows, column, ..conditions) = {
+  let hit = find(rows, ..conditions)
+  if hit == none { text(fill: red)[?] } else { hit.at(column).replace("-", "−") }
+}
+/// A percentage for prose: a leading plus is dropped (the sentence says "gains"), a minus is kept.
+#let pct(rows, column, ..conditions) = {
+  let hit = find(rows, ..conditions)
+  if hit == none { text(fill: red)[?] } else [#hit.at(column).trim("+", at: start).replace("-", "−")%]
+}
+/// A percentage with its sign dropped, for "x% worse".
+#let mag(rows, column, ..conditions) = {
+  let hit = find(rows, ..conditions)
+  if hit == none { text(fill: red)[?] } else [#hit.at(column).trim("+", at: start).trim("-", at: start)%]
+}
+/// One Table 3 row's numbers: RMSE, r, CSI 2, vs raw (a dash on gauge-only rows) and vs ADW.
+#let t3(rows, product, method, raw: true) = (
+  val(rows, "RMSE", product: product, method: method),
+  val(rows, "r", product: product, method: method),
+  val(rows, "CSI2", product: product, method: method),
+  if raw [#val(rows, "vs_raw", product: product, method: method)%] else [—],
+  [#val(rows, "vs_adw", product: product, method: method)%],
+)
+
 #align(center)[
   #text(size: 17pt, weight: "semibold", font: ("Segoe UI", "Arial"))[Research plan]
   #v(0.2em)
@@ -70,7 +113,7 @@
     [Rain is detected and timed well; peak magnitude is lost, by 60–85% at ≥ 8 mm h⁻¹.],
     [Answered], [Landform panel in Fig. 4; rerun on IMERG Uncal],
     [3], [What does gauge fusion gain, with which method and product?],
-    [MGWR + blend beats raw GPM by 10% and gauges alone by 3%; gain largest on heavy hours and far from gauges. GPM is the better anchor, with or without gauge calibration; fused GSMaP does not beat gauges alone.],
+    [MGWR + blend beats raw GPM by #pct(mu, "vs_raw0", product: G, method: B) and gauges alone by #pct(mu, "vs_adw0", product: G, method: B); gain largest on heavy hours and far from gauges. GPM is the better anchor, with or without gauge calibration; fused GSMaP does not beat gauges alone.],
     [Answered, gaps], [Choose headline method],
     rule,
   )
@@ -201,29 +244,33 @@ the nearest training gauge.
 
 *Answer so far.*
 - *Fusion beats both of its inputs on GPM, not on GSMaP.* MGWR followed by a blend with ADW where the
-  satellites report rain cuts RMSE by 10% from raw GPM and 32% from raw GSMaP. Against gauge-only ADW it
-  gains 2.8% on GPM and 3.1% on the merged anchor, both significant, but only 1.3% on GSMaP, which is
-  not (p = 0.10). Every blended variant on GPM and on the merged anchor beats ADW significantly; over
+  satellites report rain cuts RMSE by #pct(mu, "vs_raw", product: G, method: B) from raw GPM and #pct(mu, "vs_raw", product: "GSMaP", method: B) from raw GSMaP. Against gauge-only ADW it
+  gains #pct(mu, "vs_adw", product: G, method: B) on GPM and #pct(mu, "vs_adw", product: "MERGED_OLS", method: B) on the merged anchor, both significant, but only
+  #pct(mu, "vs_adw", product: "GSMaP", method: B) on GSMaP, which is not (p = #val(cu, "p_holm", product: "GSMaP", method: B, stratum: "overall")). Every blended variant on GPM and on the merged anchor beats ADW significantly; over
   all hours none on GSMaP does.
-- *The gain is where floods need it.* On heavy hours (≥ 8 mm h⁻¹) MGWR alone improves on ADW by 5.5%
-  (GPM) and 8.0% (GSMaP), the agreement blend by 2.8% and 4.0%, all significant. Unblended regression
-  *hurts* dry, light and moderate hours (MGWR on GPM −22%, −25% and −33% against ADW), which is why the
-  blend is needed. At 2.5–8 mm h⁻¹ the blend gains nothing significant (+0.6% on GPM).
-- *The gain grows with distance from the network.* On GPM the improvement over ADW is 0.6% within
-  20 km of a training gauge, 2.7% at 20–50 km and 8.2% at 50–100 km (GSMaP 0.3%, 1.8%, 1.9%).
-- *Best method.* Among gauge-only interpolators ADW, with IDW indistinguishable (0.695 vs 0.697 mm h⁻¹);
-  TPS and GWR are 5–6% worse. Best fusion: MGWR + blend; MGWR alone only for heavy hours.
+- *The gain is where floods need it.* On heavy hours (≥ 8 mm h⁻¹) MGWR alone improves on ADW by
+  #pct(cu, "change", product: G, method: "mgwr", stratum: "8_plus") (GPM) and #pct(cu, "change", product: "GSMaP", method: "mgwr", stratum: "8_plus") (GSMaP), the agreement blend by
+  #pct(cu, "change", product: G, method: B, stratum: "8_plus") and #pct(cu, "change", product: "GSMaP", method: B, stratum: "8_plus"), all significant. Unblended regression
+  *hurts* dry, light and moderate hours (MGWR on GPM #pct(su, "change0", product: G, method: "mgwr", group: "rain_intensity", level: "no_rain"), #pct(su, "change0", product: G, method: "mgwr", group: "rain_intensity", level: "light") and #pct(su, "change0", product: G, method: "mgwr", group: "rain_intensity", level: "moderate") against ADW), which is why the
+  blend is needed. At 2.5–8 mm h⁻¹ the blend gains nothing significant (#val(cu, "change", product: G, method: B, stratum: "2.5_8")% on GPM).
+- *The gain grows with distance from the network.* On GPM the improvement over ADW is
+  #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "0_20") within 20 km of a training gauge, #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "20_50") at 20–50 km and
+  #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "50_100") at 50–100 km (GSMaP #pct(su, "change", product: "GSMaP", method: B, group: "nearest_train_km", level: "0_20"), #pct(su, "change", product: "GSMaP", method: B, group: "nearest_train_km", level: "20_50"), #pct(su, "change", product: "GSMaP", method: B, group: "nearest_train_km", level: "50_100")).
+- *Best method.* Among gauge-only interpolators ADW, with IDW indistinguishable (#val(mu, "RMSE", product: G, method: "adw") vs #val(mu, "RMSE", product: G, method: "idw") mm h⁻¹);
+  TPS and GWR are #mag(mu, "vs_adw", product: G, method: "tps") and #mag(mu, "vs_adw", product: G, method: "gwr") worse. Best fusion: MGWR + blend; MGWR alone only for heavy hours.
 - *Best product.* GPM, with neither product gauge-calibrated: lower raw error over all 2022–2024 hours
-  (RMSE 0.75 vs 1.02 mm h⁻¹, r 0.43 vs 0.38). GPM's near-zero event bias and better areal timeline
-  (RQ1, RQ2) are so far measured on IMERG Final. Once fused, the two anchors differ by about 1.6%
-  (0.676 vs 0.687), but only fused GPM beats ADW significantly. Merging gives a better raw field
-  (RMSE 0.718) but adds almost nothing after fusion (0.674 vs 0.676); its OLS weights are 0.49 for GPM
-  and 0.15 for GSMaP, plus a 0.04 mm h⁻¹ intercept.
+  (RMSE #val(mu, "RMSE", product: G, method: "raw") vs #val(mu, "RMSE", product: "GSMaP", method: "raw") mm h⁻¹,
+  r #val(mu, "r", product: G, method: "raw") vs #val(mu, "r", product: "GSMaP", method: "raw")). GPM's near-zero event bias and better areal timeline
+  (RQ1, RQ2) are so far measured on IMERG Final. Once fused, the two anchors are close
+  (#val(mu, "RMSE", product: G, method: B) vs #val(mu, "RMSE", product: "GSMaP", method: B)), but only fused GPM beats ADW significantly. Merging gives a better raw field
+  (RMSE #val(mu, "RMSE", product: "MERGED_OLS", method: "raw")) but adds almost nothing after fusion (#val(mu, "RMSE", product: "MERGED_OLS", method: B) vs #val(mu, "RMSE", product: G, method: B)); its OLS weights are
+  #val(wu, "beta_gpm", product: "MERGED_OLS") for GPM and #val(wu, "beta_gsmap", product: "MERGED_OLS") for GSMaP, plus a #val(wu, "intercept", product: "MERGED_OLS") mm h⁻¹ intercept.
 - *IMERG Final gives the same fused result.* Gauge-calibrated IMERG Final has higher raw error than
-  IMERG Uncal (RMSE 0.781 vs 0.750 mm h⁻¹), but after fusion the two are level (0.676 both; +2.7% vs
-  +2.8% over ADW). On Final, MGWR alone loses more to ADW (−6.4%, against a non-significant −2.7% on
-  Uncal) and gains more on heavy hours (6.8% vs 5.5%). The OLS merge puts less weight on Final than on
-  Uncal (0.41 vs 0.49).
+  IMERG Uncal (RMSE #val(mf, "RMSE", product: "GPM", method: "raw") vs #val(mu, "RMSE", product: G, method: "raw") mm h⁻¹), but after fusion the two are level
+  (#val(mf, "RMSE", product: "GPM", method: B) vs #val(mu, "RMSE", product: G, method: B); #val(mf, "vs_adw", product: "GPM", method: B)% vs #val(mu, "vs_adw", product: G, method: B)% over ADW). On Final, MGWR alone loses more to ADW
+  (#pct(cf, "change", product: "GPM", method: "mgwr", stratum: "overall"), against a non-significant #pct(cu, "change", product: G, method: "mgwr", stratum: "overall") on Uncal) and gains more on heavy hours
+  (#pct(cf, "change", product: "GPM", method: "mgwr", stratum: "8_plus") vs #pct(cu, "change", product: G, method: "mgwr", stratum: "8_plus")). The OLS merge puts less weight on Final than on Uncal
+  (#val(wf, "beta_gpm", product: "MERGED_OLS") vs #val(wu, "beta_gpm", product: "MERGED_OLS")).
 
 #figure(
   image("figures/fig06b_fusion_methods.png", width: 100%),
@@ -240,20 +287,20 @@ the nearest training gauge.
     rule,
     table.header([*Anchor*], [*Method*], [*RMSE*], [*r*], [*CSI 2*], [*vs raw*], [*vs ADW*]),
     thin,
-    [—], [ADW (gauges only)], [0.695], [0.505], [0.318], [—], [0.0%],
-    [—], [IDW (gauges only)], [0.697], [0.501], [0.317], [—], [−0.4%],
-    [—], [TPS (gauges only)], [0.732], [0.468], [0.314], [—], [−5.4%],
-    [—], [GWR (gauges only)], [0.738], [0.438], [0.284], [—], [−6.2%],
+    [—], [ADW (gauges only)], ..t3(mu, "GPM_uncal", "adw", raw: false),
+    [—], [IDW (gauges only)], ..t3(mu, "GPM_uncal", "idw", raw: false),
+    [—], [TPS (gauges only)], ..t3(mu, "GPM_uncal", "tps", raw: false),
+    [—], [GWR (gauges only)], ..t3(mu, "GPM_uncal", "gwr", raw: false),
     thin,
-    [GPM], [raw], [0.750], [0.426], [0.250], [0.0%], [−7.9%],
-    [GPM], [MGWR + agreement blend], [0.676], [0.540], [0.347], [+9.9%], [+2.8%],
-    [GSMaP], [raw], [1.017], [0.382], [0.257], [0.0%], [−46.0%],
-    [GSMaP], [MGWR + agreement blend], [0.687], [0.540], [0.354], [+32.4%], [+1.3%],
-    [Merged (OLS)], [raw], [0.718], [0.447], [0.224], [0.0%], [−3.3%],
-    [Merged (OLS)], [MGWR + agreement blend], [0.674], [0.544], [0.335], [+6.2%], [+3.1%],
+    [GPM], [raw], ..t3(mu, "GPM_uncal", "raw"),
+    [GPM], [MGWR + agreement blend], ..t3(mu, "GPM_uncal", "blend_agrenv_mgwr"),
+    [GSMaP], [raw], ..t3(mu, "GSMaP", "raw"),
+    [GSMaP], [MGWR + agreement blend], ..t3(mu, "GSMaP", "blend_agrenv_mgwr"),
+    [Merged (OLS)], [raw], ..t3(mu, "MERGED_OLS", "raw"),
+    [Merged (OLS)], [MGWR + agreement blend], ..t3(mu, "MERGED_OLS", "blend_agrenv_mgwr"),
     thin,
-    [GPM (Final)], [raw], [0.781], [0.425], [0.264], [0.0%], [−12.5%],
-    [GPM (Final)], [MGWR + agreement blend], [0.676], [0.540], [0.353], [+13.5%], [+2.7%],
+    [GPM (Final)], [raw], ..t3(mf, "GPM", "raw"),
+    [GPM (Final)], [MGWR + agreement blend], ..t3(mf, "GPM", "blend_agrenv_mgwr"),
     rule,
   ),
   caption: [Draft Table 3. Held-out gauges, balanced spatial CV over all 26,304 hours of 2022–2024;
