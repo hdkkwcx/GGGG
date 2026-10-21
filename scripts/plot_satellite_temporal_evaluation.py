@@ -11,7 +11,10 @@ The plotting environment is pinned in `scripts/requirements-plot.txt`
 (`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.
 
 `--gpm-gsmap` draws only the `gpm_gsmap_full` sample, and only the figures that carry no FY4B series, into
-`figures_gpm_gsmap/`; it adds the intensity-class figure split by landform region.
+`figures_gpm_gsmap/`; it adds the intensity-class figure split by landform region. A run directory given as
+the first argument is drawn instead of the default, e.g. `output/satellite_temporal_evaluation_nofy4b_gpmuncal`.
+A run without the `all_products` sample (the default, FY4B-free run) is drawn as `--gpm-gsmap` draws, and
+the IMERG product (`GPM_uncal` or `GPM`) is read off its tables.
 
 Two samples run through every figure: `all_products` (the hours FY4B covers, so all three products on
 identical cells) and `gpm_gsmap_full` (GPM and GSMaP over the whole 2022-2024 record). Regions with fewer
@@ -40,9 +43,24 @@ from matplotlib.patches import Patch
 from plot_provenance import write_plot_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
-RUN_DIR = ROOT / "output" / "satellite_temporal_evaluation"
-GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
-FIG_DIR = RUN_DIR / ("figures_gpm_gsmap" if GPM_GSMAP_ONLY else "figures")
+ARGS = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+RUN_DIR = Path(ARGS[0]) if ARGS else ROOT / "output" / "satellite_temporal_evaluation"
+FIG_DIR = RUN_DIR / ("figures_gpm_gsmap" if "--gpm-gsmap" in sys.argv[1:] else "figures")
+
+
+def _scored() -> tuple[set[str], set[str]]:
+    """The samples and products the run scored."""
+    with open(RUN_DIR / "intensity_class_metrics.csv", newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    return {row["sample"] for row in rows}, {row["product"] for row in rows}
+
+
+_SAMPLES_SCORED, _PRODUCTS_SCORED = _scored()
+# A run without FY4B (`run_satellite_temporal_evaluation.jl` without `--with-fy4b`) has only the
+# GPM/GSMaP sample, so it is drawn the way `--gpm-gsmap` draws a three-product run.
+GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:] or "all_products" not in _SAMPLES_SCORED
+# The run's IMERG product: `GPM_uncal` (uncalibrated, the default run) or `GPM` (`--gpm-cal`).
+GPM = "GPM_uncal" if "GPM_uncal" in _PRODUCTS_SCORED else "GPM"
 
 SURFACE = "#fcfcfb"
 INK = "#0b0b0b"
@@ -50,10 +68,11 @@ INK_SECONDARY = "#52514e"
 MUTED = "#898781"
 GRID = "#e1e0d9"
 AXIS = "#c3c2b7"
-PRODUCT_COLORS = {"FY4B": "#2a78d6", "GPM": "#eb6834", "GSMaP": "#1baf7a"}
+PRODUCT_COLORS = {"FY4B": "#2a78d6", "GPM": "#eb6834", "GPM_uncal": "#eb6834", "GSMaP": "#1baf7a"}
 # Shapes double-code the products, as in plot_heavy_rain_events.py, so the figures read without colour.
-PRODUCT_MARKERS = {"FY4B": "s", "GPM": "o", "GSMaP": "^"}
-SAMPLE_PRODUCTS = {"all_products": ["FY4B", "GPM", "GSMaP"], "gpm_gsmap_full": ["GPM", "GSMaP"]}
+PRODUCT_MARKERS = {"FY4B": "s", "GPM": "o", "GPM_uncal": "o", "GSMaP": "^"}
+PRODUCT_LABELS = {"GPM_uncal": "GPM (uncal)"}
+SAMPLE_PRODUCTS = {"all_products": ["FY4B", GPM, "GSMaP"], "gpm_gsmap_full": [GPM, "GSMaP"]}
 SAMPLES = ["gpm_gsmap_full"] if GPM_GSMAP_ONLY else list(SAMPLE_PRODUCTS)
 SAMPLE_TITLES = {
     "all_products": "All three products · hours FY4B covers",
@@ -144,9 +163,14 @@ def clean_axis(ax: plt.Axes, grid_axis: str = "y") -> None:
         ax.spines[spine].set_visible(False)
 
 
+def product_label(product: str) -> str:
+    """How a product is named on a figure."""
+    return PRODUCT_LABELS.get(product, product)
+
+
 def product_legend(fig: plt.Figure, products: list[str], extra: list | None = None, **kwargs) -> None:
     handles = [Line2D([], [], linestyle="none", marker=PRODUCT_MARKERS[p], markersize=6.5 if PRODUCT_MARKERS[p] == "^" else 5.5,
-                      markerfacecolor=PRODUCT_COLORS[p], markeredgecolor=SURFACE, label=p) for p in products]
+                      markerfacecolor=PRODUCT_COLORS[p], markeredgecolor=SURFACE, label=product_label(p)) for p in products]
     handles += extra or []
     fig.legend(handles=handles, frameon=False, fontsize=6.8, ncol=len(handles), **kwargs)
 
@@ -316,7 +340,7 @@ def fig3_confusion(confusion: list[dict]) -> None:
             ax.tick_params(length=0, pad=2)
             for spine in ax.spines.values():
                 spine.set_visible(False)
-            ax.set_title(f"{product}", loc="left", pad=3, color=INK)
+            ax.set_title(product_label(product), loc="left", pad=3, color=INK)
         axes[i, 0].text(-0.36, 0.5, SAMPLE_TITLES[sample].replace(" · ", "\n"), transform=axes[i, 0].transAxes,
                         rotation=90, ha="center", va="center", fontsize=6.5)
     cax = fig.add_axes([0.92, 0.25, 0.012, 0.5])
@@ -364,7 +388,7 @@ def fig4_false_alarms(false_alarms: list[dict]) -> None:
                            linewidth=0.6, zorder=2)
                     bottom += value
                 if s == 0:
-                    ax.text(x, bottom, product, rotation=90, ha="center", va="bottom", fontsize=5.4, color=INK_SECONDARY)
+                    ax.text(x, bottom, product_label(product), rotation=90, ha="center", va="bottom", fontsize=5.4, color=INK_SECONDARY)
         ax.set_xticks(range(len(SEASONS)))
         ax.set_xticklabels(["All" if s == "all" else s for s in SEASONS])
         ax.set_title(SAMPLE_TITLES[sample], loc="left", pad=4)
@@ -465,7 +489,7 @@ def fig6_diurnal(diurnal: list[dict], summary: list[dict], sample: str, by: str)
                 ax.text(0, 1.2, title, transform=ax.transAxes, ha="left", va="bottom", fontsize=7.5, color=INK)
             if j == 0:
                 phase = [one(summary, sample=sample, product=p, season=season, region=region) for p in products]
-                text = "  ".join(f"{p} {r['phase_diff_h']:+.1f} h" for p, r in zip(products, phase) if r and np.isfinite(r["phase_diff_h"]))
+                text = "  ".join(f"{product_label(p)} {r['phase_diff_h']:+.1f} h" for p, r in zip(products, phase) if r and np.isfinite(r["phase_diff_h"]))
                 ax.set_title("amount phase vs gauge: " + text, loc="right", fontsize=5.4, color=INK_SECONDARY, pad=2)
             ax.set_xlim(0, 23)
             ax.set_xticks([0, 6, 12, 18, 23])
@@ -474,7 +498,7 @@ def fig6_diurnal(diurnal: list[dict], summary: list[dict], sample: str, by: str)
     for ax in axes[-1]:
         ax.set_xlabel("Hour of day (BJT, hour-ending)")
     handles = [Line2D([], [], color=INK, linewidth=1.8, label="Gauge")] + \
-              [Line2D([], [], color=PRODUCT_COLORS[p], linewidth=1.5, label=p) for p in products]
+              [Line2D([], [], color=PRODUCT_COLORS[p], linewidth=1.5, label=product_label(p)) for p in products]
     fig.legend(handles=handles, loc="upper left", ncol=len(handles), frameon=False, fontsize=6.8,
                bbox_to_anchor=(0.12, 1 - 0.62 / height))
     what = "season" if by == "season" else "landform region"
@@ -519,7 +543,7 @@ def fig7_station_maps(stations: list[dict]) -> None:
             ax.set_xticklabels(["110°E", "111°E"] if i == 1 or j >= 1 else [])
             ax.set_yticklabels(["31.5°N", "32.5°N"] if j == 0 else [])
             ax.tick_params(length=2, pad=1.5, labelsize=6)
-            ax.set_title(product, loc="left", pad=3)
+            ax.set_title(product_label(product), loc="left", pad=3)
         axes[i, 0].text(-0.26, 0.5, SAMPLE_TITLES[sample].replace(" · ", "\n"), transform=axes[i, 0].transAxes, rotation=90,
                         ha="center", va="center", fontsize=6.5)
     # The empty sixth panel holds the colour scale and the marker key.
@@ -627,8 +651,8 @@ def fig9_regional_series(regional: list[dict]) -> None:
                 products = SAMPLE_PRODUCTS[sample]
                 for product in products:
                     # Full-record dots on the left of each tick, FY4B-hours dots on the right, never sharing a position.
-                    offset = {("gpm_gsmap_full", "GPM"): -0.3, ("gpm_gsmap_full", "GSMaP"): -0.17,
-                              ("all_products", "FY4B"): 0.03, ("all_products", "GPM"): 0.16,
+                    offset = {("gpm_gsmap_full", GPM): -0.3, ("gpm_gsmap_full", "GSMaP"): -0.17,
+                              ("all_products", "FY4B"): 0.03, ("all_products", GPM): 0.16,
                               ("all_products", "GSMaP"): 0.29}[(sample, product)]
                     values = [(one(regional, sample=sample, product=product, region=region, season="all", timescale_h=t) or {}).get(key, np.nan)
                               for t in timescales]
@@ -645,7 +669,7 @@ def fig9_regional_series(regional: list[dict]) -> None:
                     label="full record"),
              Line2D([], [], linestyle="none", marker="o", markersize=5, markerfacecolor=SURFACE, markeredgecolor=MUTED,
                     label="FY4B hours")]
-    product_legend(fig, ["FY4B", "GPM", "GSMaP"], extra, loc="upper right", bbox_to_anchor=(0.99, 0.975))
+    product_legend(fig, ["FY4B", GPM, "GSMaP"], extra, loc="upper right", bbox_to_anchor=(0.99, 0.975))
     fig.suptitle("Regional-mean series across timescales", x=0.1, ha="left", fontsize=9, y=0.975)
     fig.text(0.1, 0.94, "Hourly means over each region's gauges (≥ 90% reporting), accumulated to met-day 3-h blocks and "
              "days, all seasons.\nFilled (left of each tick): full 2022–2024 record; hollow (right): the hours FY4B covers "
@@ -674,6 +698,7 @@ def main() -> None:
         fig6_diurnal(diurnal, diurnal_scores, "gpm_gsmap_full", "season")
         fig6_diurnal(diurnal, diurnal_scores, "gpm_gsmap_full", "region")
         fig8_scorecard(metrics, events, diurnal_scores, station_summary, "gpm_gsmap_full")
+        write_plot_provenance(FIG_DIR, ROOT)
         return
     for sample in SAMPLE_PRODUCTS:
         fig2_intensity(metrics, sample)
