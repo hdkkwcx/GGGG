@@ -1,6 +1,6 @@
 {
  "source": "output/gauge_satellite_fusion_nofy4b/fusion_vs_gauge_only.csv",
- "source_sha256": "7924b8756323050ff8537e63ad53bc3a73ceb7a65b59fab014aa9657de02ad4f",
+ "source_sha256": "aa7bee354618e92c99477c115315b583af7fd0d34af40e7dc95cbd936f2a4841",
  "rows": [
   {
    "product": "GPM",
@@ -153,7 +153,7 @@
    "product": "MERGED_MEAN",
    "method": "mgwr",
    "stratum": "overall",
-   "change": "-4.4",
+   "change": "-4.3",
    "p_holm": "0.01"
   },
   {

@@ -46,7 +46,7 @@ end
 
 function select_mixed_bandwidth(
     Xlocal::Matrix{Float64}, Xglobal::Matrix{Float64}, y::Vector{Float64},
-    lonlat::Matrix{Float64}, candidates::Vector{Float64}, kernel::Function;
+    lonlat::Matrix{Float64}, candidates::Vector{Float64}, kernel::GWKernel;
     adaptive::Bool=true, ridge::Float64=1e-8,
     tolerance::Float64=1e-5, max_iterations::Int=200,
 )
@@ -111,7 +111,7 @@ end
 
 function select_multiscale_bandwidths(
     local_groups::Vector{Matrix{Float64}}, Xglobal::Matrix{Float64}, y::Vector{Float64},
-    lonlat::Matrix{Float64}, candidates::Vector{Float64}, kernel::Function;
+    lonlat::Matrix{Float64}, candidates::Vector{Float64}, kernel::GWKernel;
     adaptive::Bool=true, ridge::Float64=1e-8,
     tolerance::Float64=1e-5, max_iterations::Int=200,
 )
@@ -196,7 +196,7 @@ function mixed_gwr_predict(
     Xlocal_train::Matrix{Float64}, Xglobal_train::Matrix{Float64}, Ytrain::Matrix{Float64},
     train_lonlat::Matrix{Float64}, Xlocal_target::Matrix{Float64},
     Xglobal_target::Matrix{Float64}, target_lonlat::Matrix{Float64}, bandwidth::Float64,
-    kernel::Function; adaptive::Bool=true,
+    kernel::GWKernel; adaptive::Bool=true,
     ridge::Float64=1e-8, tolerance::Float64=1e-5, max_iterations::Int=200,
     exclude_self::Bool=false, unsupported::Symbol=:zero,
     train_distances::Union{Nothing,Matrix{Float64}}=nothing,
@@ -281,7 +281,7 @@ function multiscale_gwr_predict(
     local_train::Vector{Matrix{Float64}}, Xglobal_train::Matrix{Float64},
     Ytrain::Matrix{Float64}, train_lonlat::Matrix{Float64},
     local_target::Vector{Matrix{Float64}}, Xglobal_target::Matrix{Float64},
-    target_lonlat::Matrix{Float64}, bandwidths::Vector{Float64}, kernel::Function;
+    target_lonlat::Matrix{Float64}, bandwidths::Vector{Float64}, kernel::GWKernel;
     adaptive::Bool=true, ridge::Float64=1e-8,
     tolerance::Float64=1e-5, max_iterations::Int=200, exclude_self::Bool=false,
     unsupported::Symbol=:zero,

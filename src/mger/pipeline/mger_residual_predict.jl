@@ -1,27 +1,3 @@
-function pairwise_haversine_km(X_lonlat::Matrix{Float64})
-	points = map(x -> (x[1], x[2]), eachrow(X_lonlat))
-	fun_dist = Haversine(6378.388)
-	return pairwise(fun_dist, points)
-end
-
-
-function make_loocv_dist(dMat::Matrix{Float64})
-	d = copy(dMat)
-	@inbounds for i in 1:min(size(d)...)
-		d[i, i] = Inf
-	end
-	return d
-end
-
-
-# `metric_continuous`, `metric_event`, `common_valid_mask` and `complete_time_mask` now live in
-# `src/core/metrics.jl` inside the `MixedGWR` module, which this file already imports at the top. They
-# are reused by the benchmark, the diagnostics and the tests, so they are library code rather than
-# part of this pipeline.
-
-
-
-
 function st_gwr_predict_nanaware(
 	X::Matrix{Float64}, Y::Matrix{Float64}, wMat::Matrix{Float64};
 	Xpred::Matrix{Float64}, min_obs::Int=size(X, 2), lambda::Float64=1e-8,
@@ -108,7 +84,7 @@ end
 """Return target-centred east/north offsets in kilometres for training stations."""
 function target_centered_offsets_km(
 	train_lonlat::Matrix{Float64}, target_lon::Float64, target_lat::Float64;
-	earth_radius_km::Float64=6378.388,
+	earth_radius_km::Float64=MixedGWR.EARTH_RADIUS_KM,
 )
 	size(train_lonlat, 2) == 2 ||
 		throw(DimensionMismatch("train_lonlat must have columns [lon, lat]"))
@@ -271,7 +247,7 @@ function bias_correct_stgwr(
 	dMat::Matrix{Float64}; kernel::Int=BISQUARE, adaptive::Bool=true, bw::Float64=50.0,
 	use_loocv::Bool=true, slope_ridge::Float64=1e-6,
 )
-	dist = use_loocv ? make_loocv_dist(dMat) : dMat
+	dist = use_loocv ? loocv_distances(dMat) : dMat
 	wMat = gw_weight(dist, bw; kernel, adaptive)
 	R = Y_obs .- Y_sat
 	Rhat = local_linear_residual_predict(

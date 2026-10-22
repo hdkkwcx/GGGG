@@ -49,7 +49,7 @@ selection per inner group would multiply the permutation cost for no effect on t
 """
 function _joint_candidate_metrics(
     context, residuals::Matrix{Float64}, y_obs::Matrix{Float64},
-    y_sat::Matrix{Float64}, method::String, bandwidths::Vector{Float64}, kernel::Function,
+    y_sat::Matrix{Float64}, method::String, bandwidths::Vector{Float64}, kernel::GWKernel,
     time_indices::Vector{Int}, time_weights::Union{Nothing,Vector{Float64}}=nothing,
     selection_contexts=nothing, shrink_candidates::Vector{Float64}=[1.0];
     adaptive::Bool=true,
@@ -118,7 +118,6 @@ function _select_joint_single_bandwidth!(
 )
     first_row = length(scan_rows) + 1
     for kernel in cfg.mger.kernels
-        kernel_fn = _kernel_function(kernel)
         for (adaptive, family_candidates) in bandwidth_families
             for bandwidth in family_candidates
                 _scan_candidate!(scan_rows;
@@ -127,7 +126,7 @@ function _select_joint_single_bandwidth!(
                 ) do
                     metrics = _joint_candidate_metrics(
                         joint_context, residuals, y_obs, y_sat, joint_method,
-                        [bandwidth], kernel_fn,
+                        [bandwidth], kernel,
                         times, time_weights, selection_entries, shrink_candidates;
                         adaptive,
                     )
@@ -167,7 +166,6 @@ function _select_joint_coordinate_descent!(
 # candidates, or fails to converge, is skipped rather than aborting the whole search.
 best_result = nothing
 for kernel in cfg.mger.kernels
-    kernel_fn = _kernel_function(kernel)
     for (adaptive, family_candidates) in bandwidth_families
         isempty(family_candidates) && continue
         # Start every group at the widest candidate - the global one, when it is in the
@@ -199,7 +197,7 @@ for kernel in cfg.mger.kernels
                             haskey(scores, trial) && return scores[trial]
                             metrics = _joint_candidate_metrics(
                                 joint_context, residuals, y_obs, y_sat, joint_method,
-                                trial, kernel_fn,
+                                trial, kernel,
                                 times, time_weights, selection_entries, shrink_candidates;
                                 adaptive,
                             )

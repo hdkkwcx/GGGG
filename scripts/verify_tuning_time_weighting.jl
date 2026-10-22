@@ -266,7 +266,7 @@ function verify_joint(cells=JOINT_CELLS)
             # behaviour explicitly, since it is measuring the tuning-time-weighting objective,
             # not the kernel sweep.
             bandwidth_f = Float64(bandwidth)
-            kernel_fn = _kernel_function(BISQUARE)
+            kernel_fn = BISQUARE
             # The reported metric: held-out stations, every hour.
             held_out, _ = dynamic_covariate_predict(context, residuals, method, [bandwidth_f], kernel_fn)
             reported = _candidate_metrics(y_obs_val, y_sat_val,

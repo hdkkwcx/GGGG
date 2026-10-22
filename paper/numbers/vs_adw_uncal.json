@@ -1,6 +1,6 @@
 {
  "source": "output/gauge_satellite_fusion_nofy4b_gpmuncal/fusion_vs_gauge_only.csv",
- "source_sha256": "71f093c68e69885bd4183ad33414b96416409e2814128c9ed848f5c77efd0030",
+ "source_sha256": "84d91d4901f0b174fcdb97d7384b368111493a112bc02bb6231e0b2e58bbb7a1",
  "rows": [
   {
    "product": "GPM_uncal",
@@ -133,7 +133,7 @@
    "method": "blend_agrenv_mgwr",
    "stratum": "overall",
    "change": "+1.3",
-   "p_holm": "0.10"
+   "p_holm": "0.09"
   },
   {
    "product": "GSMaP",
@@ -153,8 +153,8 @@
    "product": "MERGED_MEAN",
    "method": "mgwr",
    "stratum": "overall",
-   "change": "-3.3",
-   "p_holm": "0.10"
+   "change": "-3.2",
+   "p_holm": "0.11"
   },
   {
    "product": "MERGED_OLS",
