@@ -3,6 +3,7 @@ using DataFrames
 using LinearAlgebra
 using Random
 using Statistics
+using MixedGWR
 
 include(joinpath(@__DIR__, "..", "src", "load_modules.jl"))
 load_standalone_modules("DEMTerrainExperiment")

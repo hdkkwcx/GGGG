@@ -1,4 +1,5 @@
 using Test, DataFrames, Dates, Statistics
+using MixedGWR
 
 include(joinpath(@__DIR__, "..", "src", "load_modules.jl"))
 load_standalone_modules("HeavyRainEvents")
