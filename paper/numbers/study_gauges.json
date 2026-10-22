@@ -1,0 +1,22 @@
+{
+ "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal/station_correlation_summary.csv",
+ "source_sha256": "0d70905a282df06bdbd57a79479049e0b55cdf88677f1ecdeaff9abd76f6db14",
+ "rows": [
+  {
+   "region": "all",
+   "n": "237"
+  },
+  {
+   "region": "relief_500_1000",
+   "n": "97"
+  },
+  {
+   "region": "relief_ge1000",
+   "n": "11"
+  },
+  {
+   "region": "relief_lt500",
+   "n": "129"
+  }
+ ]
+}
