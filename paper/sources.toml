@@ -694,16 +694,16 @@ id = "claims"
 kind = "analysis"
 command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal"]
-marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/claim_assessment_by_method.csv"
-needs = ["benchmark"]
+marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/claim_provenance.csv"
+needs = ["benchmark", "prep_study_area", "prep_gpm_uncal"]
 
 [[step]]
 id = "claims_final"
 kind = "analysis"
 command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b"]
-marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/claim_assessment_by_method.csv"
-needs = ["benchmark_final"]
+marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/claim_provenance.csv"
+needs = ["benchmark_final", "prep_study_area"]
 
 [[step]]
 id = "fusion"

@@ -12,6 +12,11 @@
 #
 #   julia --project=. scripts/run_claim_reassessment.jl
 #   julia --project=. scripts/run_claim_reassessment.jl <benchmark_output_dir>
+#
+# Records `claim_provenance.csv` beside its tables (the folder is shared with the other benchmark
+# diagnostics). Its inputs are the study-area files and the run's `benchmark_scope.csv`,
+# `metrics_pooled.csv` and fold split, not the ~4.5 GB of out-of-fold predictions: those belong to
+# the run, and a different run has a different `benchmark_scope.csv`.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -22,6 +27,7 @@ include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("InterpolationBenchmark")
 load_standalone_modules("BenchmarkDiagnostics")
 using Main.BenchmarkDiagnostics
+using Main.RunProvenance: start_provenance, finish_provenance!
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
 const DEFAULT_RUN = joinpath(
@@ -139,6 +145,11 @@ function main(args=ARGS)
     run_name = basename(rstrip(run_dir, '/'))
     mger = study_config(outdir; gpm_uncal=endswith(run_name, "_gpmuncal"),
         fy4b=!occursin("_nofy4b", run_name))
+    provenance = start_provenance(ROOT, outdir; inputs=[
+        mger.station_meta_path, mger.obs_hourly_wide_path, values(mger.sat_paths)...,
+        joinpath(run_dir, "benchmark_scope.csv"), joinpath(run_dir, "metrics_pooled.csv"),
+        joinpath(scheme_directory(run_dir), "split_common.csv"),
+    ])
     # The three products with files define the common station/time grid, which every product in
     # the run shares - a derived product is built on that grid by construction. Which products to
     # *assess* is a separate question, answered from the run's own outputs below.
@@ -258,6 +269,7 @@ function main(args=ARGS)
     CSV.write(joinpath(outdir, "claim_assessment_by_method.csv"), claims)
     CSV.write(joinpath(outdir, "paired_comparisons_by_method.csv"), comparisons)
     CSV.write(joinpath(outdir, "method_coverage.csv"), DataFrame(coverage_rows))
+    CSV.write(joinpath(outdir, "claim_provenance.csv"), finish_provenance!(provenance, ROOT))
     println("Wrote claim re-assessment to $outdir")
     return (; claims, comparisons)
 end
