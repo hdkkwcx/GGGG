@@ -582,7 +582,17 @@ kind = "data"
 command = ["julia", "--project=.", "scripts/prepare_gpm_uncal_stations.jl"]
 outputs = ["output/gpm_imerg_uncal_stations_2022_2024"]
 needs = ["raw_imerg_uncal"]
-note = "rebuilt 2026-10-22; through prep_gpm_uncal it reproduces the prepared study-area file byte for byte"
+note = """rebuilt 2026-10-22; through prep_gpm_uncal it reproduces the prepared study-area file byte for byte. \
+Caveat (checked 2026-10-22): 73 of the 237 study gauges sit on a 0.1 deg cell edge, and at 49 of them \
+this series reads a neighbouring pixel of the one Earth Engine read for IMERG Final (GPM): Earth \
+Engine took the southern and/or western cell (south 33, west 13, south-west 3). Identified by the \
+calibrated/uncalibrated ratio, which is near-constant within a month only at the matching pixel \
+(median spread 0.011 there vs 0.414 at this series' pixel; 0.008 at interior gauges). Neither pixel \
+is wrong, the gauge lies on their edge, but gauge-level comparisons of GPM_uncal with GPM (and \
+merges with the Earth Engine products) mix in the pixel choice at those 49 gauges. The cited \
+storm-core calibration ratio (rq1_cores `cal`, 2024-07-30, 5 of 20 core gauges affected) is 1.681 \
+as run and 1.724 with Uncal at Earth Engine's pixel, both printed 1.7; 2023-09-10 (uncited) would \
+print 1.0 instead of 0.9. Not rerun with Earth Engine's pixels."""
 
 [[step]]
 id = "raw_imerg_uncal"
