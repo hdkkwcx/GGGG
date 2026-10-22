@@ -1,0 +1,42 @@
+{
+ "source": "output/imerg_pixel_agreement/calibration_ratio.csv",
+ "source_sha256": "7c2275cfe37a780d1b8c3f347b6eb788dbb1808870d5884064057aeb46f5c850",
+ "rows": [
+  {
+   "event_day": "2022-06-26",
+   "n_core": "6",
+   "n_mismatched": "1",
+   "cal_same_pixel": "0.8"
+  },
+  {
+   "event_day": "2022-10-03",
+   "n_core": "6",
+   "n_mismatched": "0",
+   "cal_same_pixel": "1.0"
+  },
+  {
+   "event_day": "2023-06-17",
+   "n_core": "4",
+   "n_mismatched": "1",
+   "cal_same_pixel": "1.2"
+  },
+  {
+   "event_day": "2023-08-26",
+   "n_core": "5",
+   "n_mismatched": "0",
+   "cal_same_pixel": "1.2"
+  },
+  {
+   "event_day": "2023-09-10",
+   "n_core": "18",
+   "n_mismatched": "5",
+   "cal_same_pixel": "1.0"
+  },
+  {
+   "event_day": "2024-07-30",
+   "n_core": "20",
+   "n_mismatched": "5",
+   "cal_same_pixel": "1.7"
+  }
+ ]
+}

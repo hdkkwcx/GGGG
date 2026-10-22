@@ -15,6 +15,8 @@
 // satellite_temporal_evaluation_nofy4b_gpmuncal and, for the Scope paragraph's FY4B numbers,
 // satellite_temporal_evaluation_gpmuncal. The IMERG Final runs (no _gpmuncal) reproduce the
 // earlier Final-based text.
+// scripts/make_paper.jl rebuilds every figure and number here in dependency order; the [[step]]
+// graph in paper/sources.toml records each step's command and what it needs.
 
 #set document(
   title: "Research plan: satellite precipitation and gauge fusion (GPM, GSMaP)",
@@ -72,6 +74,7 @@
 #let e1 = load("rq1_events")       // RQ1: scores per event
 #let e1f = load("rq1_events_final")
 #let k1 = load("rq1_cores")        // RQ1: storm-core deficit per event and product
+#let px = load("pixel_cores")      // core gauges where IMERG Final and Uncal read neighbouring pixels
 #let c2 = load("rq2_classes")      // RQ2: by intensity class, season and relief
 #let v2 = load("rq2_events")       // RQ2: rain-event detection and timing
 #let a2 = load("rq2_areal")        // RQ2: areal-mean series
@@ -176,8 +179,9 @@ agreement blend in RQ3 use GPM and GSMaP only.
 
 #val(n0, "n", region: "all") hourly gauges in the Shiyan study area, 2022–2024 (values quantised to 0.5 mm). All sit in hills
 and mountains: by local relief from the Copernicus GLO-30 DEM, #val(n0, "n", region: "relief_lt500") are below 500 m, #val(n0, "n", region: "relief_500_1000") at 500–1000 m
-and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 and GSMaP v8 operational (`hourlyPrecipRate`), both hourly
-at 0.1°, are sampled at the gauge pixels. The primary GPM product is IMERG Uncal, so that neither
+and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 and GSMaP v8 operational (`hourlyPrecipRate`), both at
+0.1°, are sampled at the gauge pixels: IMERG Uncal from NASA GES DISC's half-hourly files, averaged to
+hours, and IMERG Final and GSMaP through Google Earth Engine. The primary GPM product is IMERG Uncal, so that neither
 product carries gauge information: IMERG Final is calibrated monthly to GPCC gauge totals, GSMaP
 operational has no gauge correction. IMERG Final is kept as a sensitivity check
 for all three questions. Days run 08–08 Beijing time.
@@ -361,7 +365,9 @@ Fig. 8 — raw vs fused skill per anchor, and the merge weights.]
 - *Independence of GPM.* All three questions use IMERG Uncal, which carries no gauge information;
   IMERG Final, calibrated monthly to GPCC gauges, gives the same fused result. Calibration matters most
   for the storm cores: it raises GPM's 2024-07-30 core rain ×#val(k1, "cal", product: "GPM", event_day: "2024-07-30") and its CSI from
-  #val(e1, "CSI50", product: G, event_day: "2024-07-30") to #val(e1f, "CSI50", product: "GPM", event_day: "2024-07-30").
+  #val(e1, "CSI50", product: G, event_day: "2024-07-30") to #val(e1f, "CSI50", product: "GPM", event_day: "2024-07-30"). IMERG Final and Uncal were sampled separately, and at a gauge on a pixel
+  edge they can read neighbouring pixels: on 2024-07-30 that is #val(px, "n_mismatched", event_day: "2024-07-30") of the #val(px, "n_core", event_day: "2024-07-30") core
+  gauges, and reading Final's pixel there leaves the factor at ×#val(px, "cal_same_pixel", event_day: "2024-07-30").
 - *Small samples.* Only 11 gauges lie at relief ≥ 1000 m, too few to interpret; heavy hours and the six
   events are few, so their intervals are wide.
 - *Residual heavy-rain deficit.* Fusion narrows but does not close the underestimation at ≥ 20 mm h⁻¹.
