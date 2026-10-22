@@ -6,6 +6,7 @@ using Dates
 using LinearAlgebra
 using Random
 using Statistics
+using MixedGWR: gw_weight, haversine_distance_matrix, loocv_distances, BISQUARE
 
 # Shared bookkeeping for every variable-selection path; see src/selection/SelectionScaffolding.jl.
 using Main.SelectionScaffolding
@@ -425,10 +426,9 @@ function _coefficients(stats, distances, neighbors, cfg;
     n = length(stats.A); result = fill(NaN, n, stats.p)
     # Weights are a function of the geometry and bandwidth alone - `order` reorders which
     # sufficient statistic each spatial slot contributes, never the weight on that slot - so a
-    # permutation test builds them once and hands them in. See
-    # `ERA5VariableSelection._local_weight_rows`.
+    # permutation test builds them once and hands them in.
     rows = weight_rows === nothing ?
-        ERA5VariableSelection._local_weight_rows(distances, neighbors, n) : weight_rows
+        eachcol(gw_weight(distances, Float64(neighbors); kernel=BISQUARE)) : weight_rows
     lhs = Matrix{Float64}(undef, stats.p, stats.p); rhs = Vector{Float64}(undef, stats.p)
     for target in 1:n
         spatial_weights = rows[target]
@@ -450,10 +450,9 @@ end
 
 function _loocv(stats, distances, neighbors, cfg)
     total = 0.0; station_count = 0; n = length(stats.A)
+    loo = loocv_distances(distances)
     for target in 1:n
-        spatial_weights = ERA5VariableSelection._adaptive_weights(
-            view(distances, target, :), neighbors; exclude=target,
-        )
+        spatial_weights = gw_weight(view(loo, :, target), Float64(neighbors); kernel=BISQUARE)
         lhs = cfg.ridge .* Matrix{Float64}(I, stats.p, stats.p); rhs = zeros(stats.p)
         for i in 1:n
             lhs .+= spatial_weights[i] .* stats.A[i]; rhs .+= spatial_weights[i] .* stats.b[i]
@@ -485,7 +484,7 @@ function joint_spatial_variability_test(
         end
         return (; scan, result, bandwidth=missing)
     end
-    distances = ERA5VariableSelection._distance_matrix(stats.coords)
+    distances = haversine_distance_matrix(stats.coords, stats.coords)
     candidates = filter(c -> max(4, stats.p + 1) <= c <= length(stats.eligible) - 1,
         unique(cfg.bandwidth_candidates))
     for candidate in candidates
@@ -500,8 +499,7 @@ function joint_spatial_variability_test(
         return (; scan, result, bandwidth=missing)
     end
     bandwidth = available.neighbors[argmin(available.loocv_rmse)]
-    weight_rows = ERA5VariableSelection._local_weight_rows(
-        distances, bandwidth, length(stats.A))
+    weight_rows = eachcol(gw_weight(distances, Float64(bandwidth); kernel=BISQUARE))
     coefficients = _coefficients(stats, distances, bandwidth, cfg; weight_rows)
     observed = [sum(var(coefficients[:, index]) for index in stats.group_indices[group]) for group in groups]
     # Drawn up front, from the same `rng` in the same order, so `orders[i]` is exactly what

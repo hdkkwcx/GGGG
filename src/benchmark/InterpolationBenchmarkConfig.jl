@@ -167,11 +167,6 @@ const AUTO_CANDIDATE_RUNS = [
     ("direct", "gwr"), ("residual", "gwr"), ("residual", "mixed_gwr"), ("residual", "mgwr"),
 ]
 
-"""Convert the benchmark's `Int` kernel index into the weight-formula `Function` the
-`mixed_gwr`/`mgwr` local-hat machinery (`MixedGWR`, `JointCovariateModels`) expects.
-`GWR_KERNELS` isn't exported, so it needs `MixedGWR.` qualification here."""
-_kernel_function(kernel::Int) = MixedGWR.GWR_KERNELS[kernel + 1]
-
 Base.@kwdef struct InterpolationBenchmarkConfig
     mger::MGERConfig
     terrain_path::Union{Nothing,String} = nothing

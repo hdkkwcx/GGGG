@@ -397,13 +397,9 @@ function run_pipeline(cfg::MGERConfig; spatial_cv::Bool=true, train_frac::Float6
 			Y_sat_val = Y_sat[val_idx, :]
 
 			# Distance matrix among training sites (for fitting)
-			dMat_train = pairwise_haversine_km(lonlat_train)
+			dMat_train = haversine_distance_matrix(lonlat_train, lonlat_train)
 			# Distance matrix from train to val sites (for prediction)
-			dMat_train_val = let
-				points_train = map(x -> (x[1], x[2]), eachrow(lonlat_train))
-				points_val = map(x -> (x[1], x[2]), eachrow(lonlat_val))
-				pairwise(Haversine(6378.388), points_train, points_val)
-			end
+			dMat_train_val = haversine_distance_matrix(lonlat_train, lonlat_val)
 
 			println("[$product] $cv_scheme: $(length(train_ids)) train sites, $(length(val_ids)) val sites")
 
@@ -448,7 +444,7 @@ function run_pipeline(cfg::MGERConfig; spatial_cv::Bool=true, train_frac::Float6
 
 			# Product output: fit on all common stations and write a clearly labeled
 			# in-sample file. This file is not used for validation metrics.
-			dMat_full = pairwise_haversine_km(lonlat)
+			dMat_full = haversine_distance_matrix(lonlat, lonlat)
 			fullfit_path = write_fullfit_product(
 				cfg.outdir, product, times, ids, lonlat, Y_obs, Y_sat, dMat_full, best,
 			)
@@ -482,7 +478,7 @@ function run_pipeline(cfg::MGERConfig; spatial_cv::Bool=true, train_frac::Float6
 			))
 		else
 			# Standard pipeline: all sites
-			dMat = pairwise_haversine_km(lonlat)
+			dMat = haversine_distance_matrix(lonlat, lonlat)
 
 			scan_df, best = scan_params(
 				lonlat, Y_obs, Y_sat, dMat;
@@ -497,7 +493,7 @@ function run_pipeline(cfg::MGERConfig; spatial_cv::Bool=true, train_frac::Float6
 			)
 			CSV.write(joinpath(cfg.outdir, "scan_$(product).csv"), scan_df)
 
-			dist = cfg.use_loocv_eval ? make_loocv_dist(dMat) : dMat
+			dist = cfg.use_loocv_eval ? loocv_distances(dMat) : dMat
 			wMat = gw_weight(dist, Float64(best.bw); kernel=Int(best.kernel), adaptive=Bool(best.adaptive))
 			R = Y_obs .- Y_sat
 			Rhat = local_linear_residual_predict(

@@ -7,71 +7,6 @@ fit, and the global projection.
 export local_hat_matrix, local_weight_matrix, global_projection, distance_subset
 
 """
-General local GWR weights for one target, written into `weights` and using `buffer` as scratch
-when `adaptive`. `kernel(dist, bw)` is the weight formula (e.g. bisquare, gaussian, ...).
-
-For an adaptive bandwidth, only the k-th smallest finite distance is needed, so `partialsort!`
-on a reused buffer replaces `sort(filter(isfinite, distances))`; it returns the same value in
-linear time and without allocating. For a fixed bandwidth, `bw` is applied directly with no
-neighbor-count conversion. `distances` is not modified.
-"""
-# Reimplements the library's GWR weighting (`gw_weight!` in src/core/gw_weight.jl, kernels in
-# src/core/kernel.jl) instead of calling it, and not identically: the adaptive bandwidth here is the
-# distance to the k-th nearest neighbour via `partialsort!`, where `gw_weight!` uses the `dn = bw/n`
-# ratio. Both are defensible, but they are different weights for the same nominal bandwidth, so
-# the DEM path's `bw` is not directly comparable to the rest of the GWR family's. Unifying them
-# changes fitted weights and therefore results - flagged, not fixed.
-function _gw_local_weights!(
-    weights::Vector{Float64}, distances::Vector{Float64}, bw::Float64,
-    kernel::Function, buffer::Vector{Float64}; adaptive::Bool=true,
-)
-    n = length(distances)
-    if !adaptive
-        @inbounds for i in 1:n
-            d = distances[i]
-            weights[i] = isfinite(d) ? kernel(d, bw) : 0.0
-        end
-        return weights
-    end
-    finite_count = 0
-    @inbounds for i in 1:n
-        d = distances[i]
-        isfinite(d) || continue
-        finite_count += 1
-        buffer[finite_count] = d
-    end
-    if finite_count == 0
-        fill!(weights, 0.0)
-        return weights
-    end
-    finite_distances = view(buffer, 1:finite_count)
-    # Kept exactly as it was, quirk included: with a single finite distance `clamp` returns
-    # `hi = 1` for the usual `neighbors >= 2`, but `lo = 2` for `neighbors <= 1`, which then
-    # asks for an element that is not there. Both the old indexing and `partialsort!` below
-    # raise `BoundsError` on that input, and no caller can reach it — the bandwidth grids
-    # start at 8 and callers clamp with `min(bandwidth, n - 1)`.
-    k = clamp(Int(round(bw)), 2, finite_count)
-    # `partialsort!` permutes `finite_distances` without dropping elements, so the
-    # `maximum` fallback below still sees the same multiset.
-    bandwidth = partialsort!(finite_distances, k)
-    bandwidth > 0 || (bandwidth = maximum(finite_distances))
-    if !(bandwidth > 0)
-        @inbounds for i in 1:n
-            weights[i] = distances[i] == 0 ? 1.0 : 0.0
-        end
-        return weights
-    end
-    # `kernel` (not a hardcoded `d < bandwidth` cutoff) decides whether/how a distance beyond
-    # `bandwidth` still contributes: that's a no-op for bisquare/tricube/boxcar, which are zero
-    # there anyway, but gaussian/exponential have no hard cutoff and must keep tapering.
-    @inbounds for i in 1:n
-        d = distances[i]
-        weights[i] = isfinite(d) ? kernel(d, bandwidth) : 0.0
-    end
-    return weights
-end
-
-"""
 Rows `rows` and columns `columns` of a supplied distance matrix, without copying when the
 selection is the whole matrix.
 
@@ -103,7 +38,7 @@ depend on `X`, so a caller fitting many designs over one geometry builds them on
 """
 function local_hat_matrix(
     Xtrain::Matrix{Float64}, Xtarget::Matrix{Float64}, distances::Matrix{Float64},
-    bw::Float64, kernel::Function; adaptive::Bool=true, ridge::Float64=1e-8,
+    bw::Float64, kernel::GWKernel; adaptive::Bool=true, ridge::Float64=1e-8,
     exclude_self::Bool=false, unsupported::Symbol=:zero,
     weights::Union{Nothing,Matrix{Float64}}=nothing,
 )
@@ -175,12 +110,12 @@ end
 """One target's local weights for `local_hat_matrix`; `d` and `buffer` are scratch."""
 function _target_local_weights!(
     w::Vector{Float64}, d::Vector{Float64}, buffer::Vector{Float64},
-    distances::Matrix{Float64}, target::Int, bw::Float64, kernel::Function,
+    distances::Matrix{Float64}, target::Int, bw::Float64, kernel::GWKernel,
     adaptive::Bool, exclude_self::Bool,
 )
     copyto!(d, view(distances, :, target))
     exclude_self && (d[target] = Inf)
-    return _gw_local_weights!(w, d, bw, kernel, buffer; adaptive)
+    return gw_weight!(w, d, bw; kernel, adaptive, buffer)
 end
 
 """
@@ -188,7 +123,7 @@ Every target's local weights for [`local_hat_matrix`](@ref)'s `weights` keyword:
 exactly the `w` that `local_hat_matrix` would compute for it with the same arguments.
 """
 function local_weight_matrix(
-    distances::Matrix{Float64}, bw::Float64, kernel::Function;
+    distances::Matrix{Float64}, bw::Float64, kernel::GWKernel;
     adaptive::Bool=true, exclude_self::Bool=false,
 )
     ntrain, ntarget = size(distances)

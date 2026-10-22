@@ -1,31 +1,3 @@
-function _haversine(lon1, lat1, lon2, lat2)
-    dlat = deg2rad(lat2 - lat1); dlon = deg2rad(lon2 - lon1)
-    a = sin(dlat / 2)^2 + cos(deg2rad(lat1)) * cos(deg2rad(lat2)) * sin(dlon / 2)^2
-    return 6371.0088 * 2 * asin(sqrt(clamp(a, 0.0, 1.0)))
-end
-
-function _distance_matrix(lonlat::Matrix{Float64})
-    n = size(lonlat, 1); result = zeros(n, n)
-    for i in 1:n, j in (i + 1):n
-        d = _haversine(lonlat[i, 1], lonlat[i, 2], lonlat[j, 1], lonlat[j, 2])
-        result[i, j] = result[j, i] = d
-    end
-    return result
-end
-
-function _adaptive_weights(distances::AbstractVector{<:Real}, neighbors::Int; exclude::Int=0)
-    usable = [i for i in eachindex(distances) if i != exclude && isfinite(distances[i])]
-    isempty(usable) && return zeros(length(distances))
-    k = min(neighbors, length(usable))
-    bandwidth = max(sort(distances[usable])[k], eps(Float64))
-    weights = zeros(length(distances))
-    for i in usable
-        ratio = distances[i] / bandwidth
-        ratio < 1 && (weights[i] = (1 - ratio^2)^2)
-    end
-    return weights
-end
-
 function _panel_sufficient_statistics(panel, selected::Vector{Symbol}, lonlat::Matrix{Float64}, cfg)
     eligible = findall(panel.eligible_station)
     isempty(eligible) && return nothing
@@ -54,19 +26,17 @@ function _panel_sufficient_statistics(panel, selected::Vector{Symbol}, lonlat::M
     return (; A, b, rows, ys, coords, eligible, p)
 end
 
-"""One `_adaptive_weights` row per target, for reuse across a permutation test.
-
-The weights are a function of `distances` and `neighbors` only — the block permutation reorders
-which sufficient statistic each spatial slot contributes, never the weight on that slot. Building
-them once removes a sort and two allocations per target from every one of the ~1000 permutations.
-"""
-_local_weight_rows(distances, neighbors, n::Int) =
-    [_adaptive_weights(view(distances, target, :), neighbors) for target in 1:n]
+"""Adaptive bisquare weights of every target, as views of one column each."""
+_weight_rows(distances, neighbors) =
+    eachcol(gw_weight(distances, Float64(neighbors); kernel=BISQUARE))
 
 function _local_coefficients(stats, distances, neighbors, cfg;
     block_order=collect(eachindex(stats.A)), weight_rows=nothing)
     n = length(stats.A); coefficients = fill(NaN, n, stats.p)
-    rows = weight_rows === nothing ? _local_weight_rows(distances, neighbors, n) : weight_rows
+    # Weights are a function of the geometry and bandwidth alone - `block_order` reorders which
+    # sufficient statistic each spatial slot contributes, never the weight on that slot - so a
+    # permutation test builds them once and hands them in.
+    rows = weight_rows === nothing ? _weight_rows(distances, neighbors) : weight_rows
     lhs = Matrix{Float64}(undef, stats.p, stats.p); rhs = Vector{Float64}(undef, stats.p)
     for target in 1:n
         weights = rows[target]
@@ -91,8 +61,9 @@ end
 
 function _loocv_panel_rmse(stats, distances, neighbors, cfg)
     n = length(stats.A); sse = 0.0; count_station = 0
+    loo = loocv_distances(distances)
     for target in 1:n
-        weights = _adaptive_weights(view(distances, target, :), neighbors; exclude=target)
+        weights = gw_weight(view(loo, :, target), Float64(neighbors); kernel=BISQUARE)
         lhs, rhs = cfg.ridge .* Matrix{Float64}(I, stats.p, stats.p), zeros(stats.p)
         for i in 1:n
             lhs .+= weights[i] .* stats.A[i]; rhs .+= weights[i] .* stats.b[i]
@@ -123,7 +94,7 @@ function panel_spatial_variability_test(
         end
         return (; bandwidth_scan, variability, bandwidth=missing)
     end
-    distances = _distance_matrix(stats.coords)
+    distances = haversine_distance_matrix(stats.coords, stats.coords)
     candidates = filter(c -> max(4, stats.p + 1) <= c <= length(stats.eligible) - 1,
         unique(cfg.bandwidth_candidates))
     for candidate in candidates
@@ -138,7 +109,7 @@ function panel_spatial_variability_test(
         return (; bandwidth_scan, variability, bandwidth=missing)
     end
     bandwidth = available.neighbors[argmin(available.loocv_rmse)]
-    weight_rows = _local_weight_rows(distances, bandwidth, length(stats.A))
+    weight_rows = _weight_rows(distances, bandwidth)
     coefficients = _local_coefficients(stats, distances, bandwidth, cfg; weight_rows)
     observed = [var(coefficients[:, 3 + j]) for j in eachindex(selected)]
     # Drawn up front, from the same `rng` in the same order, so `orders[i]` is exactly what

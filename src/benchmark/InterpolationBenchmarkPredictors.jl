@@ -9,20 +9,10 @@ function _gwr_predict(
     if exclude_self
         size(train_lonlat, 1) == size(target_lonlat, 1) ||
             throw(DimensionMismatch("GWR exclude_self requires matching rows"))
-        for i in 1:size(distances, 1)
-            distances[i, i] = Inf
-        end
+        # An infinite distance leaves each station out of its own fit, at any bandwidth.
+        distances = loocv_distances(distances)
     end
     weights = gw_weight(distances, bw; kernel=kernel, adaptive=adaptive)
-    if exclude_self
-        # The `Inf` distance above is what keeps self out of the adaptive neighbour ranking, but
-        # it does not by itself produce a zero weight: at the global candidate (`bw = Inf`)
-        # `kernel(Inf, Inf)` is NaN for four of the five kernels and 1.0 for boxcar, which would
-        # leak the held-out station straight back into its own fit. Clear it explicitly.
-        for i in axes(weights, 1)
-            weights[i, i] = 0.0
-        end
-    end
     return st_gwr_predict_nanaware(X_train, values, weights; Xpred=X_target, min_obs=3)
 end
 
@@ -85,7 +75,7 @@ function _mixed_gwr_predict(
     prediction, _ = mixed_gwr_predict(
         designs.local_train, designs.global_train, values, train_lonlat,
         designs.local_target, designs.global_target, target_lonlat, bw,
-        _kernel_function(kernel); adaptive, exclude_self,
+        kernel; adaptive, exclude_self,
     )
     return prediction
 end
@@ -114,7 +104,7 @@ function _mgwr_predict(
     prediction, _ = multiscale_gwr_predict(
         designs.local_train, designs.global_train, values, train_lonlat,
         designs.local_target, designs.global_target, target_lonlat, bandwidths,
-        _kernel_function(kernel); adaptive, exclude_self,
+        kernel; adaptive, exclude_self,
     )
     return prediction
 end
@@ -134,7 +124,7 @@ function predict_selected(
     interpolated = if is_joint_model && mode == "residual"
         prediction, converged = dynamic_covariate_predict(
             joint_context, values, selected.joint_method,
-            Float64.(selected.bandwidths), _kernel_function(selected.kernel);
+            Float64.(selected.bandwidths), selected.kernel;
             adaptive=selected.adaptive,
         )
         any(.!converged) && @warn(
@@ -152,7 +142,7 @@ function predict_selected(
             designs.mixed_local_train, zeros(Float64, size(train_lonlat, 1), 0), values,
             train_lonlat, designs.mixed_local_target,
             zeros(Float64, size(target_lonlat, 1), 0), target_lonlat,
-            selected.bw, _kernel_function(selected.kernel); adaptive=selected.adaptive,
+            selected.bw, selected.kernel; adaptive=selected.adaptive,
             ridge=dem_context.dem.ridge,
             tolerance=dem_context.dem.tolerance,
             max_iterations=dem_context.dem.max_iterations,
@@ -163,7 +153,7 @@ function predict_selected(
         prediction, _ = mixed_gwr_predict(
             designs.mixed_local_train, designs.global_train, values, train_lonlat,
             designs.mixed_local_target, designs.global_target, target_lonlat,
-            selected.bw, _kernel_function(selected.kernel); adaptive=selected.adaptive,
+            selected.bw, selected.kernel; adaptive=selected.adaptive,
             ridge=dem_context.dem.ridge,
             tolerance=dem_context.dem.tolerance,
             max_iterations=dem_context.dem.max_iterations,
@@ -174,7 +164,7 @@ function predict_selected(
         prediction, _ = multiscale_gwr_predict(
             designs.multiscale_train, designs.global_train, values, train_lonlat,
             designs.multiscale_target, designs.global_target, target_lonlat,
-            selected.bandwidths, _kernel_function(selected.kernel);
+            selected.bandwidths, selected.kernel;
             adaptive=selected.adaptive,
             ridge=dem_context.dem.ridge,
             tolerance=dem_context.dem.tolerance,

@@ -235,7 +235,7 @@ function run_dem_experiment(
             baseline_X = designs.mixed_local_train[valid_aggregate, 1:3]
             baseline_bw, baseline_scan = select_mixed_bandwidth(
                 baseline_X, zeros(Float64, train_count, 0), aggregate[valid_aggregate],
-                aggregate_lonlat, candidates_f, gw_weight_bisquare; ridge=cfg.ridge,
+                aggregate_lonlat, candidates_f, BISQUARE; ridge=cfg.ridge,
                 tolerance=cfg.tolerance, max_iterations=cfg.max_iterations,
             )
             for row in eachrow(baseline_scan)
@@ -247,7 +247,7 @@ function run_dem_experiment(
                 designs.mixed_local_train[:, 1:3], zeros(Float64, length(train_idx), 0),
                 Yobs[train_idx, :] - Ysat[train_idx, :], lonlat[train_idx, :],
                 designs.mixed_local_target[:, 1:3], zeros(Float64, length(val_idx), 0),
-                lonlat[val_idx, :], baseline_bw, gw_weight_bisquare; ridge=cfg.ridge,
+                lonlat[val_idx, :], baseline_bw, BISQUARE; ridge=cfg.ridge,
                 tolerance=cfg.tolerance, max_iterations=cfg.max_iterations,
             )
             oof[(product, "residual_gwr")][val_idx, :] = baseline_prediction
@@ -261,7 +261,7 @@ function run_dem_experiment(
             mixed_bw, mixed_scan = select_mixed_bandwidth(
                 designs.mixed_local_train[valid_aggregate, :],
                 designs.global_train[valid_aggregate, :], aggregate[valid_aggregate],
-                aggregate_lonlat, candidates_f, gw_weight_bisquare; ridge=cfg.ridge,
+                aggregate_lonlat, candidates_f, BISQUARE; ridge=cfg.ridge,
                 tolerance=cfg.tolerance, max_iterations=cfg.max_iterations,
             )
             for row in eachrow(mixed_scan)
@@ -273,7 +273,7 @@ function run_dem_experiment(
                 designs.mixed_local_train, designs.global_train,
                 Yobs[train_idx, :] - Ysat[train_idx, :], lonlat[train_idx, :],
                 designs.mixed_local_target, designs.global_target, lonlat[val_idx, :], mixed_bw,
-                gw_weight_bisquare; ridge=cfg.ridge, tolerance=cfg.tolerance,
+                BISQUARE; ridge=cfg.ridge, tolerance=cfg.tolerance,
                 max_iterations=cfg.max_iterations,
             )
             oof[(product, "mixed_gwr")][val_idx, :] = mixed_prediction
@@ -286,7 +286,7 @@ function run_dem_experiment(
             local_valid = [X[valid_aggregate, :] for X in designs.multiscale_train]
             multiscale_bw, multiscale_scan, bandwidth_converged = select_multiscale_bandwidths(
                 local_valid, designs.global_train[valid_aggregate, :], aggregate[valid_aggregate],
-                aggregate_lonlat, candidates_f, gw_weight_bisquare; ridge=cfg.ridge,
+                aggregate_lonlat, candidates_f, BISQUARE; ridge=cfg.ridge,
                 tolerance=cfg.tolerance, max_iterations=cfg.max_iterations,
             )
             for row in eachrow(multiscale_scan)
@@ -304,7 +304,7 @@ function run_dem_experiment(
                 designs.multiscale_train, designs.global_train,
                 Yobs[train_idx, :] - Ysat[train_idx, :], lonlat[train_idx, :],
                 designs.multiscale_target, designs.global_target, lonlat[val_idx, :],
-                multiscale_bw, gw_weight_bisquare;
+                multiscale_bw, BISQUARE;
                 ridge=cfg.ridge, tolerance=cfg.tolerance, max_iterations=cfg.max_iterations,
             )
             oof[(product, "multiscale_gwr")][val_idx, :] = multiscale_prediction

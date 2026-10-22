@@ -7,7 +7,8 @@ using LinearAlgebra
 using SHA
 using Statistics
 
-using MixedGWR: haversine_distance_matrix, local_hat_matrix, local_weight_matrix, global_projection
+using MixedGWR: GWKernel, haversine_distance_matrix, local_hat_matrix, local_weight_matrix
+using MixedGWR: global_projection
 using MixedGWR: mixed_gwr_predict
 
 # The covariate design vocabulary, shared with `JointVariableSelection` so the two cannot drift.
@@ -442,7 +443,7 @@ function _multiscale_predict_damped(
     local_train::Vector{Matrix{Float64}}, global_train::Matrix{Float64},
     response::Matrix{Float64}, train_lonlat::Matrix{Float64},
     local_target::Vector{Matrix{Float64}}, global_target::Matrix{Float64},
-    target_lonlat::Matrix{Float64}, bandwidths::Vector{Float64}, kernel::Function, cfg;
+    target_lonlat::Matrix{Float64}, bandwidths::Vector{Float64}, kernel::GWKernel, cfg;
     adaptive::Bool=true, exclude_self::Bool=false, unsupported::Symbol=:zero,
     train_distances::Union{Nothing,Matrix{Float64}}=nothing,
     target_distances::Union{Nothing,Matrix{Float64}}=nothing,
@@ -567,7 +568,7 @@ end
 
 function dynamic_covariate_predict(
     context::JointFoldContext, residuals::Matrix{Float64}, method::String,
-    bandwidths::Vector{Float64}, kernel::Function;
+    bandwidths::Vector{Float64}, kernel::GWKernel;
     adaptive::Bool=true, time_indices::Vector{Int}=collect(axes(residuals, 2)),
     leave_one_out::Bool=false,
 )

@@ -105,9 +105,9 @@ end
     )
     @test isnan(degenerate[1, 1])
 
-    distances = pairwise_haversine_km(train_lonlat)
+    distances = haversine_distance_matrix(train_lonlat, train_lonlat)
     loocv_weights = gw_weight(
-        make_loocv_dist(distances), 200.0; kernel=GAUSSIAN, adaptive=false,
+        loocv_distances(distances), 200.0; kernel=GAUSSIAN, adaptive=false,
     )
     @test all(loocv_weights[i, i] == 0.0 for i in axes(loocv_weights, 1))
 
@@ -149,7 +149,7 @@ end
     ]
     observations = fill(2.0, 5, 2)
     satellite = fill(1.0, 5, 2)
-    distances = pairwise_haversine_km(lonlat)
+    distances = haversine_distance_matrix(lonlat, lonlat)
     common_args = (
         kernels=[BOXCAR],
         bw_adaptive=Float64[],

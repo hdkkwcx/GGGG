@@ -53,4 +53,11 @@ const GWR_KERNELS = [
 ]
 
 
-export GAUSSIAN, EXPONENTIAL, BISQUARE, TRICUBE, BOXCAR, kernel_name
+"""A GW kernel: its index (`GAUSSIAN` ... `BOXCAR`) or a weight function `kernel(dist, bw)`."""
+const GWKernel = Union{Integer,Function}
+
+kernel_function(kernel::Integer) = GWR_KERNELS[kernel + 1]
+kernel_function(kernel::Function) = kernel
+
+
+export GAUSSIAN, EXPONENTIAL, BISQUARE, TRICUBE, BOXCAR, GWKernel, kernel_name

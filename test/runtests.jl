@@ -20,6 +20,7 @@ if HAS_SHIYAN_DATA
 else
   @warn "Skipping the R/GWmodel comparison testsets: $SHIYAN_DATA_PATH is missing"
 end
+include("test-gw-weight.jl")
 include("test-study-area.jl")
 include("test-mger-five-kernels.jl")
 include("test-interpolation-benchmark.jl")

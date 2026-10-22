@@ -230,7 +230,7 @@ function reference_local_prediction(
     for target in axes(Xtarget, 1)
         d = copy(distances[:, target])
         exclude_self && (d[target] = Inf)
-        w = DEMTerrainExperiment._adaptive_bisquare(d, neighbors)
+        w = gw_weight(d, Float64(neighbors); kernel=BISQUARE)
         valid = w .> 0
         count(valid) >= p + 1 || continue
         Xv = Xtrain[valid, :]
@@ -239,28 +239,6 @@ function reference_local_prediction(
         prediction[target] = dot(Xtarget[target, :], beta)
     end
     return prediction
-end
-
-@testset "adaptive bisquare weights" begin
-    distances = [5.0, 1.0, 9.0, 3.0, Inf, 7.0]
-    bandwidth = sort(filter(isfinite, distances))[3]
-    @test bandwidth == 5.0
-    weights = DEMTerrainExperiment._adaptive_bisquare(distances, 3)
-    for (index, d) in enumerate(distances)
-        @test weights[index] ==
-            (isfinite(d) && d < bandwidth ? (1 - (d / bandwidth)^2)^2 : 0.0)
-    end
-    @test all(iszero, weights[distances .>= bandwidth])
-    @test count(>(0), weights) == 2
-
-    # Asking for more neighbours than there are finite distances clamps to the largest.
-    @test DEMTerrainExperiment._adaptive_bisquare(distances, 99) ==
-        DEMTerrainExperiment._adaptive_bisquare(distances, 5)
-    # No finite distance at all: no station gets weight.
-    @test all(iszero, DEMTerrainExperiment._adaptive_bisquare(fill(Inf, 4), 2))
-    # Every finite distance zero: the kernel degenerates to exact coincidence.
-    @test DEMTerrainExperiment._adaptive_bisquare([0.0, 0.0, Inf], 2) == [1.0, 1.0, 0.0]
-    @test DEMTerrainExperiment._adaptive_bisquare(zeros(4), 2) == ones(4)
 end
 
 @testset "local hat operator matches weighted least squares" begin

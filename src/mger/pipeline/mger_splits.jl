@@ -88,12 +88,8 @@ function evaluate_spatial_holdout(
 	Y_obs_val = Y_obs[val_idx, :]
 	Y_sat_val = Y_sat[val_idx, :]
 
-	dMat_train = pairwise_haversine_km(lonlat_train)
-	dMat_train_val = let
-		points_train = map(x -> (x[1], x[2]), eachrow(lonlat_train))
-		points_val = map(x -> (x[1], x[2]), eachrow(lonlat_val))
-		pairwise(Haversine(6378.388), points_train, points_val)
-	end
+	dMat_train = haversine_distance_matrix(lonlat_train, lonlat_train)
+	dMat_train_val = haversine_distance_matrix(lonlat_train, lonlat_val)
 
 	scan_df, best = scan_params(
 		lonlat_train, Y_obs_train, Y_sat_train, dMat_train;

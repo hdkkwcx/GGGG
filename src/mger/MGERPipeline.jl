@@ -1,6 +1,5 @@
 using MixedGWR
 using CSV, DataFrames, Dates, Statistics, Random
-using Distances
 
 
 """

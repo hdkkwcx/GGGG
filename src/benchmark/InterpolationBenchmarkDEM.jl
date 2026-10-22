@@ -204,7 +204,7 @@ function _select_dem_mixed_bandwidth!(
             try
                 bandwidth, scan = select_mixed_bandwidth(
                     local_design, global_design, response, train_lonlat,
-                    candidates, _kernel_function(kernel); adaptive, ridge=dem.ridge,
+                    candidates, kernel; adaptive, ridge=dem.ridge,
                     tolerance=dem.tolerance, max_iterations=dem.max_iterations,
                 )
                 for row in eachrow(scan)
@@ -273,7 +273,7 @@ function _select_dem_multiscale_bandwidths!(
             try
                 bandwidths, scan, converged = select_multiscale_bandwidths(
                     local_designs, global_design, response, train_lonlat,
-                    candidates, _kernel_function(kernel); adaptive, ridge=dem.ridge,
+                    candidates, kernel; adaptive, ridge=dem.ridge,
                     tolerance=dem.tolerance, max_iterations=dem.max_iterations,
                 )
                 final_iteration = nrow(scan) == 0 ? 0 : maximum(scan.iteration)

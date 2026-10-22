@@ -7,7 +7,7 @@ module HurdleGWR
 
 using Dates
 using LinearAlgebra
-using MixedGWR: BISQUARE, GWR_KERNELS
+using MixedGWR: BISQUARE, GWR_KERNELS, gw_weight, haversine_distance_matrix
 
 abstract type SpatialBandwidth end
 
@@ -210,13 +210,6 @@ end
     return searchsortedlast(breaks, value) + 1
 end
 
-function _haversine_km(lon1::Float64, lat1::Float64, lon2::Float64, lat2::Float64)
-    dlon = deg2rad(lon2 - lon1)
-    dlat = deg2rad(lat2 - lat1)
-    a = sin(dlat / 2)^2 + cosd(lat1) * cosd(lat2) * sin(dlon / 2)^2
-    return 2 * 6378.388 * asin(sqrt(clamp(a, 0.0, 1.0)))
-end
-
 function _spatial_weights(
     train_lonlat::Matrix{Float64}, target_lon::Float64, target_lat::Float64,
     config::HurdleGWRConfig; exclude_train_index::Int=0,
@@ -224,38 +217,16 @@ function _spatial_weights(
     n_station = size(train_lonlat, 1)
     0 <= exclude_train_index <= n_station ||
         throw(ArgumentError("exclude_train_index is outside the training-station range"))
+    distances = vec(haversine_distance_matrix(train_lonlat, [target_lon target_lat]))
+    exclude_train_index > 0 && (distances[exclude_train_index] = Inf)
 
-    distances = Vector{Float64}(undef, n_station)
-    @inbounds for station in 1:n_station
-        distances[station] = station == exclude_train_index ? Inf :
-            _haversine_km(
-                train_lonlat[station, 1], train_lonlat[station, 2],
-                target_lon, target_lat,
-            )
-    end
-
-    bandwidth = if config.bandwidth isa FixedBandwidth
-        config.bandwidth.km
-    else
-        k = config.bandwidth.neighbors
-        finite_distances = filter(isfinite, distances)
-        length(finite_distances) >= k ||
-            throw(ArgumentError("adaptive bandwidth requests $k neighbours but only $(length(finite_distances)) are available"))
-        partialsort!(finite_distances, k)
-        finite_distances[k]
-    end
-    bandwidth = max(bandwidth, sqrt(eps(Float64)))
-
-    kernel_function = GWR_KERNELS[config.kernel + 1]
-    weights = zeros(Float64, n_station)
-    @inbounds for station in 1:n_station
-        distance = distances[station]
-        if isfinite(distance)
-            weight = kernel_function(distance, bandwidth)
-            weights[station] = isfinite(weight) && weight > 0 ? weight : 0.0
-        end
-    end
-    return weights
+    config.bandwidth isa FixedBandwidth &&
+        return gw_weight(distances, config.bandwidth.km; kernel=config.kernel, adaptive=false)
+    k = config.bandwidth.neighbors
+    available = count(isfinite, distances)
+    available >= k || throw(ArgumentError(
+        "adaptive bandwidth requests $k neighbours but only $available are available"))
+    return gw_weight(distances, Float64(k); kernel=config.kernel)
 end
 
 function _aggregate_amount_statistics(

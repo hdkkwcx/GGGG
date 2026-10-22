@@ -653,7 +653,7 @@ end
     y_sat_train = f.y_sat[train_idx, :]
     times = collect(1:size(residuals, 2))
 
-    bisquare = _kernel_function(BISQUARE)
+    bisquare = BISQUARE
     unshrunk = _joint_candidate_metrics(
         context, residuals, y_obs_train, y_sat_train, "residual_gwr",
         [8.0], bisquare, times, nothing, nothing, [1.0],

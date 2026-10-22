@@ -64,10 +64,10 @@ const FY4B_NADIR_RESOLUTION_M = 4000.0
 """
 Earth radius for converting a grid step to ground km.
 
-`FY4BPreprocessing`'s value rather than the station distances' `MixedGWR.EARTH_RADIUS_KM`
-(6378.388): the footprint is a property of the geostationary projection, so it has to use the
-same figure that projection does. The two differ by 0.25 km in 6378, far below anything reported
-here.
+`FY4BPreprocessing`'s equatorial value rather than the stations' mean radius
+(`MixedGWR.EARTH_RADIUS_KM`): the footprint is a property of the geostationary projection, so it
+has to use the same figure that projection does. The two differ by 0.1%, far below anything
+reported here.
 """
 const EARTH_RADIUS_KM = 6378.137
 

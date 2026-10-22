@@ -1,26 +1,10 @@
-"""Adaptive bisquare weights; a thin, behaviour-preserving wrapper over [`_gw_local_weights!`](@ref)."""
-function _adaptive_bisquare!(
-    weights::Vector{Float64}, distances::Vector{Float64}, neighbors::Int,
-    buffer::Vector{Float64},
-)
-    _gw_local_weights!(weights, distances, Float64(neighbors), gw_weight_bisquare, buffer; adaptive=true)
-end
-
-function _adaptive_bisquare(distances::Vector{Float64}, neighbors::Int)
-    n = length(distances)
-    return _adaptive_bisquare!(
-        Vector{Float64}(undef, n), distances, neighbors, Vector{Float64}(undef, n),
-    )
-end
-
 """
 Per-target local weights for [`_gwr_smoothers`](@ref): the surviving neighbour indices and their
 weights, for every target.
 
 Split out because these depend on `distances`, `neighbors` and `exclude_self` alone — never on
-the design matrix. `spatial_variability_test` rebuilds a smoother a thousand times over the same
-geometry with only `X` permuted, and used to recompute this, including a sort per target, every
-single time.
+the design matrix — and `spatial_variability_test` rebuilds a smoother a thousand times over the
+same geometry with only `X` permuted.
 
 The `p + 1` sufficiency check lives here too, so it is raised from the caller's own task rather
 than from inside a threaded permutation loop, where it would surface wrapped.
@@ -37,7 +21,7 @@ function _gwr_local_weights(
     for target in 1:n
         copyto!(d, view(distances, :, target))
         exclude_self && (d[target] = Inf)
-        _adaptive_bisquare!(w, d, neighbors, buffer)
+        gw_weight!(w, d, Float64(neighbors); kernel=BISQUARE, buffer)
         valid = w .> 0
         count(valid) >= p + 1 || throw(ArgumentError("insufficient local observations for bandwidth $neighbors"))
         indices = findall(valid)

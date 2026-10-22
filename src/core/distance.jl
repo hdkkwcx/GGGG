@@ -1,7 +1,8 @@
-export haversine_distance_matrix
+export haversine_distance_matrix, loocv_distances
 
-# Station distances are on a sphere of this radius, in km.
-const EARTH_RADIUS_KM = 6378.388
+# Every station distance in the project is on a sphere of this radius: the IUGG mean Earth
+# radius, in km.
+const EARTH_RADIUS_KM = 6371.0088
 
 """
 Pairwise great-circle distances in km between `(lon, lat)` rows in degrees, with rows=train and
@@ -26,4 +27,13 @@ function haversine_distance_matrix(
         end
     end
     return result
+end
+
+"""A copy of `distances` with `Inf` on the diagonal, which leaves each target out of its own fit."""
+function loocv_distances(distances::AbstractMatrix{<:Real})
+    d = Matrix{Float64}(distances)
+    for i in 1:min(size(d)...)
+        d[i, i] = Inf
+    end
+    return d
 end

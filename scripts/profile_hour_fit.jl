@@ -75,7 +75,7 @@ function main(args=ARGS)
     (; context, data, train_idx) = build_probe_context(cfg)
 
     residuals = data.Y_obs[train_idx, :] .- data.Y_sat[train_idx, :]
-    kernel = _kernel_function(BISQUARE)
+    kernel = BISQUARE
     bandwidth = Float64(first(context.bandwidth_candidates))
     tuning = first(_tuning_time_sample(
         data.Y_obs[train_idx, :], cfg.tuning_max_times, cfg.tuning_time_weighting))

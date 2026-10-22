@@ -6,8 +6,8 @@ using Dates
 using LinearAlgebra
 using Random
 using Statistics
-using MixedGWR: INTENSITY_RANGES, haversine_distance_matrix, tied_ranks, gw_weight_bisquare
-using MixedGWR: _gw_local_weights!
+using MixedGWR: INTENSITY_RANGES, haversine_distance_matrix, tied_ranks, gw_weight!
+using MixedGWR: BISQUARE
 # The mixed/multiscale GWR estimators live in MixedGWR; re-exported for the existing callers.
 using MixedGWR: mixed_gwr_predict, multiscale_gwr_predict
 using MixedGWR: select_mixed_bandwidth, select_multiscale_bandwidths
