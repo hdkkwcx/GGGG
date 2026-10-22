@@ -592,7 +592,8 @@ is wrong, the gauge lies on their edge, but gauge-level comparisons of GPM_uncal
 merges with the Earth Engine products) mix in the pixel choice at those 49 gauges. The cited \
 storm-core calibration ratio (rq1_cores `cal`, 2024-07-30, 5 of 20 core gauges affected) is 1.681 \
 as run and 1.724 with Uncal at Earth Engine's pixel, both printed 1.7; 2023-09-10 (uncited) would \
-print 1.0 instead of 0.9. Not rerun with Earth Engine's pixels."""
+print 1.0 instead of 0.9. Not rerun with Earth Engine's pixels. Reproduced, and its numbers asserted, by \
+scripts/verify_imerg_pixel_agreement.jl (tables in output/imerg_pixel_agreement/)."""
 
 [[step]]
 id = "raw_imerg_uncal"
