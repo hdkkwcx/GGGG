@@ -32,8 +32,8 @@ function standalone_module_dependencies(name::AbstractString)
                 "NDVIVariableSelection", "CovariateGroups"]
     # Everything that reads a station table or writes a CSV atomically. Listed as one clause
     # because the dependency is the same for all of them and the list is the interesting part.
-    name in ("AppEEARSNDVI", "ERA5LandStations", "FY4BPreprocessing", "MGERDataPrep",
-             "MOD13A2NDVIProcessing", "StudyArea", "TerrainFeatures") &&
+    name in ("AppEEARSNDVI", "ERA5LandStations", "FY4BPreprocessing", "IMERGUncalStations",
+             "MGERDataPrep", "MOD13A2NDVIProcessing", "StudyArea", "TerrainFeatures") &&
         return ["TableIO"]
     name in ("HeavyRainEvents", "HeavyCoreDiagnostics") && return ["TraditionalInterpolation"]
     name == "LandformClassification" && return ["TerrainFeatures"]

@@ -216,7 +216,7 @@ function main(args=ARGS)
     to_run = String[]
     for id in filter(in(selected), order)
         step, (state, reason) = byid[id], status[id]
-        println("  ", rpad(state, 8), rpad(id, 20), rpad(step["kind"], 9), reason)
+        println("  ", rpad(state, 8), rpad(id, 25), rpad(step["kind"], 9), reason)
         if state in ("STALE", "MISSING")
             command = isempty(step["command"]) ? "(no tracked command)" : join(step["command"], ' ')
             println(" "^10, "command: ", command)
