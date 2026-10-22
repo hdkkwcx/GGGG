@@ -7,15 +7,8 @@ using LinearAlgebra
 using SHA
 using Statistics
 
-# Loaded through src/load_modules.jl by whoever loads this file. Previously included here,
-# which compiled a second DEMTerrainExperiment whose types were incompatible with the one
-# the benchmark and JointVariableSelection used.
-# `using Main.X: a, b` imports only `a` and `b`; it does not bind `X` itself, and this module
-# also reaches DEMTerrainExperiment by qualification (`_haversine_matrix`, `_local_hat`,
-# `_global_projection`). Bind the module name explicitly so both forms resolve, without
-# pulling in the rest of its exported surface.
-using Main: DEMTerrainExperiment
-using Main.DEMTerrainExperiment: mixed_gwr_predict, multiscale_gwr_predict
+using MixedGWR: haversine_distance_matrix, local_hat_matrix, local_weight_matrix, global_projection
+using MixedGWR: mixed_gwr_predict
 
 # The covariate design vocabulary, shared with `JointVariableSelection` so the two cannot drift.
 using Main.CovariateGroups: JOINT_GROUP_ORDER, GROUP_COLUMNS, GROUP_FAMILY
@@ -41,9 +34,10 @@ Base.@kwdef struct JointCovariateBenchmarkConfig
     tolerance::Float64 = 1e-5
     # The back-fit routinely needs several hundred sweeps once smooth covariate groups are in
     # play; at the old cap of 200 the median sweep count sat at 150-194 and MGWR discarded whole
-    # hours for want of a few more iterations. Measured on the real `_local_hat`/`_global_projection`
-    # operators (150 stations, 93%-dry residuals, two smooth ERA5-like covariate groups): the
-    # `:split` layout converges on 60% of hours at 200 sweeps and 100% at 500.
+    # hours for want of a few more iterations. Measured on the real `local_hat_matrix` and
+    # `global_projection` operators (150 stations, 93%-dry residuals, two smooth ERA5-like
+    # covariate groups): the `:split` layout converges on 60% of hours at 200 sweeps and 100% at
+    # 500.
     max_iterations::Int = 1000
     # Successive over-relaxation factor for the back-fitting sweeps. It converges to the same
     # fixed point for any admissible value - `relaxation` cancels at the fixed point - so this
@@ -400,45 +394,6 @@ function _design_at(context::JointFoldContext, method::String, time::Int; target
     return (; local_groups, global_design, group_names)
 end
 
-function _haversine_matrix(train::Matrix{Float64}, target::Matrix{Float64})
-    radius = 6371.0088
-    result = Matrix{Float64}(undef, size(train, 1), size(target, 1))
-    for i in axes(train, 1), j in axes(target, 1)
-        lat1, lat2 = deg2rad(train[i, 2]), deg2rad(target[j, 2])
-        dlat = lat2 - lat1
-        dlon = deg2rad(target[j, 1] - train[i, 1])
-        value = sin(dlat / 2)^2 + cos(lat1) * cos(lat2) * sin(dlon / 2)^2
-        result[i, j] = 2radius * asin(sqrt(clamp(value, 0.0, 1.0)))
-    end
-    return result
-end
-
-function _adaptive_weights(distances::AbstractVector{Float64}, neighbors::Int)
-    finite = sort(filter(isfinite, distances))
-    isempty(finite) && return zeros(length(distances))
-    k = clamp(neighbors, 1, length(finite))
-    bandwidth = finite[k]
-    bandwidth <= 0 && (bandwidth = maximum(finite[finite .> 0]; init=1.0))
-    weights = zeros(length(distances))
-    for i in eachindex(distances)
-        ratio = distances[i] / bandwidth
-        isfinite(ratio) && ratio < 1 && (weights[i] = (1 - ratio^2)^2)
-    end
-    return weights
-end
-
-function _weight_matrix(
-    distances::Matrix{Float64}, neighbors::Int; exclude_self::Bool=false,
-)
-    weights = zeros(size(distances, 2), size(distances, 1))
-    for target in axes(distances, 2)
-        d = copy(@view distances[:, target])
-        exclude_self && target <= length(d) && (d[target] = Inf)
-        weights[target, :] .= _adaptive_weights(d, neighbors)
-    end
-    return weights
-end
-
 function _local_predict(
     Xtrain::Matrix{Float64}, y::Vector{Float64}, Xtarget::Matrix{Float64},
     weights::Matrix{Float64}, ridge::Float64,
@@ -504,11 +459,11 @@ function _multiscale_predict_damped(
     # hour it fits and so builds these once instead of once per hour. Same contract as
     # `mixed_gwr_predict`: the distances of `train_lonlat`/`target_lonlat` exactly as passed.
     train_d::Matrix{Float64} = train_distances === nothing ?
-        DEMTerrainExperiment._haversine_matrix(train_lonlat, train_lonlat) : train_distances
-    # `train_weights`/`target_weights`, when given, hold one `_local_weight_matrix` per group of
+        haversine_distance_matrix(train_lonlat, train_lonlat) : train_distances
+    # `train_weights`/`target_weights`, when given, hold one `local_weight_matrix` per group of
     # `train_d` (with this call's `exclude_self`) and `target_d` (without it) at that group's
     # bandwidth, so the hats below read the weights instead of recomputing them.
-    train_hats = [DEMTerrainExperiment._local_hat(
+    train_hats = [local_hat_matrix(
         X, X, train_d, bandwidth, kernel; adaptive, ridge=cfg.ridge, exclude_self,
         weights=train_weights === nothing ? nothing : train_weights[group],
     ) for (group, (X, bandwidth)) in enumerate(zip(local_train, bandwidths))]
@@ -518,7 +473,7 @@ function _multiscale_predict_damped(
     # is the same value, and a non-finite iterate still leaves the reals through the local sum.
     has_global = !isempty(global_train)
     global_hat = has_global ?
-        DEMTerrainExperiment._global_projection(global_train; ridge=cfg.ridge) : nothing
+        global_projection(global_train; ridge=cfg.ridge) : nothing
     local_components = [zeros(length(y)) for _ in local_train]
     global_component = has_global ? global_hat * y : zeros(length(y))
     previous = fill(NaN, length(y))
@@ -594,13 +549,13 @@ function _multiscale_predict_damped(
     prediction = isempty(global_target) ? zeros(size(target_lonlat, 1)) :
         global_target * global_beta
     target_d::Matrix{Float64} = target_distances === nothing ?
-        DEMTerrainExperiment._haversine_matrix(train_lonlat, target_lonlat) : target_distances
+        haversine_distance_matrix(train_lonlat, target_lonlat) : target_distances
     for group in eachindex(local_train)
         partial = y - (isempty(global_train) ? zeros(length(y)) : global_train * global_beta)
         for other in eachindex(local_components)
             other == group || (partial .-= local_components[other])
         end
-        target_hat = DEMTerrainExperiment._local_hat(
+        target_hat = local_hat_matrix(
             local_train[group], local_target[group], target_d,
             bandwidths[group], kernel; adaptive, ridge=cfg.ridge, unsupported,
             weights=target_weights === nothing ? nothing : target_weights[group],
@@ -634,11 +589,11 @@ function dynamic_covariate_predict(
     # `valid` changes below. Building the two haversine matrices here rather than inside the loop
     # replaces ~2*N^2 transcendental evaluations per hour with one row/column gather. The
     # submatrix of a distance matrix is elementwise the distance matrix of the submatrix, so the
-    # values handed to `_local_hat` are unchanged.
+    # values handed to `local_hat_matrix` are unchanged.
     full_train_distances =
-        DEMTerrainExperiment._haversine_matrix(context.train_lonlat, context.train_lonlat)
+        haversine_distance_matrix(context.train_lonlat, context.train_lonlat)
     full_target_distances = leave_one_out ? full_train_distances :
-        DEMTerrainExperiment._haversine_matrix(context.train_lonlat, context.target_lonlat)
+        haversine_distance_matrix(context.train_lonlat, context.target_lonlat)
     # The local kernel weights depend on the distances, bandwidth, kernel and `exclude_self`
     # alone. On an hour where every training station is valid those are the same for every hour,
     # every MGWR group sharing a bandwidth, and every hat - yet the per-target k-th-neighbour
@@ -649,7 +604,7 @@ function dynamic_covariate_predict(
     weight_kinds = leave_one_out ? ((:train, false), (:train, true)) :
         ((:train, false), (:target, false))
     full_weights = Dict(
-        (kind, exclude, bw) => DEMTerrainExperiment._local_weight_matrix(
+        (kind, exclude, bw) => local_weight_matrix(
             kind === :train ? full_train_distances : full_target_distances, bw, kernel;
             adaptive, exclude_self=exclude,
         ) for (kind, exclude) in weight_kinds for bw in all_valid_bandwidths
@@ -681,7 +636,7 @@ function dynamic_covariate_predict(
         # Subset the fold's distance matrices the same way the coordinates are subset, so the
         # models below receive exactly the matrices they would have rebuilt for themselves - and
         # skip the copy entirely on the common hour where nothing is dropped. See
-        # `DEMTerrainExperiment._distance_subset` for why these copies are worth avoiding.
+        # `MixedGWR.distance_subset` for why these copies are worth avoiding.
         all_valid = all(valid)
         train_distances = all_valid ? full_train_distances : full_train_distances[valid, valid]
         if leave_one_out

@@ -6,6 +6,7 @@ using Dates
 using LinearAlgebra
 using Random
 using Statistics
+using MixedGWR: tied_ranks
 
 # Shared bookkeeping for every variable-selection path; see src/selection/SelectionScaffolding.jl.
 using Main.SelectionScaffolding
@@ -313,7 +314,7 @@ function screen_ndvi(
             )
             p = ERA5VariableSelection._weighted_correlation(xv, yv, weights)
             s = ERA5VariableSelection._weighted_correlation(
-                ERA5VariableSelection._tie_ranks(xv), ERA5VariableSelection._tie_ranks(yv), weights,
+                tied_ranks(xv), tied_ranks(yv), weights,
             )
         end
         push!(monthly, ("ndvi", month_value, p, s, _direction(p), _direction(s)))

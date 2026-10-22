@@ -35,9 +35,8 @@ module GridSupportDiagnostics
 
 using DataFrames, Dates, Statistics
 using NCDatasets
-using MixedGWR: metric_continuous
+using MixedGWR: metric_continuous, haversine_distance_matrix
 using Main: FY4BPreprocessing
-using Main.TraditionalInterpolation: haversine_distance_matrix
 
 export WET_MM, COARSE_CELL_DEG, FY4B_NADIR_RESOLUTION_M, SEPARATION_BIN_EDGES
 export fy4b_pixel_index, latlon_cell_index, latlon_cell_center, pixel_footprint_km
@@ -65,9 +64,10 @@ const FY4B_NADIR_RESOLUTION_M = 4000.0
 """
 Earth radius for converting a grid step to ground km.
 
-`FY4BPreprocessing`'s value rather than `TraditionalInterpolation`'s 6378.388: the footprint is a
-property of the geostationary projection, so it has to use the same figure that projection does.
-The two differ by 0.25 km in 6378, far below anything reported here.
+`FY4BPreprocessing`'s value rather than the station distances' `MixedGWR.EARTH_RADIUS_KM`
+(6378.388): the footprint is a property of the geostationary projection, so it has to use the
+same figure that projection does. The two differ by 0.25 km in 6378, far below anything reported
+here.
 """
 const EARTH_RADIUS_KM = 6378.137
 

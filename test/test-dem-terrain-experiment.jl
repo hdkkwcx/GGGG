@@ -117,7 +117,7 @@ end
     Xglobal = reshape(elevation_z, :, 1)
     y = 1.5 .* elevation_z .+ 0.3 .* longitude_z
     Y = reshape(y, :, 1)
-    bisquare = DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     mixed_prediction, mixed_converged = mixed_gwr_predict(
         Xlocal, Xglobal, Y, lonlat, Xlocal, Xglobal, lonlat, 24.0, bisquare;
         max_iterations=100,
@@ -217,7 +217,7 @@ end
 """
 Weighted-least-squares prediction at every target, written straight from the definition.
 
-`_local_hat` returns the linear operator that produces this, so `hat * y` must match it
+`local_hat_matrix` returns the linear operator that produces this, so `hat * y` must match it
 for any `y`. Deriving the reference from the definition rather than from a copy of the
 implementation is what makes these tests bite on a rewrite of the inner loop.
 """
@@ -263,26 +263,26 @@ end
 end
 
 @testset "local hat operator matches weighted least squares" begin
-    bisquare = DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     rng = MersenneTwister(2026)
     n, m = 40, 11
     lonlat = hcat(109.0 .+ 4 .* rand(rng, n), 30.0 .+ 4 .* rand(rng, n))
     target_lonlat = hcat(109.0 .+ 4 .* rand(rng, m), 30.0 .+ 4 .* rand(rng, m))
-    train_distances = DEMTerrainExperiment._haversine_matrix(lonlat, lonlat)
-    target_distances = DEMTerrainExperiment._haversine_matrix(lonlat, target_lonlat)
+    train_distances = MixedGWR.haversine_distance_matrix(lonlat, lonlat)
+    target_distances = MixedGWR.haversine_distance_matrix(lonlat, target_lonlat)
     y = randn(rng, n)
     for p in 1:5
         Xtrain = hcat(ones(n), randn(rng, n, p - 1))
         Xtarget = hcat(ones(m), randn(rng, m, p - 1))
         for bandwidth in (10, 20, n)
-            square = DEMTerrainExperiment._local_hat(
+            square = MixedGWR.local_hat_matrix(
                 Xtrain, Xtrain, train_distances, Float64(bandwidth), bisquare,
             )
             @test square * y ≈ reference_local_prediction(
                 Xtrain, Xtrain, train_distances, y, bandwidth,
             )
 
-            held_out = DEMTerrainExperiment._local_hat(
+            held_out = MixedGWR.local_hat_matrix(
                 Xtrain, Xtrain, train_distances, Float64(bandwidth), bisquare; exclude_self=true,
             )
             @test all(iszero, diag(held_out))
@@ -290,7 +290,7 @@ end
                 Xtrain, Xtrain, train_distances, y, bandwidth; exclude_self=true,
             )
 
-            rectangular = DEMTerrainExperiment._local_hat(
+            rectangular = MixedGWR.local_hat_matrix(
                 Xtrain, Xtarget, target_distances, Float64(bandwidth), bisquare,
             )
             @test size(rectangular) == (m, n)
@@ -301,19 +301,19 @@ end
     end
 
     # A bandwidth too small to support the design leaves the row at zero rather than
-    # throwing — `_gwr_smoothers` is the one that throws, `_local_hat` is not.
+    # throwing — `_gwr_smoothers` is the one that throws, `local_hat_matrix` is not.
     Xwide = hcat(ones(n), randn(rng, n, 5))
-    @test all(iszero, DEMTerrainExperiment._local_hat(
+    @test all(iszero, MixedGWR.local_hat_matrix(
         Xwide, Xwide, train_distances, 2.0, bisquare,
     ))
 
     # `unsupported=:missing` records the same unfittable target as NaN instead, which is what
     # lets the benchmark's coverage gates see it rather than scoring a fabricated zero
     # correction as a real prediction.
-    @test all(isnan, DEMTerrainExperiment._local_hat(
+    @test all(isnan, MixedGWR.local_hat_matrix(
         Xwide, Xwide, train_distances, 2.0, bisquare; unsupported=:missing,
     ))
-    @test_throws ArgumentError DEMTerrainExperiment._local_hat(
+    @test_throws ArgumentError MixedGWR.local_hat_matrix(
         Xwide, Xwide, train_distances, 2.0, bisquare; unsupported=:nan,
     )
 
@@ -322,10 +322,10 @@ end
     # targets and not others must differ only on the unsupported rows.
     Xnarrow = hcat(ones(n), randn(rng, n, 2))
     for bandwidth in (6.0, 12.0, 40.0)
-        zero_hat = DEMTerrainExperiment._local_hat(
+        zero_hat = MixedGWR.local_hat_matrix(
             Xnarrow, Xnarrow, train_distances, bandwidth, bisquare,
         )
-        nan_hat = DEMTerrainExperiment._local_hat(
+        nan_hat = MixedGWR.local_hat_matrix(
             Xnarrow, Xnarrow, train_distances, bandwidth, bisquare; unsupported=:missing,
         )
         for target in axes(zero_hat, 1)
@@ -341,10 +341,10 @@ end
 
     # The ridge is applied to the normal equations, so a larger one shrinks the operator.
     Xtrain = hcat(ones(n), randn(rng, n, 2))
-    weak = DEMTerrainExperiment._local_hat(
+    weak = MixedGWR.local_hat_matrix(
         Xtrain, Xtrain, train_distances, 12.0, bisquare; ridge=1e-8,
     )
-    strong = DEMTerrainExperiment._local_hat(
+    strong = MixedGWR.local_hat_matrix(
         Xtrain, Xtrain, train_distances, 12.0, bisquare; ridge=1.0,
     )
     @test !(weak ≈ strong)
@@ -352,13 +352,13 @@ end
         Xtrain, Xtrain, train_distances, y, 12; ridge=1.0,
     )
 
-    @test_throws DimensionMismatch DEMTerrainExperiment._local_hat(
+    @test_throws DimensionMismatch MixedGWR.local_hat_matrix(
         Xtrain, randn(rng, m, 2), target_distances, 12.0, bisquare,
     )
-    @test_throws DimensionMismatch DEMTerrainExperiment._local_hat(
+    @test_throws DimensionMismatch MixedGWR.local_hat_matrix(
         Xtrain, Xtrain, target_distances, 12.0, bisquare,
     )
-    @test_throws DimensionMismatch DEMTerrainExperiment._local_hat(
+    @test_throws DimensionMismatch MixedGWR.local_hat_matrix(
         Xtrain, hcat(ones(m), randn(rng, m, 2)), target_distances, 12.0, bisquare;
         exclude_self=true,
     )
@@ -369,42 +369,42 @@ end
     n, m = 30, 9
     lonlat = hcat(109.0 .+ 4 .* rand(rng, n), 30.0 .+ 4 .* rand(rng, n))
     target_lonlat = hcat(109.0 .+ 4 .* rand(rng, m), 30.0 .+ 4 .* rand(rng, m))
-    train_distances = DEMTerrainExperiment._haversine_matrix(lonlat, lonlat)
-    target_distances = DEMTerrainExperiment._haversine_matrix(lonlat, target_lonlat)
+    train_distances = MixedGWR.haversine_distance_matrix(lonlat, lonlat)
+    target_distances = MixedGWR.haversine_distance_matrix(lonlat, target_lonlat)
     Xtrain = hcat(ones(n), randn(rng, n, 2))
     Xtarget = hcat(ones(m), randn(rng, m, 2))
     gaussian(d, bw) = exp(-0.5 * (d / bw)^2)
-    for kernel in (DEMTerrainExperiment._bisquare_kernel, gaussian),
+    for kernel in (MixedGWR.gw_weight_bisquare, gaussian),
             (adaptive, bw) in ((true, 12.0), (false, 150.0))
         for exclude_self in (false, true)
-            weights = DEMTerrainExperiment._local_weight_matrix(
+            weights = MixedGWR.local_weight_matrix(
                 train_distances, bw, kernel; adaptive, exclude_self,
             )
             @test isequal(
-                DEMTerrainExperiment._local_hat(
+                MixedGWR.local_hat_matrix(
                     Xtrain, Xtrain, train_distances, bw, kernel; adaptive, exclude_self, weights,
                 ),
-                DEMTerrainExperiment._local_hat(
+                MixedGWR.local_hat_matrix(
                     Xtrain, Xtrain, train_distances, bw, kernel; adaptive, exclude_self,
                 ),
             )
         end
-        weights = DEMTerrainExperiment._local_weight_matrix(target_distances, bw, kernel; adaptive)
+        weights = MixedGWR.local_weight_matrix(target_distances, bw, kernel; adaptive)
         @test isequal(
-            DEMTerrainExperiment._local_hat(
+            MixedGWR.local_hat_matrix(
                 Xtrain, Xtarget, target_distances, bw, kernel; adaptive, weights,
             ),
-            DEMTerrainExperiment._local_hat(Xtrain, Xtarget, target_distances, bw, kernel; adaptive),
+            MixedGWR.local_hat_matrix(Xtrain, Xtarget, target_distances, bw, kernel; adaptive),
         )
     end
-    @test_throws DimensionMismatch DEMTerrainExperiment._local_hat(
-        Xtrain, Xtarget, target_distances, 12.0, DEMTerrainExperiment._bisquare_kernel;
+    @test_throws DimensionMismatch MixedGWR.local_hat_matrix(
+        Xtrain, Xtarget, target_distances, 12.0, MixedGWR.gw_weight_bisquare;
         weights=zeros(n, n),
     )
 
     # `mixed_gwr_predict` uses the weights only on a column where every training row is valid;
     # the column with a missing row must fall back and still match.
-    bisquare = DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     Y = randn(rng, n, 3)
     Y[4, 2] = NaN
     Xglobal = randn(rng, n, 1)
@@ -414,7 +414,7 @@ end
         train_distances, target_distances)
     reused = DEMTerrainExperiment.mixed_gwr_predict(arguments...;
         train_distances, target_distances,
-        train_weights=DEMTerrainExperiment._local_weight_matrix(train_distances, 12.0, bisquare),
-        target_weights=DEMTerrainExperiment._local_weight_matrix(target_distances, 12.0, bisquare))
+        train_weights=MixedGWR.local_weight_matrix(train_distances, 12.0, bisquare),
+        target_weights=MixedGWR.local_weight_matrix(target_distances, 12.0, bisquare))
     @test isequal(plain, reused)
 end

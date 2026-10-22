@@ -168,7 +168,7 @@ const AUTO_CANDIDATE_RUNS = [
 ]
 
 """Convert the benchmark's `Int` kernel index into the weight-formula `Function` the
-`mixed_gwr`/`mgwr` local-hat machinery (`DEMTerrainExperiment`/`JointCovariateModels`) expects.
+`mixed_gwr`/`mgwr` local-hat machinery (`MixedGWR`, `JointCovariateModels`) expects.
 `GWR_KERNELS` isn't exported, so it needs `MixedGWR.` qualification here."""
 _kernel_function(kernel::Int) = MixedGWR.GWR_KERNELS[kernel + 1]
 

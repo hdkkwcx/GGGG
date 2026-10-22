@@ -71,7 +71,7 @@ end
     @test !(context.predictor_train["u10"][:, :, 1] ≈
         context.predictor_train["u10"][:, :, 2])
 
-    bisquare = JCM.DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     residuals = fixture.Yobs[fixture.train, :] .- fixture.Ysat[fixture.train, :]
     prediction, converged = JCM.dynamic_covariate_predict(
         context, residuals, "residual_gwr", [15.0], bisquare,
@@ -89,13 +89,12 @@ end
 @testset "precomputed local weights leave the joint models unchanged" begin
     fixture = joint_model_fixture()
     context = fixture.context
-    DEM = JCM.DEMTerrainExperiment
-    bisquare = DEM._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     residuals = fixture.Yobs[fixture.train, :] .- fixture.Ysat[fixture.train, :]
     design = JCM._design_at(context, "mgwr", 2; target=false)
     target_design = JCM._design_at(context, "mgwr", 2; target=true)
-    train_distances = DEM._haversine_matrix(context.train_lonlat, context.train_lonlat)
-    target_distances = DEM._haversine_matrix(context.train_lonlat, context.target_lonlat)
+    train_distances = MixedGWR.haversine_distance_matrix(context.train_lonlat, context.train_lonlat)
+    target_distances = MixedGWR.haversine_distance_matrix(context.train_lonlat, context.target_lonlat)
     bandwidths = [12.0, 20.0]
     response = reshape(residuals[:, 2], :, 1)
     arguments = (design.local_groups, design.global_design, response, context.train_lonlat,
@@ -103,8 +102,8 @@ end
         bandwidths, bisquare, context.config)
     plain = JCM._multiscale_predict_damped(arguments...; train_distances, target_distances)
     reused = JCM._multiscale_predict_damped(arguments...; train_distances, target_distances,
-        train_weights=[DEM._local_weight_matrix(train_distances, bw, bisquare) for bw in bandwidths],
-        target_weights=[DEM._local_weight_matrix(target_distances, bw, bisquare) for bw in bandwidths])
+        train_weights=[MixedGWR.local_weight_matrix(train_distances, bw, bisquare) for bw in bandwidths],
+        target_weights=[MixedGWR.local_weight_matrix(target_distances, bw, bisquare) for bw in bandwidths])
     @test isequal(plain, reused)
     @test all(isfinite, first(plain))
 
@@ -136,7 +135,7 @@ function regrouped_context(fixture, grouping::Symbol)
 end
 
 @testset "mgwr spatial grouping controls only the spatial block" begin
-    bisquare = JCM.DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     fixture = joint_model_fixture()
     residuals = fixture.Yobs[fixture.train, :] .- fixture.Ysat[fixture.train, :]
     expected = Dict(
@@ -168,7 +167,7 @@ end
 end
 
 @testset "back-fitting rejects a bandwidth vector of the wrong length" begin
-    bisquare = JCM.DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     fixture = joint_model_fixture()
     n = length(fixture.train)
     lonlat = fixture.lonlat[fixture.train, :]
@@ -215,7 +214,7 @@ end
         "GPM", fixture.roles, fixture.train, fixture.target, fixture.lonlat,
         fixture.Yobs, fixture.Ysat, fixture.terrain, fixture.era5, nothing, tight,
     )
-    bisquare = JCM.DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     slow, slow_ok = JCM.dynamic_covariate_predict(
         context, residuals, "mgwr", fill(20.0, 4), bisquare,
     )
@@ -249,7 +248,7 @@ end
     )
     residuals = fixture.Yobs[fixture.train, :] .- fixture.Ysat[fixture.train, :]
     prediction, _ = JCM.dynamic_covariate_predict(
-        missing_context, residuals, "mixed_gwr", [15.0], JCM.DEMTerrainExperiment._bisquare_kernel,
+        missing_context, residuals, "mixed_gwr", [15.0], MixedGWR.gw_weight_bisquare,
     )
     @test isnan(prediction[1, 1])
 end
@@ -269,7 +268,7 @@ end
 
 @testset "an unfittable local target is missing, not a zero correction" begin
     # A target with fewer than `p + 1` positively weighted training stations cannot be fitted
-    # locally. `:zero` (the historical encoding) left `_local_hat`'s all-zero row in place, so
+    # locally. `:zero` (the historical encoding) left `local_hat_matrix`'s all-zero row in place, so
     # the target contributed exactly 0 and was reported as a successful prediction of "no local
     # correction" — invisible to every coverage gate the benchmark has. `:missing` marks it NaN.
     #
@@ -278,7 +277,7 @@ end
     # seven targets sit east of the training block, so a fixed 60 km reaches the first three and
     # not the last four.
     fixture = joint_model_fixture()
-    bisquare = JCM.DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     residuals = fixture.Yobs[fixture.train, :] .- fixture.Ysat[fixture.train, :]
     zero_context = unsupported_context(fixture, :zero)
     missing_context = unsupported_context(fixture, :missing)
@@ -302,7 +301,7 @@ end
         # The bug: an unsupported target used to come back as a real-looking number.
         @test all(isfinite, zero_mgwr[unsupported_rows, time])
         @test all(isnan, missing_mgwr[unsupported_rows, time])
-        # The fix must not move a value the local fit could actually support. `_local_hat`
+        # The fix must not move a value the local fit could actually support. `local_hat_matrix`
         # fills one row per target and the back-fit hats are untouched, so these are equal
         # bit for bit, not merely close.
         @test isequal(
@@ -358,7 +357,7 @@ end
     @test residual_design.global_design == mixed_design.global_design
     @test residual_design.group_names != mixed_design.group_names
 
-    bisquare = JCM.DEMTerrainExperiment._bisquare_kernel
+    bisquare = MixedGWR.gw_weight_bisquare
     residuals = distinct.Yobs[distinct.train, :] .- distinct.Ysat[distinct.train, :]
     same = [JCM.dynamic_covariate_predict(all_local, residuals, method, [15.0], bisquare)[1]
         for method in ("residual_gwr", "mixed_gwr")]

@@ -24,8 +24,8 @@ Conventions every function here relies on:
 module HeavyRainEvents
 
 using DataFrames, Dates, Statistics
-using MixedGWR: metric_continuous, metric_event
-using Main.TraditionalInterpolation: haversine_distance_matrix, idw_predict
+using MixedGWR: metric_continuous, metric_event, haversine_distance_matrix, tied_ranks
+using Main.TraditionalInterpolation: idw_predict
 
 export met_day, align_to_reference, daily_totals, screen_heavy_rain_days, tag_rain_processes!
 export event_hours, select_representative_events, event_station_totals, spatial_metrics
@@ -281,22 +281,6 @@ function event_station_totals(
     return (; keep, obs=total(Y_obs), sat=Dict(String(p) => total(Y) for (p, Y) in products))
 end
 
-"""Ranks with ties given their average rank, for Spearman correlation."""
-function _tied_ranks(x::AbstractVector{<:Real})
-    order = sortperm(x)
-    ranks = Vector{Float64}(undef, length(x))
-    i = 1
-    while i <= length(order)
-        j = i
-        while j < length(order) && x[order[j + 1]] == x[order[i]]
-            j += 1
-        end
-        ranks[order[i:j]] .= (i + j) / 2
-        i = j + 1
-    end
-    return ranks
-end
-
 """Great-circle distance in km between two `(lon, lat)` points."""
 _distance_km(a, b) = haversine_distance_matrix([a[1] a[2]], [b[1] b[2]])[1, 1]
 
@@ -369,7 +353,7 @@ function spatial_metrics(
     head = (;
         n=length(pairs), obs_mean, est_mean,
         continuous.RMSE, continuous.MAE, continuous.Bias, RB_pct=100 * continuous.Bias / obs_mean,
-        continuous.r, rho=cor(_tied_ranks(o), _tied_ranks(e)), CRMSE=crmse,
+        continuous.r, rho=cor(tied_ranks(o), tied_ranks(e)), CRMSE=crmse,
         sd_ratio, cv_ratio, KGE=kge,
     )
     return merge(head, NamedTuple{Tuple(event_names)}(Tuple(event_values)), (; centroid_shift_km, peak_shift_km))

@@ -1,4 +1,13 @@
+"""
+Hurdle GWR: a two-part satellite-precipitation calibration, with a spatially weighted wet
+probability per satellite-intensity category and a local ridge regression for positive amounts.
+Behind the benchmark's `hurdle_gwr` method, which is deliberately disabled.
+"""
+module HurdleGWR
+
 using Dates
+using LinearAlgebra
+using MixedGWR: BISQUARE, GWR_KERNELS
 
 abstract type SpatialBandwidth end
 
@@ -639,3 +648,5 @@ end
 export SpatialBandwidth, FixedBandwidth, AdaptiveBandwidth
 export HurdleGWRConfig, HurdleGWRCalibrator, HurdleGWRPrediction
 export fit_hurdle_gwr, predict_hurdle_gwr
+
+end # module
