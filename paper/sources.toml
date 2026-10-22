@@ -366,6 +366,18 @@ column = "r"
 fmt = "2f"
 where = { event_day = "2022-06-26", product = ["GPM_uncal", "GSMaP"] }
 
+[[table]]
+name = "pixel_cores"
+label = "Uncertainties text: core gauges where IMERG Final and Uncal read neighbouring pixels"
+step = "pixel_check"
+source = "output/imerg_pixel_agreement/calibration_ratio.csv"
+provenance = ["output/imerg_pixel_agreement/provenance.csv"]
+keys = ["event_day"]
+[table.values]
+n_core = ["n_core", "0f"]
+n_mismatched = ["n_mismatched", "0f"]
+cal_same_pixel = ["final_over_uncal_earth_engine_pixel", "1f"]
+
 # RQ2: hourly evaluation over the full 2022-2024 record (IMERG Uncal run without FY4B).
 
 [[table]]
@@ -670,6 +682,13 @@ reviewed = "9e33211e4c60f242ff6de12242b71aef0fb9ccb6"
 command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl"]
 marker = "output/heavy_core_diagnostics_gpmuncal/provenance.csv"
 needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
+
+[[step]]
+id = "pixel_check"
+kind = "analysis"
+command = ["julia", "--project=.", "scripts/verify_imerg_pixel_agreement.jl"]
+marker = "output/imerg_pixel_agreement/provenance.csv"
+needs = ["rq1_cores", "prep_study_area", "raw_imerg_uncal"]
 
 [[step]]
 id = "rq2"
