@@ -26,7 +26,7 @@ jobs:
           - '1'
           # - 'nightly'
         os:
-          - ubuntu-latest
+          - ubuntu-24.04
         arch:
           - x64
         
@@ -46,7 +46,7 @@ jobs:
           R -e 'install.packages("GWmodel")'
       
       - run: echo "LD_LIBRARY_PATH=$(R RHOME)/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
 
       - run: |
           sudo apt install libgdal-dev libgeos-dev libproj-dev libudunits2-dev
