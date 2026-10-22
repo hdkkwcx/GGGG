@@ -12,6 +12,12 @@
 # (output/satellite_temporal_evaluation_gpmuncal/).
 
 [[item]]
+label = "Fig. 1 (study area)"
+paper = "paper/figures/fig01_study_area.png"
+source = "output/study_area_map/figures/fig1_study_area.png"
+provenance = ["output/study_area_map/figures/plot_provenance.csv"]
+
+[[item]]
 label = "Fig. 2 (RQ1 event maps)"
 paper = "paper/figures/fig02_event_maps.png"
 source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/figures/fig0_event_overview.png"
