@@ -7,8 +7,7 @@
 // Table 3 and Figs. 6-7 come from clean benchmark runs at commit 94afc78 (git_dirty=false, recorded
 // in each run's benchmark_scope.csv with its Manifest.toml and a SHA-256 for every input file):
 // ..._fusedanchor_nofy4b_gpmuncal and, for the GPM (Final) rows, ..._fusedanchor_nofy4b. They
-// reproduce the earlier runs at ec320ab and on uncommitted code
-// (output/*_uncommitted_ef3616d) byte for byte.
+// reproduce the earlier runs at ec320ab and on uncommitted code (ef3616d) byte for byte.
 // RQ1/RQ2 and Figs. 2-4 come from clean IMERG Uncal runs at commit 3bce549, plotted at 072eef6:
 // output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal,
 // satellite_temporal_evaluation_nofy4b_gpmuncal and, for the Scope paragraph's FY4B numbers,
