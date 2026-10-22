@@ -1,24 +1,15 @@
 using MixedGWR, RTableTools, Distances, Test
 include("main_pkgs.jl");
 
-# These four validate against R's GWmodel on the Shiyan station fixture. `data/` is gitignored,
+# These use the Shiyan station fixture, and test-gwmodel.jl also needs R. `data/` is gitignored,
 # so the fixture is absent from a fresh checkout and from CI; they are skipped rather than
 # aborting the suite. Everything below them is self-contained and always runs.
 if HAS_SHIYAN_DATA
-  @testset "GWR" begin
-    for adaptive in [true, false]
-      for kernel in 0:4
-        r = R"GWmodel:::gwr_q($x1, $y, $dMat, 20.0, $kernel + 1, $adaptive)" |> rcopy
-        jl = GWR(x1, y, dMat, 20.0; kernel, adaptive)
-        @test r ≈ jl
-      end
-    end
-  end
-
+  include("test-gwmodel.jl")
   include("test-solver.jl")
   include("test-ST_GWR.jl")
 else
-  @warn "Skipping the R/GWmodel comparison testsets: $SHIYAN_DATA_PATH is missing"
+  @warn "Skipping the Shiyan fixture testsets: $SHIYAN_DATA_PATH is missing"
 end
 include("test-gw-weight.jl")
 include("test-study-area.jl")

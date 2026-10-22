@@ -43,10 +43,10 @@ routine.
 
 `test/test-speed.jl` is a standalone benchmark, not in `runtests.jl`.
 
-The first `@testset "GWR"` in `runtests.jl`, `test-solver.jl` and `test-ST_GWR.jl` check results
-against R's `GWmodel` via `RCall`, using `data/prcp_st174_shiyan.csv`. They need R with `GWmodel`
-installed, and they are skipped with a warning when that fixture is absent (`HAS_SHIYAN_DATA` in
-`test/main_pkgs.jl`), e.g. on a fresh checkout or CI. The other test files don't need R.
+`test-gwmodel.jl`, `test-solver.jl` and `test-ST_GWR.jl` use `data/prcp_st174_shiyan.csv`, and
+they are skipped with a warning when that fixture is absent (`HAS_SHIYAN_DATA` in
+`test/main_pkgs.jl`), e.g. on a fresh checkout or CI. Only `test-gwmodel.jl` needs R: it checks
+`GWR` against R's `GWmodel` via `RCall`, so it needs R with `GWmodel` installed. CI installs no R.
 
 ### Threads and reproducibility
 
