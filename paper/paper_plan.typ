@@ -75,6 +75,7 @@
 #let c2 = load("rq2_classes")      // RQ2: by intensity class, season and relief
 #let v2 = load("rq2_events")       // RQ2: rain-event detection and timing
 #let a2 = load("rq2_areal")        // RQ2: areal-mean series
+#let n0 = load("study_gauges")     // Study area: gauges RQ2 scores, in all and by landform region
 #let fr = load("scope_fy4b_r")     // Scope: FY4B on its own hours, IMERG Uncal run with FY4B
 #let fa = load("scope_fy4b_areal")
 #let fp = load("scope_fy4b_pod")
@@ -173,9 +174,9 @@ agreement blend in RQ3 use GPM and GSMaP only.
 
 == Study area and data
 
-237 hourly gauges in the Shiyan study area, 2022–2024 (values quantised to 0.5 mm). All sit in hills
-and mountains: by local relief from the Copernicus GLO-30 DEM, 129 are below 500 m, 97 at 500–1000 m
-and 11 at 1000 m or more. GPM IMERG V07 and GSMaP v8 operational (`hourlyPrecipRate`), both hourly
+#val(n0, "n", region: "all") hourly gauges in the Shiyan study area, 2022–2024 (values quantised to 0.5 mm). All sit in hills
+and mountains: by local relief from the Copernicus GLO-30 DEM, #val(n0, "n", region: "relief_lt500") are below 500 m, #val(n0, "n", region: "relief_500_1000") at 500–1000 m
+and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 and GSMaP v8 operational (`hourlyPrecipRate`), both hourly
 at 0.1°, are sampled at the gauge pixels. The primary GPM product is IMERG Uncal, so that neither
 product carries gauge information: IMERG Final is calibrated monthly to GPCC gauge totals, GSMaP
 operational has no gauge correction. IMERG Final is kept as a sensitivity check

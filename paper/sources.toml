@@ -423,6 +423,20 @@ timescale_h = ["1", "24"]
 r = ["r", "2f"]
 RB0 = ["RB_pct", "+0f"]
 
+# Study area: the gauges RQ2 scores, in all and by landform region (both products score the same gauges).
+[[table]]
+name = "study_gauges"
+label = "Study-area text: gauges in all and by landform region"
+source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal/station_correlation_summary.csv"
+provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal/provenance.csv"]
+keys = ["region"]
+[table.where]
+sample = "gpm_gsmap_full"
+product = "GPM_uncal"
+season = "all"
+[table.values]
+n = ["n_stations", "0f"]
+
 # Scope: FY4B against GPM and GSMaP on the hours it covers (IMERG Uncal run with FY4B).
 
 [[table]]
