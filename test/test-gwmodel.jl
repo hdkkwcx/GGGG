@@ -1,5 +1,5 @@
 # GWR against R's GWmodel on the Shiyan station fixture. The only test file that needs R (with
-# GWmodel installed); runtests.jl includes it after main_pkgs.jl, and only when the fixture exists.
+# GWmodel installed); test-shiyan-fixture.jl includes it only when the fixture exists.
 using RCall
 R"""
 library(GWmodel)

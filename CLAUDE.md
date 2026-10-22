@@ -24,7 +24,7 @@ outright, and `git stash --all` strips it off disk. Use `git clean -fd` (no `-x`
 ```sh
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolve dependencies
 julia --project=. -e 'using Pkg; Pkg.test()'          # full suite (test/runtests.jl)
-julia --project=. test/test-study-area.jl             # one file; most are self-contained
+julia --project=. test/test-study-area.jl             # one file; each is self-contained
 julia --project=. scripts/run_mger_smoke_202206.jl    # scripts/run_*.jl, verify_*.jl are the entry points
 julia --project=. scripts/make_paper.jl               # paper status; --run rebuilds what is stale (see its header)
 ```
@@ -41,11 +41,13 @@ That venv redraws the paper's figures byte for byte (checked on Fig. 4). `/paper
 `/merge-branch` (`.claude/skills/`) are the read-only paper check and the repo's merge-and-push
 routine.
 
-`test/test-speed.jl` is a standalone benchmark, not in `runtests.jl`.
+`runtests.jl` runs every file in `TEST_FILES` in its own Julia process, `Sys.CPU_THREADS` at a
+time (set `JULIA_CPU_THREADS` to change that), so a new test file must load everything it uses
+and be added to that list. `test/test-speed.jl` is a standalone benchmark, not in `runtests.jl`.
 
-`test-gwmodel.jl`, `test-solver.jl` and `test-ST_GWR.jl` use `data/prcp_st174_shiyan.csv`, and
-they are skipped with a warning when that fixture is absent (`HAS_SHIYAN_DATA` in
-`test/main_pkgs.jl`), e.g. on a fresh checkout or CI. Only `test-gwmodel.jl` needs R: it checks
+`test-gwmodel.jl`, `test-solver.jl` and `test-ST_GWR.jl` use `data/prcp_st174_shiyan.csv`. They
+run together from `test-shiyan-fixture.jl`, and are skipped with a warning when that fixture is
+absent (`HAS_SHIYAN_DATA` in `test/main_pkgs.jl`), e.g. on a fresh checkout or CI. Only `test-gwmodel.jl` needs R: it checks
 `GWR` against R's `GWmodel` via `RCall`, so it needs R with `GWmodel` installed. CI installs no R.
 
 ### Threads and reproducibility
