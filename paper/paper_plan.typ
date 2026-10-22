@@ -4,6 +4,8 @@
 // scripts/plot_satellite_temporal_evaluation.py and scripts/plot_gauge_satellite_fusion.py
 // (the fusion figures from its FY4B-free IMERG Uncal report, output/gauge_satellite_fusion_nofy4b_gpmuncal).
 // Numbers are read from the CSVs beside those figures in output/.
+// Fig. 1 is scripts/plot_study_area_map.py's output/study_area_map/figures/fig1_study_area.png, drawn
+// straight from data/ (its plot_provenance.csv records the inputs' SHA-256).
 // Table 3 and Figs. 6-7 come from clean benchmark runs at commit 94afc78 (git_dirty=false, recorded
 // in each run's benchmark_scope.csv with its Manifest.toml and a SHA-256 for every input file):
 // ..._fusedanchor_nofy4b_gpmuncal and, for the GPM (Final) rows, ..._fusedanchor_nofy4b. They
@@ -179,7 +181,14 @@ product carries gauge information: IMERG Final is calibrated monthly to GPCC gau
 operational has no gauge correction. IMERG Final is kept as a sensitivity check
 for all three questions. Days run 08–08 Beijing time.
 
-#planned[Fig. 1 — study area: relief, gauges, landform regions, location inset, river basins.]
+#figure(
+  image("figures/fig01_study_area.png", width: 80%),
+  caption: [Draft Fig. 1. The study area: shaded relief from a 1 km SRTM DEM, and the hourly gauges by
+  landform region, classed by local relief in the Copernicus GLO-30 DEM. Hollow markers: the region has
+  too few gauges to be interpreted on its own.],
+)
+
+#planned[Fig. 1, still to add: a location inset and the river basins.]
 
 == Evaluating the satellite products (RQ1, RQ2)
 
@@ -385,7 +394,8 @@ which the project does not yet have.
 
 = Work remaining before drafting
 
-- Fig. 1: study-area map.
+- Fig. 1: add the location inset and the river basins, which need boundary and basin data not yet in
+  `data/`.
 - Fig. 4: add the landform-region panel (RQ2).
 - Choose the headline fusion method: agreement blend or stacked combination (RQ3).
 - Fill the #refslot slots in §4.2 with papers actually read.
