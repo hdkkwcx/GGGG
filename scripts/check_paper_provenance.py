@@ -15,8 +15,9 @@ Every `[[table]]` block, the numbers the text cites, is also re-exported in memo
 a stale export or a changed source all fail.
 
 It also fails when `paper/figures/` holds a file, or `paper/paper_plan.typ` includes an image, that
-has no entry. One line per entry, then the commits involved; the exit status is nonzero if anything
-failed. Standard library only.
+has no entry, or when an entry names no `step`, or one that is not a `[[step]]` block (the graph
+`scripts/make_paper.jl` rebuilds the paper from). One line per entry, then the commits involved;
+the exit status is nonzero if anything failed. Standard library only.
 """
 
 from __future__ import annotations
@@ -110,11 +111,14 @@ def check_table(spec: dict, commits: dict[str, set[str]]) -> tuple[list[str], li
 def main() -> int:
     sources = tomllib.loads((ROOT / "paper" / "sources.toml").read_text(encoding="utf-8"))
     items, tables = sources["item"], sources.get("table", [])
+    steps = {step["id"] for step in sources.get("step", [])}
     commits: dict[str, set[str]] = {}
     failed = 0
     width = max(len(entry["label"]) for entry in items + tables)
     for item in items + tables:
         problems, notes = (check_table if item in tables else check_item)(item, commits)
+        if item.get("step") not in steps:
+            problems.append(f"no step: {item['step']}" if "step" in item else "names no step")
         failed += bool(problems)
         status = "FAIL: " + "; ".join(problems) if problems else "OK"
         print(f"{item['label']:<{width}}  {status}" + "".join(f"\n{'':<{width}}  note: {note}" for note in notes))
