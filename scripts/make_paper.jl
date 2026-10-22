@@ -18,7 +18,8 @@
 # its script, scripts/plot_provenance.py or scripts/requirements-plot.txt. CHANGED is reported, never
 # rerun on its own, since most edits do not move a result and the benchmark takes hours: review the
 # diff, then rerun with `--force`, or record the review as `reviewed = "<commit>"` on the step, after
-# which only changes past that commit count.
+# which only changes past that commit count. A step is also CHANGED when its provenance records a
+# `command` (runs since 2026-10-21 do) other than the step's own, from its `scripts/` path on.
 #
 # `--run` refuses on a dirty tree, as every paper run starts clean. It runs the STALE and MISSING
 # steps with their own commands (logs in output/logs/<step>.log), copies each figure into
@@ -77,6 +78,12 @@ function marker_status(step)
         isfile(path) || return ("STALE", "input gone: $relative")
         file_sha256(path) == recorded || return ("STALE", "input changed: $relative")
     end
+    # Runs since 2026-10-21 record their command; the step's must be the one that made the result.
+    recorded = get(record, "report_command", get(record, "command", nothing))
+    argv = step["command"]
+    expected = join(argv[something(findfirst(startswith("scripts/"), argv), 1):end], ' ')
+    recorded === nothing || recorded == expected ||
+        return ("CHANGED", "made by a different command: $recorded")
     base, changed, note = code_changes(step, record)
     isempty(changed) && return ("REUSE", note)
     return ("CHANGED", strip("code changed since $(base[1:7]): $(join(changed, ", ")). $note"))

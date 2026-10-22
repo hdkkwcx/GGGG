@@ -17,6 +17,7 @@ const RP = Main.RunProvenance
     @test value("git_commit") == "unavailable"
     @test value("git_dirty") == "unavailable"
     @test value("julia_version") == string(VERSION)
+    @test value("command") == RP.process_command(root)
     # A repeated input is hashed once, under its path relative to `root`.
     @test value("input_sha256:data/gauges.csv") == RP.file_sha256(input)
     @test count(r -> startswith(r.key, "input_sha256:"), rows) == 2
@@ -27,6 +28,17 @@ const RP = Main.RunProvenance
 
     RP.finish_provenance!(rows, root)
     @test rows[end].key == "git_dirty_at_end"
+
+    # An explicit command is recorded as given.
+    given = RP.start_provenance(root, outdir; command="scripts/run_x.jl full --flag")
+    @test only(r.value for r in given if r.key == "command") == "scripts/run_x.jl full --flag"
+end
+
+@testset "process_command is the script, relative to the root, and its arguments" begin
+    # Run as a script (this file, or runtests.jl under Pkg.test) the path is under test/; under
+    # `julia -e` there is no script.
+    command = RP.process_command(joinpath(@__DIR__, ".."))
+    @test command == "unavailable" || startswith(command, "test/")
 end
 
 @testset "git_provenance reads this checkout" begin

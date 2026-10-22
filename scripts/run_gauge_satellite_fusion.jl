@@ -333,7 +333,8 @@ function main(args=ARGS)
     report_git = filter(:key => in(("git_commit", "git_dirty")), _git_provenance())
     write_csv_atomic(joinpath(outdir, "source_provenance.csv"), vcat(
         filter(:key => in(("git_commit", "git_branch", "git_dirty")), scope),
-        DataFrame(key="report_" .* report_git.key, value=report_git.value)))
+        DataFrame(key="report_" .* report_git.key, value=report_git.value),
+        DataFrame(key=["report_command"], value=[Main.RunProvenance.process_command(ROOT)])))
     println("Wrote the tables read off the run's own outputs")
 
     # The rest re-scores stored predictions, which needs the observations on the run's grid.
