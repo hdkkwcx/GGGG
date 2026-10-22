@@ -13,6 +13,13 @@
 # data/, so they are only checked and their command printed, never run: OK, MISSING, or ABSENT for
 # an intermediate that was cleared after the data steps needing it were made.
 #
+# A REUSE step is CHANGED when the code it ran has changed since the commit its provenance records:
+# for a Julia step, anything under src/, Project.toml, its script or the Manifest; for a plot step,
+# its script, scripts/plot_provenance.py or scripts/requirements-plot.txt. CHANGED is reported, never
+# rerun on its own, since most edits do not move a result and the benchmark takes hours: review the
+# diff, then rerun with `--force`, or record the review as `reviewed = "<commit>"` on the step, after
+# which only changes past that commit count.
+#
 # `--run` refuses on a dirty tree, as every paper run starts clean. It runs the STALE and MISSING
 # steps with their own commands (logs in output/logs/<step>.log), copies each figure into
 # paper/figures/ when it differs from its source, re-exports paper/numbers/, runs the provenance
@@ -59,7 +66,7 @@ function marker_status(step)
     end
     marker = joinpath(ROOT, step["marker"])
     isfile(marker) || return ("MISSING", "no $(step["marker"])")
-    readline(marker) == "key,value" || return ("REUSE", "")
+    readline(marker) == "key,value" || return ("REUSE", "code not checked: no commit recorded")
     record = read_provenance(marker)
     dirty = [key for key in CLEAN_KEYS if get(record, key, "false") != "false"]
     isempty(dirty) || return ("STALE", join(dirty, ", ") * " in its provenance")
@@ -70,7 +77,47 @@ function marker_status(step)
         isfile(path) || return ("STALE", "input gone: $relative")
         file_sha256(path) == recorded || return ("STALE", "input changed: $relative")
     end
-    return ("REUSE", "")
+    base, changed, note = code_changes(step, record)
+    isempty(changed) && return ("REUSE", note)
+    return ("CHANGED", strip("code changed since $(base[1:7]): $(join(changed, ", ")). $note"))
+end
+
+git_ok(args...) = success(pipeline(Cmd(`git $args`; dir=ROOT); stderr=devnull))
+
+"""
+`(base, changed, note)`: the files of the step's code that changed between `base` and the
+working tree, plus any environment that no longer matches the recorded one. `base` is the commit
+the step ran at, or its `reviewed` commit when that descends from it: code changes up to `reviewed`
+were checked and do not move the result. Julia steps count `src/` as a whole (the loaders pull
+modules in by name), `Project.toml`, their script and the Manifest; plot steps their script,
+`scripts/plot_provenance.py` and `scripts/requirements-plot.txt`.
+"""
+function code_changes(step, record)
+    commit = get(record, "report_git_commit", get(record, "git_commit", ""))
+    isempty(commit) && return ("", String[], "code not checked: no commit recorded")
+    git_ok("cat-file", "-e", "$commit^{commit}") ||
+        return (commit, ["recorded commit $(commit[1:7]) is not in this repository"], "")
+    base, note = commit, ""
+    if haskey(step, "reviewed")
+        reviewed = step["reviewed"]
+        if git_ok("merge-base", "--is-ancestor", commit, reviewed)
+            base = reviewed
+        elseif !git_ok("merge-base", "--is-ancestor", reviewed, commit)   # older: the run supersedes it
+            note = "reviewed $(reviewed[1:min(7, end)]) ignored: not a descendant of $(commit[1:7])"
+        end
+    end
+    julia = step["command"][1] == "julia"
+    scripts = filter(startswith("scripts/"), step["command"])
+    paths = julia ? ["src", "Project.toml", scripts...] : [scripts..., "scripts/plot_provenance.py"]
+    changed = split(read(Cmd(`git diff --name-only $base -- $paths`; dir=ROOT), String))
+    environment = julia ? ("manifest_sha256", "Manifest.toml") :
+        ("requirements_sha256", "scripts/requirements-plot.txt")
+    recorded = get(record, environment[1], nothing)
+    path = joinpath(ROOT, environment[2])
+    if recorded !== nothing && (!isfile(path) || file_sha256(path) != recorded)
+        push!(changed, "$(environment[2]) (differs from the recorded one)")
+    end
+    return (base, String.(changed), note)
 end
 
 """Step ids in dependency order, data then analysis then figures, failing on an unknown id or a cycle."""
@@ -141,7 +188,7 @@ function main(args=ARGS)
     for id in filter(in(selected), order)
         step = byid[id]
         status[id] = id in options["force"] ? ("STALE", "forced") : marker_status(step)
-        if step["kind"] != "data" && status[id][1] == "REUSE"
+        if step["kind"] != "data" && status[id][1] in ("REUSE", "CHANGED")
             rerun = findfirst(need -> byid[need]["kind"] != "data" &&
                 status[need][1] in ("STALE", "MISSING"), get(step, "needs", String[]))
             rerun === nothing || (status[id] = ("STALE", "needs $(step["needs"][rerun]), which reruns"))
@@ -170,6 +217,12 @@ function main(args=ARGS)
             step["kind"] == "data" || push!(to_run, id)
         end
     end
+    changed = filter(id -> status[id][1] == "CHANGED", filter(in(selected), order))
+    isempty(changed) || println("""
+        $(length(changed)) step(s) reused although code they ran has changed since: $(join(changed, ", ")).
+        Not rerun automatically. Review each diff (git diff <commit> -- <files>); if a change can move
+        the result, rerun with --run --force <step>, otherwise record the review as `reviewed = "<commit>"`
+        on the step in paper/sources.toml.""")
 
     if options["run"]
         dirty = read(Cmd(`git status --porcelain`; dir=ROOT), String)

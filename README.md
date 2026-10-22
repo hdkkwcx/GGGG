@@ -58,6 +58,10 @@ Figure numbers are still a draft. A figure's number lives in its `paper/figures/
 `id` in `sources.toml`, not in the script names. `python scripts/check_paper_provenance.py` checks
 that everything in the paper traces back to committed code.
 
+A result made before its code changed is reported as CHANGED and never rerun on its own. After
+changing analysis code, rerun the affected steps with `--run --force <step>`, or, if the change
+cannot move the result, record that review as the step's `reviewed` commit in `sources.toml`.
+
 ## References
 
 1. <https://github.com/GWmodel-Lab/GWmodel>

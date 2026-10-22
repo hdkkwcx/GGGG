@@ -156,7 +156,10 @@ using Main.BenchmarkDiagnostics
   median, a largest gap) is a `[table.stats.<name>]` entry, read with `stat`, so the check covers it;
   the paper computes nothing itself. Every `[[item]]` and `[[table]]` names a `step` in the
   `[[step]]` graph of `sources.toml`, which `scripts/make_paper.jl` walks and the check enforces: a
-  new figure or table, or a new run behind one, gets its step there with the exact command.
+  new figure or table, or a new run behind one, gets its step there with the exact command. After
+  changing analysis code, `make_paper.jl` reports the steps it touches as CHANGED: rerun them with
+  `--run --force <step>`, or, only once the diff is checked and cannot move the result, bump the
+  step's `reviewed` commit.
 - The RQ1/RQ2 scripts (`run_heavy_rain_event_evaluation.jl`, `run_satellite_temporal_evaluation.jl`,
   `run_heavy_core_diagnostics.jl`) follow the benchmark's defaults: IMERG Uncal (`GPM_uncal`, suffix
   `_gpmuncal`; `--gpm-cal` for IMERG Final), and RQ2 leaves FY4B out (suffix `_nofy4b`;
