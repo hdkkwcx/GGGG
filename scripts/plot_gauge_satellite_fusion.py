@@ -4,8 +4,8 @@ Reads the CSVs written by `scripts/run_gauge_satellite_fusion.jl` and writes PNG
 to `output/gauge_satellite_fusion/figures/`, then copies the figures and a set of rounded report tables
 into `Interim_results/` so the Typst report compiles from that folder alone:
 
-    py -3.13 scripts/plot_gauge_satellite_fusion.py
-    py -3.13 scripts/plot_gauge_satellite_fusion.py --gpm-gsmap
+    "$MIXEDGWR_PYTHON" scripts/plot_gauge_satellite_fusion.py
+    "$MIXEDGWR_PYTHON" scripts/plot_gauge_satellite_fusion.py --gpm-gsmap
 
 The plotting environment is pinned in `scripts/requirements-plot.txt`
 (`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.

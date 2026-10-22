@@ -5,8 +5,8 @@ of `scripts/prepare_station_landform.jl`, always from `output/satellite_temporal
 the landform figure is skipped with a warning when they are absent) and writes PNG (300 dpi) and PDF figures to
 `output/satellite_temporal_evaluation/figures/`:
 
-    py -3.13 scripts/plot_satellite_temporal_evaluation.py
-    py -3.13 scripts/plot_satellite_temporal_evaluation.py --gpm-gsmap
+    "$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py
+    "$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py --gpm-gsmap
 
 The plotting environment is pinned in `scripts/requirements-plot.txt`
 (`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.

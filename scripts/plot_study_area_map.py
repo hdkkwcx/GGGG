@@ -6,7 +6,7 @@ landform region (`data/processed/covariates/station_landform.csv`, from
 `scripts/prepare_station_landform.jl`), and writes PNG (300 dpi) and PDF to
 `output/study_area_map/figures/`:
 
-    py -3.13 scripts/plot_study_area_map.py
+    "$MIXEDGWR_PYTHON" scripts/plot_study_area_map.py
 
 The plotting environment is pinned in `scripts/requirements-plot.txt`; `plot_provenance.csv` beside the
 figure records it and a SHA-256 for each of the three inputs, since no Julia run stands between them

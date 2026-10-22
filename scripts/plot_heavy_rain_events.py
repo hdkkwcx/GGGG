@@ -3,8 +3,8 @@
 Reads the CSVs written by `scripts/run_heavy_rain_event_evaluation.jl` and writes PNG (300 dpi)
 and PDF figures to `output/heavy_rain_events/figures/`:
 
-    py -3.13 scripts/plot_heavy_rain_events.py
-    py -3.13 scripts/plot_heavy_rain_events.py --gpm-gsmap
+    "$MIXEDGWR_PYTHON" scripts/plot_heavy_rain_events.py
+    "$MIXEDGWR_PYTHON" scripts/plot_heavy_rain_events.py --gpm-gsmap
 
 The plotting environment is pinned in `scripts/requirements-plot.txt`
 (`pip install -r scripts/requirements-plot.txt`); `plot_provenance.csv` beside the figures records it.

@@ -434,7 +434,7 @@ julia -t 4 --project=. scripts/run_interpolation_benchmark.jl full --nested-cova
     --satellite-wet-blend --blend-axis agreement_envelope --fused-anchor
 julia --project=. scripts/run_claim_reassessment.jl output/<run directory>
 julia --project=. scripts/run_gauge_satellite_fusion.jl
-py -3.13 scripts/plot_gauge_satellite_fusion.py
+"$MIXEDGWR_PYTHON" scripts/plot_gauge_satellite_fusion.py
 ```
 
 #table(

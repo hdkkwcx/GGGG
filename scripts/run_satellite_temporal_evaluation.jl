@@ -12,7 +12,7 @@
 # GPM is uncalibrated IMERG V07 (`GPM_uncal`) by default, the paper's primary GPM product;
 # `--gpm-cal` scores gauge-calibrated IMERG Final (`GPM`) instead. Writes CSVs to
 # output/satellite_temporal_evaluation[_nofy4b][_gpmuncal]/; the figures are drawn from those by
-# `py -3.13 scripts/plot_satellite_temporal_evaluation.py <that directory>`.
+# `"$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py <that directory>`.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 

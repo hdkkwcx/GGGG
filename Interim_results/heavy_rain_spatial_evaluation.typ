@@ -326,5 +326,5 @@ All results come from commit `2658353`.
 
 ```sh
 julia --project=. scripts/run_heavy_rain_event_evaluation.jl  # screens, selects and scores events
-py -3.13 scripts/plot_heavy_rain_events.py                    # figures
+"$MIXEDGWR_PYTHON" scripts/plot_heavy_rain_events.py                    # figures
 ```

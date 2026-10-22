@@ -5,7 +5,7 @@ Reads the CSVs written by `scripts/run_no_rain_evaluation.jl` (output/no_rain_ev
 output/no_rain_evaluation/figures/, then copies the figures into Interim_results/figures/ and writes rounded
 report tables to Interim_results/tables/norain_*.json, so the Typst report compiles from that folder alone:
 
-    py -3.13 scripts/plot_no_rain_evaluation.py
+    "$MIXEDGWR_PYTHON" scripts/plot_no_rain_evaluation.py
 
 Colour carries one job per figure. The products keep the temporal report's hues (FY4B blue, GPM orange,
 GSMaP green); uncalibrated IMERG is GPM's orange, dashed or hollow - the same product before its gauge

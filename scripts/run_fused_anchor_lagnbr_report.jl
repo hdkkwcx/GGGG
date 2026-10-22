@@ -9,7 +9,7 @@
 #
 # Reads a finished `run_interpolation_benchmark.jl full --nested-covariates --satellite-wet-blend
 # --blend-axis agreement_envelope --fused-anchor --fused-anchor-lagnbr` run; fits nothing. Writes CSVs
-# to output/fused_anchor_lagnbr/, which `py -3.13 scripts/plot_fused_anchor_lagnbr.py` draws.
+# to output/fused_anchor_lagnbr/, which `"$MIXEDGWR_PYTHON" scripts/plot_fused_anchor_lagnbr.py` draws.
 #
 # The run scores each product on its own common mask, and MERGED_OLS_LAGNBR's is 60k cells smaller
 # than MERGED_OLS's (fold 4's covariate model left four stations unpredicted), so every comparison

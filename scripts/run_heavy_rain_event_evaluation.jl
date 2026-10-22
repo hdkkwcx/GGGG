@@ -16,7 +16,7 @@
 # Screens 2022-2024 for days with more than three gauges above 50 mm (08-08 BJT), selects four
 # widespread and two localized events, and scores each product against the gauges over a common
 # hour window. Writes CSVs to output/heavy_rain_events/; the figures are drawn from those by
-# `py -3.13 scripts/plot_heavy_rain_events.py`.
+# `"$MIXEDGWR_PYTHON" scripts/plot_heavy_rain_events.py`.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 

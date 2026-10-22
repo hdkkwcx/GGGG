@@ -10,7 +10,7 @@
 # for every anchor under both CV schemes) and re-scores them on dry hours; it fits nothing. Before
 # writing, every method's dry-hour n, RMSE and bias are checked against the run's own
 # `metrics_pooled.csv`. CSVs go to output/no_rain_evaluation/fusion/; part 1 is
-# scripts/run_no_rain_evaluation.jl, and `py -3.13 scripts/plot_no_rain_evaluation.py` draws both.
+# scripts/run_no_rain_evaluation.jl, and `"$MIXEDGWR_PYTHON" scripts/plot_no_rain_evaluation.py` draws both.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 

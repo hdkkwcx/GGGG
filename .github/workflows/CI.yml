@@ -5,6 +5,10 @@ on:
     branches: [main, master]
     paths:
       - 'src/**'
+      - 'test/**'
+      - 'Project.toml'
+      - 'Manifest.toml'
+      - '.github/workflows/CI.yml'
   pull_request:
     branches: [main, master]
 

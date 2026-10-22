@@ -581,7 +581,7 @@ From the repository root, one Julia job at a time (the two drivers each hold abo
 ```sh
 julia -t 4 --project=. scripts/run_no_rain_evaluation.jl         # ~15 min
 julia -t 4 --project=. scripts/run_no_rain_fusion_evaluation.jl  # ~35 min
-py -3.13 scripts/plot_no_rain_evaluation.py
+"$MIXEDGWR_PYTHON" scripts/plot_no_rain_evaluation.py
 typst compile Interim_results/no_rain_evaluation.typ
 ```
 
