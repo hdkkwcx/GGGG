@@ -10,7 +10,7 @@
 # temperature and dew point at the gauges, and the uncalibrated IMERG series
 # (output/gpm_imerg_uncal_stations_2022_2024/). CSVs go to output/no_rain_evaluation/. Part 2, the
 # benchmark's methods on dry hours, is scripts/run_no_rain_fusion_evaluation.jl; both are drawn by
-# `py -3.13 scripts/plot_no_rain_evaluation.py`.
+# `"$MIXEDGWR_PYTHON" scripts/plot_no_rain_evaluation.py`.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 

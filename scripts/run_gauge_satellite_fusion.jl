@@ -9,7 +9,7 @@
 # Reads a finished `run_interpolation_benchmark.jl full --nested-covariates --satellite-wet-blend
 # --blend-axis agreement_envelope --fused-anchor` run and the `run_claim_reassessment.jl` tables
 # written for it; fits nothing. Writes CSVs to output/gauge_satellite_fusion/, which
-# `py -3.13 scripts/plot_gauge_satellite_fusion.py` draws.
+# `"$MIXEDGWR_PYTHON" scripts/plot_gauge_satellite_fusion.py` draws.
 #
 # Every "best method" read off these tables is a choice among ~50 configurations made on held-out
 # scores. `auto` (a GWR-family method chosen inside each training fold) is reported beside them as

@@ -4,7 +4,7 @@ Reads the CSVs written by `scripts/run_fused_anchor_lagnbr_report.jl` and writes
 to `output/fused_anchor_lagnbr/figures/`, then copies the figures and a set of rounded report tables into
 `Interim_results/` so the Typst report compiles from that folder alone:
 
-    py -3.13 scripts/plot_fused_anchor_lagnbr.py
+    "$MIXEDGWR_PYTHON" scripts/plot_fused_anchor_lagnbr.py
 
 Same visual system as `plot_gauge_satellite_fusion.py`. The two merged anchors are the only categorical pair:
 MERGED_OLS in muted grey (the incumbent) and MERGED_OLS_LAGNBR in blue (the new one), so every figure reads

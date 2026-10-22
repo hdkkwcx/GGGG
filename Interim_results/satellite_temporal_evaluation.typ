@@ -603,7 +603,7 @@ All results come from commit `60012c4` on branch `satellite-temporal-evaluation`
 ```sh
 julia --project=. scripts/prepare_station_landform.jl          # landform regions (GDAL + GMT)
 julia --project=. scripts/run_satellite_temporal_evaluation.jl # all CSVs, about 1.5 min
-py -3.13 scripts/plot_satellite_temporal_evaluation.py         # figures
+"$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py         # figures
 ```
 
 #table(

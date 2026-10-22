@@ -386,6 +386,6 @@ From the repository root (the benchmark takes about nine hours; the rest about t
 julia -t 4 --project=. scripts/run_interpolation_benchmark.jl full --nested-covariates \
   --satellite-wet-blend --blend-axis agreement_envelope --fused-anchor --fused-anchor-lagnbr
 julia -t 4 --project=. scripts/run_fused_anchor_lagnbr_report.jl
-py -3.13 scripts/plot_fused_anchor_lagnbr.py
+"$MIXEDGWR_PYTHON" scripts/plot_fused_anchor_lagnbr.py
 cd Interim_results && typst compile fused_anchor_lagnbr.typ
 ```
