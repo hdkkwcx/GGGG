@@ -1,57 +1,31 @@
-# 实现了两个 “但单个目标位置” 的加权回归求解器
-
-
-
-export solve_reg, solve_reg2
-
+export solve_reg
 
 """
-    solve_reg2(X::Matrix{T}, Y::Matrix{T}, w::AbstractVector{T})
+    solve_reg(X, Y, w)
 
-β = C_i y = [(X' W_i X)⁻¹ X' W_i] y
-̂y = S y = x_i C_i y
+Weighted least squares at one location for every column of `Y` at once,
+`β = (X'WX) \\ X'Wy`.
+
+- `X`: [n, p]
+- `Y`: [n, ntime], or a vector
+- `w`: [n]
+
+Returns `β`, [p, ntime].
 """
-function solve_reg2(X::AbstractMatrix{T}, Y::AbstractMatrix{T}, w::AbstractVector{T}) where {T<:Real}
-  Xt = X'
-  XtW = (X .* w)'
-  XtWx = XtW * X
-  XtWx_inv = inv(XtWx)
-
-  n, p = size(X)
-  ntime = size(Y, 2)
-  β = zeros(T, p, ntime)
-
-  @inbounds @threads for i in 1:ntime
-    y = @view Y[:, i]
-    XtWy = Xt * (w .* y)
-    βᵢ = XtWx_inv * XtWy  # Li 2019, Eq. 9  
-    β[:, i] .= βᵢ[:]
-  end
-  return β
-end
-
-
-"Geographically weighted regression for single location"
 function solve_reg(X::AbstractMatrix{T}, Y::AbstractMatrix{T}, w::AbstractVector{T}) where {T<:Real}
   w_sqrt = sqrt.(w)
-  xw = X .* w_sqrt # 重新分配内存
-  XtWX = (xw' * xw)
-  n, p = size(X)
+  xw = X .* w_sqrt
+  XtWX = xw' * xw
+  p = size(X, 2)
   ntime = size(Y, 2)
   β = zeros(T, p, ntime)
 
   @inbounds @threads for i in 1:ntime
-    y = @view Y[:, i]
-    yw = y .* w_sqrt
-    βᵢ = XtWX \ (xw' * yw)
-    β[:, i] .= βᵢ[:]
+    yw = @view(Y[:, i]) .* w_sqrt
+    β[:, i] .= XtWX \ (xw' * yw)
   end
   return β
 end
 
-
 solve_reg(X::AbstractMatrix{T}, y::AbstractVector{T}, w::AbstractVector{T}) where {T<:Real} =
-  solve_reg(X, Matrix(y), w)
-
-solve_reg2(X::AbstractMatrix{T}, y::AbstractVector{T}, w::AbstractVector{T}) where {T<:Real} =
-  solve_reg2(X, Matrix(y), w)
+  solve_reg(X, reshape(y, :, 1), w)

@@ -15,7 +15,7 @@ function metric_continuous(y_true::AbstractArray{<:Real}, y_pred::AbstractArray{
 	aa = a[use_mask]
 	bb = b[use_mask]
 	n = length(aa)
-	@assert n > 0 "没有可用样本用于统计"
+	@assert n > 0 "no valid samples to compute metrics on"
 	e = bb .- aa
 	rmse = sqrt(mean(e .^ 2))
 	mae = mean(abs.(e))
