@@ -194,10 +194,10 @@ function align_ndvi_asof(
 end
 
 function _standardize_panel!(x::Matrix{Float64}, y::Matrix{Float64})
-    values, _, weights = ERA5VariableSelection._flatten_balanced(x, y)
+    values, _, weights = flatten_balanced(x, y)
     isempty(values) && return NaN, NaN
-    mean_value = ERA5VariableSelection._weighted_mean(values, weights)
-    scale = sqrt(ERA5VariableSelection._weighted_mean((values .- mean_value) .^ 2, weights))
+    mean_value = weighted_mean(values, weights)
+    scale = sqrt(weighted_mean((values .- mean_value) .^ 2, weights))
     if !isfinite(scale) || scale <= 0
         return mean_value, NaN
     end
@@ -286,7 +286,7 @@ function screen_ndvi(
     panel, periods::Vector{Date}, cfg::NDVISelectionConfig;
     rng::AbstractRNG=MersenneTwister(cfg.seed),
 )
-    pearson, spearman, pvalue = ERA5VariableSelection._association(
+    pearson, spearman, pvalue = panel_association(
         panel, :ndvi, cfg.association_permutations, rng,
     )
     stable = isfinite(pearson) && isfinite(spearman) && sign(pearson) == sign(spearman)
@@ -309,11 +309,11 @@ function screen_ndvi(
         if isempty(columns)
             p, s = NaN, NaN
         else
-            xv, yv, weights = ERA5VariableSelection._flatten_balanced(
+            xv, yv, weights = flatten_balanced(
                 panel.x[:ndvi][:, columns], panel.y[:, columns],
             )
-            p = ERA5VariableSelection._weighted_correlation(xv, yv, weights)
-            s = ERA5VariableSelection._weighted_correlation(
+            p = weighted_correlation(xv, yv, weights)
+            s = weighted_correlation(
                 tied_ranks(xv), tied_ranks(yv), weights,
             )
         end

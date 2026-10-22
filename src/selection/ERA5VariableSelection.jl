@@ -14,6 +14,8 @@ using Main.SelectionScaffolding
 export ERA5SelectionConfig, ERA5_VARIABLES, align_feature_time, load_era5_panel
 export balanced_spatial_folds, prepare_dynamic_panel, station_block_permutation
 export dynamic_panel_screen, panel_spatial_variability_test, run_era5_variable_selection
+# Station-balanced panel statistics, shared with NDVIVariableSelection's screen.
+export flatten_balanced, weighted_mean, weighted_correlation, panel_association
 
 const ERA5_VARIABLES = (:t2m_c, :d2m_c, :u10, :v10, :sp_hpa)
 

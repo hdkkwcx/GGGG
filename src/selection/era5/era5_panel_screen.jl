@@ -29,22 +29,22 @@ function balanced_spatial_folds(
     return assignment
 end
 
-function _weighted_mean(x::Vector{Float64}, w::Vector{Float64})
+function weighted_mean(x::Vector{Float64}, w::Vector{Float64})
     total = sum(w)
     total > 0 || return NaN
     return dot(x, w) / total
 end
 
-function _weighted_correlation(x::Vector{Float64}, y::Vector{Float64}, w::Vector{Float64})
+function weighted_correlation(x::Vector{Float64}, y::Vector{Float64}, w::Vector{Float64})
     length(x) >= 3 || return NaN
-    mx, my = _weighted_mean(x, w), _weighted_mean(y, w)
+    mx, my = weighted_mean(x, w), weighted_mean(y, w)
     dx, dy = x .- mx, y .- my
     vx, vy = dot(w, dx .* dx), dot(w, dy .* dy)
     vx > 0 && vy > 0 || return NaN
     return dot(w, dx .* dy) / sqrt(vx * vy)
 end
 
-function _flatten_balanced(x::Matrix{Float64}, y::Matrix{Float64})
+function flatten_balanced(x::Matrix{Float64}, y::Matrix{Float64})
     xs, ys, ws = Float64[], Float64[], Float64[]
     for i in axes(y, 1)
         valid = findall(j -> isfinite(x[i, j]) && isfinite(y[i, j]), axes(y, 2))
@@ -154,9 +154,9 @@ function prepare_dynamic_panel(
     end
     scales = DataFrame(variable=String[], mean=Float64[], scale=Float64[])
     for v in variables
-        x, _, w = _flatten_balanced(centered[v], y)
-        μ = _weighted_mean(x, w)
-        σ = sqrt(_weighted_mean((x .- μ) .^ 2, w))
+        x, _, w = flatten_balanced(centered[v], y)
+        μ = weighted_mean(x, w)
+        σ = sqrt(weighted_mean((x .- μ) .^ 2, w))
         isfinite(σ) && σ > 0 || (σ = NaN)
         if isfinite(σ)
             for index in eachindex(centered[v])
@@ -175,11 +175,11 @@ function prepare_dynamic_panel(
     return (; y, x=centered, mask, eligible_station, scales, qc)
 end
 
-function _association(panel, variable::Symbol, permutations::Int, rng::AbstractRNG)
-    x, y, w = _flatten_balanced(panel.x[variable], panel.y)
+function panel_association(panel, variable::Symbol, permutations::Int, rng::AbstractRNG)
+    x, y, w = flatten_balanced(panel.x[variable], panel.y)
     moments = _station_pair_moments(panel.x[variable], panel.y)
     pearson = _correlation_from_pair_moments(moments, collect(1:size(panel.y, 1)))
-    spearman = _weighted_correlation(tied_ranks(x), tied_ranks(y), w)
+    spearman = weighted_correlation(tied_ranks(x), tied_ranks(y), w)
     if permutations <= 0 || !isfinite(pearson)
         return pearson, spearman, isfinite(pearson) ? NaN : 1.0
     end
@@ -215,7 +215,7 @@ function _weighted_vifs(panel, active::Vector{Symbol})
         design = hcat(ones(size(X, 1)), X[:, other])
         beta = (design .* sw) \ (X[:, j] .* sw)
         prediction = design * beta
-        μ = _weighted_mean(X[:, j], weights)
+        μ = weighted_mean(X[:, j], weights)
         rss = sum(weights .* (X[:, j] .- prediction) .^ 2)
         tss = sum(weights .* (X[:, j] .- μ) .^ 2)
         r2 = tss > 0 ? clamp(1 - rss / tss, 0.0, 1.0) : 1.0
@@ -234,7 +234,7 @@ function dynamic_panel_screen(
     )
     raw = NamedTuple[]
     for variable in ERA5_VARIABLES
-        pearson, spearman, pvalue = _association(
+        pearson, spearman, pvalue = panel_association(
             panel, variable, cfg.association_permutations, rng,
         )
         stable = isfinite(pearson) && isfinite(spearman) && sign(pearson) == sign(spearman)
@@ -276,9 +276,9 @@ function dynamic_panel_screen(
         if isempty(columns)
             p, s = NaN, NaN
         else
-            x, y, w = _flatten_balanced(panel.x[variable][:, columns], panel.y[:, columns])
-            p = _weighted_correlation(x, y, w)
-            s = _weighted_correlation(tied_ranks(x), tied_ranks(y), w)
+            x, y, w = flatten_balanced(panel.x[variable][:, columns], panel.y[:, columns])
+            p = weighted_correlation(x, y, w)
+            s = weighted_correlation(tied_ranks(x), tied_ranks(y), w)
         end
         direction(value) = !isfinite(value) ? "uncertain" : value > 0 ? "positive" :
             value < 0 ? "negative" : "zero"
