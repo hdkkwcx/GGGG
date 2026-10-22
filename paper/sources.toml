@@ -574,14 +574,26 @@ id = "prep_gpm_uncal"
 kind = "data"
 command = ["julia", "--project=.", "scripts/prepare_gpm_uncal_inputs.jl"]
 outputs = ["data/processed/study_area/hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv"]
-note = "reads station series from output/gpm_imerg_uncal_stations_2022_2024/, which no tracked script writes"
+needs = ["prep_gpm_uncal_stations"]
+
+[[step]]
+id = "prep_gpm_uncal_stations"
+kind = "data"
+command = ["julia", "--project=.", "scripts/prepare_gpm_uncal_stations.jl"]
+outputs = ["output/gpm_imerg_uncal_stations_2022_2024"]
+needs = ["raw_imerg_uncal"]
+note = "rebuilt 2026-10-22; through prep_gpm_uncal it reproduces the prepared study-area file byte for byte"
 
 [[step]]
 id = "raw_imerg_uncal"
 kind = "data"
 command = []
 outputs = ["data/raw/gpm_imerg_v07_uncal_hubei_2022_2024"]
-note = "the native 0.1 deg half-hourly IMERG V07 Uncal subsets; no tracked script downloads them"
+note = """no tracked script downloads them (an Earthdata login is needed). Each file's `history` \
+attribute holds its request: NASA GES DISC OPeNDAP, collection C2723754847-GES_DISC \
+(GPM_3IMERGHH.07, IMERG V07B Final half-hourly), granule <name>.HDF5.nc4, constraint \
+/Grid/Intermediate/precipitationUncal[0:1:0][2886:1:2960][1192:1:1232] (cell centres lon \
+108.65-116.05, lat 29.25-33.25), every half hour of 2022-01-01 to 2024-12-31 UTC"""
 
 [[step]]
 id = "prep_terrain"
