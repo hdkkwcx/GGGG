@@ -27,8 +27,9 @@
 # check and compiles paper/paper_plan.typ when typst is installed. A dry run only runs the check.
 #
 # `--force <step>` treats one step as STALE; `--sources <path>` reads another sources.toml (for
-# testing). Python is $PYTHON, else python3.13, else python3: the paper scripts need Python 3.11+
-# (tomllib), and the plot scripts also need scripts/requirements-plot.txt installed.
+# testing). Python is $MIXEDGWR_PYTHON, else $PYTHON, else python3.13, else python3: the paper
+# scripts need Python 3.11+ (tomllib), and the plot scripts also need scripts/requirements-plot.txt
+# installed, e.g. in a venv that MIXEDGWR_PYTHON points at (CLAUDE.md, "Commands").
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -44,12 +45,14 @@ read_provenance(path) = Dict(String(first(row)) => String(last(row))
     if length(row) == 2)
 
 function python()
-    haskey(ENV, "PYTHON") && return split(ENV["PYTHON"])
+    for variable in ("MIXEDGWR_PYTHON", "PYTHON")
+        haskey(ENV, variable) && return split(ENV[variable])
+    end
     for name in ("python3.13", "python3")
         path = Sys.which(name)
         path === nothing || return [path]
     end
-    error("no Python found; set PYTHON")
+    error("no Python found; set MIXEDGWR_PYTHON")
 end
 
 """A step's command, with "julia" as the running Julia and "python" as `python()`."""
