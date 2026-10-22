@@ -44,21 +44,6 @@ function _weighted_correlation(x::Vector{Float64}, y::Vector{Float64}, w::Vector
     return dot(w, dx .* dy) / sqrt(vx * vy)
 end
 
-function _tie_ranks(values::Vector{Float64})
-    order = sortperm(values)
-    ranks = zeros(Float64, length(values))
-    left = 1
-    while left <= length(order)
-        right = left
-        while right < length(order) && values[order[right + 1]] == values[order[left]]
-            right += 1
-        end
-        ranks[order[left:right]] .= (left + right) / 2
-        left = right + 1
-    end
-    return ranks
-end
-
 function _flatten_balanced(x::Matrix{Float64}, y::Matrix{Float64})
     xs, ys, ws = Float64[], Float64[], Float64[]
     for i in axes(y, 1)
@@ -194,7 +179,7 @@ function _association(panel, variable::Symbol, permutations::Int, rng::AbstractR
     x, y, w = _flatten_balanced(panel.x[variable], panel.y)
     moments = _station_pair_moments(panel.x[variable], panel.y)
     pearson = _correlation_from_pair_moments(moments, collect(1:size(panel.y, 1)))
-    spearman = _weighted_correlation(_tie_ranks(x), _tie_ranks(y), w)
+    spearman = _weighted_correlation(tied_ranks(x), tied_ranks(y), w)
     if permutations <= 0 || !isfinite(pearson)
         return pearson, spearman, isfinite(pearson) ? NaN : 1.0
     end
@@ -293,7 +278,7 @@ function dynamic_panel_screen(
         else
             x, y, w = _flatten_balanced(panel.x[variable][:, columns], panel.y[:, columns])
             p = _weighted_correlation(x, y, w)
-            s = _weighted_correlation(_tie_ranks(x), _tie_ranks(y), w)
+            s = _weighted_correlation(tied_ranks(x), tied_ranks(y), w)
         end
         direction(value) = !isfinite(value) ? "uncertain" : value > 0 ? "positive" :
             value < 0 ? "negative" : "zero"

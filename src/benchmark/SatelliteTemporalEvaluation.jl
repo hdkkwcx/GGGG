@@ -33,7 +33,8 @@ module SatelliteTemporalEvaluation
 
 using DataFrames, Dates, Random, Statistics
 using MixedGWR: metric_continuous, metric_event, INTENSITY_BOUNDS, INTENSITY_CLASSES, intensity_class
-using Main.HeavyRainEvents: met_day, _tied_ranks
+using MixedGWR: tied_ranks
+using Main.HeavyRainEvents: met_day
 
 export WET_MM, GAUGE_RESOLUTION_MM, INTENSITY_BOUNDS, INTENSITY_CLASSES, SEASONS, FALSE_ALARM_BINS
 export intensity_class, season_of, evaluation_context, sample_mask, day_block_bootstrap
@@ -113,7 +114,7 @@ function _finite_cor(x::AbstractVector{<:Real}, y::AbstractVector{<:Real}; min_n
     return cor(a, b)
 end
 
-_spearman(x, y; min_n::Int=2) = length(x) >= max(min_n, 2) ? _finite_cor(_tied_ranks(x), _tied_ranks(y); min_n) : NaN
+_spearman(x, y; min_n::Int=2) = length(x) >= max(min_n, 2) ? _finite_cor(tied_ranks(x), tied_ranks(y); min_n) : NaN
 _median(v) = isempty(v) ? NaN : median(v)
 _quantile(v, p) = isempty(v) ? NaN : quantile(v, p)
 _share(v) = isempty(v) ? NaN : mean(v)

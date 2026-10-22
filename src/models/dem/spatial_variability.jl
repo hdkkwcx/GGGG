@@ -16,7 +16,7 @@ function spatial_variability_test(
     spatial_Z, _, _ = _standardize_train(spatial_X)
     X = hcat(ones(size(spatial_Z, 1)), spatial_Z)
     design_groups = vcat(["intercept", "longitude", "latitude"], terrain_column_groups)
-    distances = _haversine_matrix(coords, coords)
+    distances = haversine_distance_matrix(coords, coords)
     best, scan = _select_gwr_bandwidth(X, y, distances, bandwidth_candidates; ridge)
     smoothers = _gwr_smoothers(
         X, distances, best.bandwidth; ridge, exclude_self=false,

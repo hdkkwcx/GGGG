@@ -26,7 +26,7 @@ small and acyclic: everything else in `src/` is a leaf.
 function standalone_module_dependencies(name::AbstractString)
     name == "ERA5VariableSelection" && return ["SelectionScaffolding"]
     name == "NDVIVariableSelection" && return ["SelectionScaffolding", "ERA5VariableSelection"]
-    name == "JointCovariateModels" && return ["DEMTerrainExperiment", "CovariateGroups"]
+    name == "JointCovariateModels" && return ["CovariateGroups"]
     name == "JointVariableSelection" &&
         return ["SelectionScaffolding", "DEMTerrainExperiment", "ERA5VariableSelection",
                 "NDVIVariableSelection", "CovariateGroups"]
@@ -39,8 +39,8 @@ function standalone_module_dependencies(name::AbstractString)
     name == "LandformClassification" && return ["TerrainFeatures"]
     name == "SatelliteTemporalEvaluation" && return ["HeavyRainEvents"]
     name == "NoRainEvaluation" && return ["TraditionalInterpolation", "SatelliteTemporalEvaluation"]
-    name == "GridSupportDiagnostics" && return ["FY4BPreprocessing", "TraditionalInterpolation",
-        "TerrainFeatures", "LandformClassification"]
+    name == "GridSupportDiagnostics" &&
+        return ["FY4BPreprocessing", "TerrainFeatures", "LandformClassification"]
     return String[]
 end
 

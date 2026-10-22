@@ -72,7 +72,8 @@ installed, and they are skipped with a warning when that fixture is absent (`HAS
 src/
   MixedGWR.jl      package entry point (path fixed by Project.toml)
   load_modules.jl  the loader every script and test goes through
-  core/            files `include`d into `module MixedGWR` — regression/kernel primitives
+  core/            files `include`d into `module MixedGWR` — kernels, weights, station distances,
+                   local solvers, mixed/multiscale GWR, metrics
   sources/         one standalone module per data source or ingest stage
   selection/       standalone modules: the variable-selection searches
   models/          standalone modules: the estimators, plus CovariateGroups (shared vocabulary)
@@ -98,9 +99,9 @@ Lowercase subdirectories inside a tier (`benchmark/diagnostics/`, `models/dem/`,
 pipeline. Never load them on their own. `MGERConfig` stays in `MGERPipeline.jl` because it is
 `load_pipeline`'s sentinel.
 
-Adding a file: a reusable regression/kernel primitive goes in `core/`, plus an `include` line in
-`src/MixedGWR.jl`. Anything else becomes a standalone module in the matching directory, and the
-loader finds it by name with no registration.
+Adding a file: a reusable GWR primitive (anything two modules would otherwise each copy) goes in
+`core/`, plus an `include` line in `src/MixedGWR.jl`. Anything else becomes a standalone module in
+the matching directory, and the loader finds it by name with no registration.
 
 Do not create `src/data/` or `src/docs/`. `.gitignore` has bare `data/` and `docs` patterns that
 match at any depth, so files there would be silently untracked.

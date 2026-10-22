@@ -90,7 +90,7 @@ function main(args=ARGS)
     end
     Xlocal = Matrix{Float64}(design.local_groups[1][valid, :])
     train_lonlat = context.train_lonlat[valid, :]
-    distances = DEMTerrainExperiment._haversine_matrix(train_lonlat, train_lonlat)
+    distances = MixedGWR.haversine_distance_matrix(train_lonlat, train_lonlat)
     response = reshape(y[valid], :, 1)
     adjusted = min(bandwidth, count(valid) - 1)
     no_global = zeros(Float64, count(valid), 0)
@@ -101,9 +101,9 @@ function main(args=ARGS)
         length(tuning), context.variables)
     println(repeat("-", 68))
 
-    probe("_haversine_matrix (n x n)", 100, () ->
-        DEMTerrainExperiment._haversine_matrix(train_lonlat, train_lonlat))
-    probe("_local_hat (one group)", 100, () -> DEMTerrainExperiment._local_hat(
+    probe("haversine_distance_matrix (n x n)", 100, () ->
+        MixedGWR.haversine_distance_matrix(train_lonlat, train_lonlat))
+    probe("local_hat_matrix (one group)", 100, () -> MixedGWR.local_hat_matrix(
         Xlocal, Xlocal, distances, adjusted, kernel; adaptive=true, ridge=1e-8))
     probe("one hour-fit (mixed_gwr_predict)", 100, () ->
         DEMTerrainExperiment.mixed_gwr_predict(

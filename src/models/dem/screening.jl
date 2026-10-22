@@ -12,22 +12,6 @@ function bh_adjust(pvalues::AbstractVector{<:Real})
     return adjusted
 end
 
-function _rank_ties(values::AbstractVector{<:Real})
-    order = sortperm(values)
-    ranks = zeros(Float64, length(values))
-    i = 1
-    while i <= length(order)
-        j = i
-        while j < length(order) && values[order[j + 1]] == values[order[i]]
-            j += 1
-        end
-        rank = (i + j) / 2
-        ranks[order[i:j]] .= rank
-        i = j + 1
-    end
-    return ranks
-end
-
 function _correlation(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     length(x) == length(y) || throw(DimensionMismatch("correlation vectors must match"))
     length(x) >= 3 || return NaN
@@ -35,7 +19,7 @@ function _correlation(x::AbstractVector{<:Real}, y::AbstractVector{<:Real})
     return cor(x, y)
 end
 
-_spearman(x, y) = _correlation(_rank_ties(x), _rank_ties(y))
+_spearman(x, y) = _correlation(tied_ranks(x), tied_ranks(y))
 
 function _permutation_pvalue(
     statistic::Function, x, y::Vector{Float64}, observed::Float64,

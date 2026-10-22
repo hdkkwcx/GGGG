@@ -21,7 +21,7 @@ precipitation against rain gauges.
 
 | Folder | Holds |
 |---|---|
-| `src/` | Reusable code: regression and kernel primitives (`core/`), data sources, variable selection, models, evaluation (`benchmark/`), the MGER pipeline and shared utilities (`util/`). See `CLAUDE.md` for how each tier is loaded. |
+| `src/` | Reusable code: the GWR library (`core/`: kernels, distances, local solvers, mixed/multiscale GWR, metrics), data sources, variable selection, models, evaluation (`benchmark/`), the MGER pipeline and shared utilities (`util/`). See `CLAUDE.md` for how each tier is loaded. |
 | `scripts/` | Entry points, grouped by prefix: `download_*` / `gee_export_*` fetch raw data, `prepare_*` build `data/processed/`, `run_*` are the analyses, `verify_*` regression gates, `plot_*` the figures, and `make_paper.jl` rebuilds the paper. |
 | `test/` | `julia --project=. -e 'using Pkg; Pkg.test()'` |
 | `data/` | Research inputs (gitignored): `raw/`, `processed/`, and a few older files at the top level. |

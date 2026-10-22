@@ -1,4 +1,5 @@
 using Test, DataFrames, Dates, Statistics
+using MixedGWR
 
 include(joinpath(@__DIR__, "..", "src", "load_modules.jl"))
 load_standalone_modules("HeavyRainEvents")
@@ -157,7 +158,7 @@ end
     moved = HRE.spatial_metrics(obs, [10.0, 90.0, 30.0, 0.0, 80.0], lonlat)
     @test moved.peak_shift_km ≈ Main.TraditionalInterpolation.haversine_distance_matrix(lonlat[5:5, :], lonlat[2:2, :])[1, 1]
 
-    @test HRE._tied_ranks([2.0, 1.0, 2.0, 3.0]) == [2.5, 1.0, 2.5, 4.0]
+    @test MixedGWR.tied_ranks([2.0, 1.0, 2.0, 3.0]) == [2.5, 1.0, 2.5, 4.0]
     tied = HRE.spatial_metrics([1.0, 2.0, 2.0, 3.0], [1.0, 1.0, 2.0, 3.0], lonlat[1:4, :])
     @test tied.rho ≈ 5 / 6
 

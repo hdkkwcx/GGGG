@@ -2,19 +2,10 @@ module TraditionalInterpolation
 
 using LinearAlgebra
 using Statistics
+using MixedGWR: EARTH_RADIUS_KM, haversine_distance_matrix
 
 export haversine_distance_matrix, local_km_coordinates, nearest_training_distance
 export idw_predict, adw_predict, tps_predict, tps_loo_predict
-
-# Station distances are NOT computed against one radius project-wide. This value (the WGS72
-# equatorial radius) is also used by MGERPipeline, DEMTerrainExperiment and
-# PrecipitationCorrection, but JointCovariateModels and ERA5VariableSelection use the mean-Earth
-# 6371.0088 instead. Each component is internally consistent, so nothing is wrong within a given
-# model; the two families are simply not on the same metric, which matters when comparing a
-# GWR-family bandwidth in km against a joint-covariate one. Left as-is deliberately: unifying
-# them moves every published number. Fix it in a commit that re-runs the benchmark, not in a
-# refactor.
-const EARTH_RADIUS_KM = 6378.388
 
 function _check_inputs(
     train_lonlat::AbstractMatrix, values::AbstractMatrix, target_lonlat::AbstractMatrix,
@@ -24,28 +15,6 @@ function _check_inputs(
     size(values, 1) == size(train_lonlat, 1) ||
         throw(DimensionMismatch("values rows must match training stations"))
     return nothing
-end
-
-"""Pairwise great-circle distances in km, with rows=train and columns=target."""
-function haversine_distance_matrix(
-    train_lonlat::AbstractMatrix{<:Real}, target_lonlat::AbstractMatrix{<:Real},
-)
-    n_train = size(train_lonlat, 1)
-    n_target = size(target_lonlat, 1)
-    distances = Matrix{Float64}(undef, n_train, n_target)
-    @inbounds for j in 1:n_target
-        lon2 = deg2rad(Float64(target_lonlat[j, 1]))
-        lat2 = deg2rad(Float64(target_lonlat[j, 2]))
-        for i in 1:n_train
-            lon1 = deg2rad(Float64(train_lonlat[i, 1]))
-            lat1 = deg2rad(Float64(train_lonlat[i, 2]))
-            dlon = lon2 - lon1
-            dlat = lat2 - lat1
-            a = sin(dlat / 2)^2 + cos(lat1) * cos(lat2) * sin(dlon / 2)^2
-            distances[i, j] = 2 * EARTH_RADIUS_KM * asin(sqrt(clamp(a, 0.0, 1.0)))
-        end
-    end
-    return distances
 end
 
 """

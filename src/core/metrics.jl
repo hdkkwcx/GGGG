@@ -71,6 +71,23 @@ function complete_time_mask(arrays::AbstractMatrix...)
 end
 
 
+"""Ranks with ties given their average rank, for Spearman correlation."""
+function tied_ranks(x::AbstractVector{<:Real})
+	order = sortperm(x)
+	ranks = Vector{Float64}(undef, length(x))
+	i = 1
+	while i <= length(order)
+		j = i
+		while j < length(order) && x[order[j + 1]] == x[order[i]]
+			j += 1
+		end
+		ranks[order[i:j]] .= (i + j) / 2
+		i = j + 1
+	end
+	return ranks
+end
+
+
 # Hourly rain-intensity classes (mm/h), the one scheme every report stratifies by. Lower-bound
 # inclusive: no rain < 0.1, light [0.1, 2), moderate [2, 4), heavy [4, 8), rainstorm [8, 20),
 # severe rainstorm >= 20. Moved here from `SatelliteTemporalEvaluation` so the benchmark, its

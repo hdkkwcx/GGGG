@@ -6,6 +6,7 @@ using Dates
 using LinearAlgebra
 using Random
 using Statistics
+using MixedGWR: tied_ranks
 
 # Shared bookkeeping for every variable-selection path; see src/selection/SelectionScaffolding.jl.
 using Main.SelectionScaffolding
