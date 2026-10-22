@@ -35,7 +35,7 @@
 #set text(font: ("Libertinus Serif", "New Computer Modern"), size: 10.5pt, lang: "en")
 #set par(justify: true, leading: 0.62em, spacing: 1.05em)
 #set heading(numbering: "1.1")
-#show heading: set text(font: ("Segoe UI", "Arial"), weight: "semibold")
+#show heading: set text(font: "Arial", weight: "semibold")
 #show heading.where(level: 1): it => { v(0.6em); it; v(0.25em) }
 // Captions carry their planned paper numbers ("Draft Fig. 3"), so Typst adds none of its own.
 #set figure(numbering: none)
@@ -115,7 +115,7 @@
 )
 
 #align(center)[
-  #text(size: 17pt, weight: "semibold", font: ("Segoe UI", "Arial"))[Research plan]
+  #text(size: 17pt, weight: "semibold", font: "Arial")[Research plan]
   #v(0.2em)
   #text(size: 11.5pt, fill: luma(60))[Can GPM and GSMaP stand in for gauges where the network is sparse, and what does fusing them with the gauges gain?]
 ]
