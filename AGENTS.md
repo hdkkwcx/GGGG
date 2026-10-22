@@ -62,7 +62,7 @@ Where:
 - `scripts/` is responsible for "calling" the core code
 - Core algorithms should not be written directly in the scripts
 
-### `scr/` Stores the core Julia source code of the project
+### `src/` Stores the core Julia source code of the project
 
 For example:
 
@@ -80,6 +80,14 @@ Rules:
 - Avoid reading fixed local absolute paths in `src/`
 - Core functions should receive data and configuration via parameters whenever possible
 
+### `paper/` Stores the manuscript
+
+- `paper/paper_plan.typ` is the manuscript. It reads its figures from `paper/figures/` and every
+  cited number from `paper/numbers/`; no result is typed by hand.
+- `paper/sources.toml` names the source output of every figure and number, and the `[[step]]` that
+  makes it, with the exact command. `scripts/make_paper.jl` rebuilds them in dependency order, and
+  `python scripts/check_paper_provenance.py` checks that each traces back to committed code.
+
 ## New File Placement Rules
 
 When creating a new file, first determine its purpose
@@ -87,5 +95,6 @@ When creating a new file, first determine its purpose
 - Program output → `output/`
 - Core algorithm → `src/`
 - Directly runnable experiments or processing procedures → `scripts/`
+- A figure or number for the paper → an entry and its `step` in `paper/sources.toml`
 
 `scripts/` handles the process flow, `src/` handles reusable core algorithms

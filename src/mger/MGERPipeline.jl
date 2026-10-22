@@ -66,6 +66,9 @@ include(joinpath(@__DIR__, "pipeline/mger_runners.jl"))
 """
 Main audited entry points:
 
-    julia --project=. scripts/run_mger_three_products_timealigned.jl
-    julia --project=. scripts/run_mger_three_products_timealigned_loocv.jl
+    julia --project=. scripts/run_mger_smoke_202206.jl
+    julia --project=. scripts/run_mger_full.jl
+
+checked by `scripts/verify_mger_smoke_202206.jl` and `scripts/verify_mger_full.jl`. The older
+`run_mger_three_products_timealigned*.jl` drivers survive only in `reference_code/scripts/`.
 """
