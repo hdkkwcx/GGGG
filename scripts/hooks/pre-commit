@@ -1,0 +1,21 @@
+#!/bin/sh
+# Refuse a commit that touches paper/ while the paper's provenance check fails: a hand-edited or
+# stale number in paper/numbers/, a figure copy that differs from its source, an entry without a
+# step. Commits that leave paper/ alone are not checked.
+#
+#   ln -s ../../scripts/hooks/pre-commit .git/hooks/pre-commit     # install, from the repo root
+#   git commit --no-verify                                         # skip it once
+#
+# The check reads the working tree, not only what is staged, so stage paper/ changes whole.
+
+git diff --cached --name-only | grep -q '^paper/' || exit 0
+
+root=$(git rev-parse --show-toplevel)
+for python in "$MIXEDGWR_PYTHON" python3.13 python3; do
+    [ -n "$python" ] && command -v "$python" >/dev/null 2>&1 && break
+done
+if ! report=$("$python" "$root/scripts/check_paper_provenance.py" 2>&1); then
+    echo "$report" | grep -E "FAIL|failed|Error"
+    echo "pre-commit: paper/ changed and scripts/check_paper_provenance.py fails; commit refused." >&2
+    exit 1
+fi

@@ -29,6 +29,18 @@ julia --project=. scripts/run_mger_smoke_202206.jl    # scripts/run_*.jl, verify
 julia --project=. scripts/make_paper.jl               # paper status; --run rebuilds what is stale (see its header)
 ```
 
+One-time setup for the paper workflow:
+
+```sh
+python3.13 -m venv ~/.venvs/mixedgwr-plot && ~/.venvs/mixedgwr-plot/bin/pip install -r scripts/requirements-plot.txt
+export MIXEDGWR_PYTHON=~/.venvs/mixedgwr-plot/bin/python  # make_paper.jl draws the figures with it (in ~/.zshrc)
+ln -s ../../scripts/hooks/pre-commit .git/hooks/pre-commit # refuse a paper/ commit that fails the provenance check
+```
+
+That venv redraws the paper's figures byte for byte (checked on Fig. 4). `/paper-check` and
+`/merge-branch` (`.claude/skills/`) are the read-only paper check and the repo's merge-and-push
+routine.
+
 `test/test-speed.jl` is a standalone benchmark, not in `runtests.jl`.
 
 The first `@testset "GWR"` in `runtests.jl`, `test-solver.jl` and `test-ST_GWR.jl` check results
