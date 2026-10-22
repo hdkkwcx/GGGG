@@ -1,6 +1,6 @@
 {
  "source": "output/gauge_satellite_fusion_nofy4b_gpmuncal/stratified_summary.csv",
- "source_sha256": "431e18cd278f3da82c8f1dc7cfc79bc73f90334258ecaa16522d38a7613ebdcc",
+ "source_sha256": "234e2144d6987dd7b7d1803d6f9370beb814f1c1ad011343f8c309925989c113",
  "rows": [
   {
    "product": "GPM_uncal",
@@ -103,7 +103,7 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-7.1",
+   "change": "-7.0",
    "change0": "-7"
   },
   {
@@ -191,7 +191,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-2.8",
+   "change": "-2.7",
    "change0": "-3"
   },
   {
@@ -199,7 +199,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-10.9",
+   "change": "-10.8",
    "change0": "-11"
   },
   {
@@ -319,7 +319,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "+6.1",
+   "change": "+6.0",
    "change0": "+6"
   },
   {
@@ -327,15 +327,15 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-3.5",
-   "change0": "-4"
+   "change": "-3.2",
+   "change0": "-3"
   },
   {
    "product": "MERGED_MEAN",
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-2.8",
+   "change": "-2.7",
    "change0": "-3"
   },
   {
@@ -343,7 +343,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-2.0",
+   "change": "-1.8",
    "change0": "-2"
   },
   {
@@ -351,7 +351,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+5.7",
+   "change": "+5.6",
    "change0": "+6"
   },
   {
@@ -392,7 +392,7 @@
    "group": "rain_intensity",
    "level": "heavy",
    "change": "-6.5",
-   "change0": "-7"
+   "change0": "-6"
   },
   {
    "product": "MERGED_MEAN",

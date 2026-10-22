@@ -1,6 +1,6 @@
 {
  "source": "output/gauge_satellite_fusion_nofy4b/method_summary.csv",
- "source_sha256": "0de6368525240b92a8c1d3ab444ac987ef3db57e49c59ab5d8ae6d7885ffec03",
+ "source_sha256": "1e99d4dc3d21147fc6184e52f3a195164734325e34bd6d46ff05f5c293701cf8",
  "rows": [
   {
    "product": "GPM",
@@ -73,7 +73,7 @@
    "method": "tps",
    "RMSE": "0.732",
    "r": "0.468",
-   "CSI2": "0.314",
+   "CSI2": "0.315",
    "vs_raw": "+6.3",
    "vs_adw": "-5.4",
    "vs_raw0": "+6",
@@ -171,7 +171,7 @@
    "product": "MERGED_MEAN",
    "method": "blend_agrenv_mgwr",
    "RMSE": "0.675",
-   "r": "0.558",
+   "r": "0.559",
    "CSI2": "0.371",
    "vs_raw": "+16.6",
    "vs_adw": "+3.1",
@@ -207,7 +207,7 @@
    "r": "0.531",
    "CSI2": "0.357",
    "vs_raw": "+10.2",
-   "vs_adw": "-4.4",
+   "vs_adw": "-4.3",
    "vs_raw0": "+10",
    "vs_adw0": "-4"
   },

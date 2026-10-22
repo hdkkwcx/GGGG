@@ -1,6 +1,6 @@
 {
  "source": "output/gauge_satellite_fusion_nofy4b_gpmuncal/method_summary.csv",
- "source_sha256": "15417089fc9fbe934f53056fe98c8121f5c9c0d53b6ff87005380b52c18a4e97",
+ "source_sha256": "44e92f13c43183dfaf569e5f4bed93de34f0422a8b17d0d1be104633bf7425b3",
  "rows": [
   {
    "product": "GPM_uncal",
@@ -172,8 +172,8 @@
    "method": "blend_agrenv_mgwr",
    "RMSE": "0.675",
    "r": "0.558",
-   "CSI2": "0.367",
-   "vs_raw": "+15.2",
+   "CSI2": "0.366",
+   "vs_raw": "+15.3",
    "vs_adw": "+3.2",
    "vs_raw0": "+15",
    "vs_adw0": "+3"
@@ -207,7 +207,7 @@
    "r": "0.532",
    "CSI2": "0.356",
    "vs_raw": "+9.6",
-   "vs_adw": "-3.3",
+   "vs_adw": "-3.2",
    "vs_raw0": "+10",
    "vs_adw0": "-3"
   },

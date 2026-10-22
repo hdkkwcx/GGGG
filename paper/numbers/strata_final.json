@@ -1,6 +1,6 @@
 {
  "source": "output/gauge_satellite_fusion_nofy4b/stratified_summary.csv",
- "source_sha256": "9e917d8f58c4351e278ac26c8334589fc60677f61c1a3c41783e1ee992af8ec2",
+ "source_sha256": "173845f3c6d0e26a93520a27bdc4e530f407545730729e9d06cef63c722c6c1f",
  "rows": [
   {
    "product": "GPM",
@@ -72,7 +72,7 @@
    "group": "rain_intensity",
    "level": "severe_rainstorm",
    "change": "+2.5",
-   "change0": "+3"
+   "change0": "+2"
   },
   {
    "product": "GPM",
@@ -384,7 +384,7 @@
    "group": "nearest_train_km",
    "level": "50_100",
    "change": "-5.5",
-   "change0": "-6"
+   "change0": "-5"
   },
   {
    "product": "MERGED_MEAN",
@@ -399,7 +399,7 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-42.8",
+   "change": "-42.7",
    "change0": "-43"
   },
   {
