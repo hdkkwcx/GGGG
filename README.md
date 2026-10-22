@@ -9,11 +9,13 @@
 
 ## Examples
 
-- Spatial: [example/ex01_spatial.jl](example/ex01_spatial.jl)
+- Spatial: the `"GWR"` testset in [test/runtests.jl](test/runtests.jl)
 
-- SpatioTemporal: [example/ex02_spatiotemporal.jl](example/ex02_spatiotemporal.jl)
+- SpatioTemporal: [test/test-ST_GWR.jl](test/test-ST_GWR.jl)
 
-<!-- <img src="./example/Figure1_GWR.png" style="zoom:50%;" /> -->
+Both read the Shiyan fixture `data/prcp_st174_shiyan.csv` and compare against R's `GWmodel`.
+The original `example/` scripts were removed in commit `3b06d88`; recover one with
+`git show 3b06d88^:example/ex01_spatial.jl`.
 
 ## References
 

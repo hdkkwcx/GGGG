@@ -44,8 +44,7 @@ end
     end
 
     @testset "a single-product fusion is that product" begin
-        # The identity every reading of a fused anchor rests on, and the one
-        # `scripts/verify_fused_anchor_bounds.jl` asserts before reporting anything.
+        # The identity every reading of a fused anchor rests on.
         identity = apply_satellite_fusion(sources, [0.0, 1.0, 0.0, 0.0])
         @test identity == sources[1]
     end

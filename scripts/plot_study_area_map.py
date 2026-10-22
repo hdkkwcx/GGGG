@@ -1,7 +1,7 @@
 """Draw the study-area map (paper Fig. 1): relief, and the gauges by landform region.
 
 Reads the 1 km SRTM DEM clipped to the study box (`data/dem_ShiYan_1km.tif`, written by
-`data/clip_dem.R`), the gauge list (`data/processed/study_area/station_meta.csv`) and each gauge's
+`scripts/clip_dem.R`), the gauge list (`data/processed/study_area/station_meta.csv`) and each gauge's
 landform region (`data/processed/covariates/station_landform.csv`, from
 `scripts/prepare_station_landform.jl`), and writes PNG (300 dpi) and PDF to
 `output/study_area_map/figures/`:
