@@ -1,22 +1,16 @@
-# 实现的是基于 Choleshy 分解的加权最小二乘求解器， 主要用于GWR或ST-GWR中重复计算局部加权回归系数
-
-# https://chatgpt.com/c/68aadc51-a978-8326-8880-9df82cecb413
-using LinearAlgebra
+# Cholesky-based weighted least squares, for the many local fits of GWR and ST-GWR.
 
 export GWRSolver
 export solve_chol!, solve_chol
 
 
-# 这里存储的是临时变量
+"""Scratch buffers reused across local fits."""
 @with_kw mutable struct GWRSolver{T}
   n_control::Int = 100
   n_max::Int = 8
 
   p::Int = 2
   n_time::Int = 10
-  # X::Matrix{T} = zeros(T, n_control, p)           # k×p
-  # Y::Matrix{T} = zeros(T, n_control, n_time)
-  # w::Vector{T} = zeros(T, n_control)              # k, 
   WY::Matrix{T} = zeros(T, n_control, n_time)
   XW::Matrix{T} = zeros(T, p, n_max)
   XtWX::Matrix{T} = zeros(T, p, p)
@@ -101,7 +95,7 @@ function _solve_chol_fast!(solver::GWRSolver{T},
     end
   end
 
-  # XtWX是对称矩阵，只计算下三角（a ≥ b), Symmetric(XtWX, :L)补齐
+  # XtWX is symmetric: fill the lower triangle (a ≥ b) only; Symmetric(XtWX, :L) reads it.
   @inbounds for b in 1:p
     for a in b:p
       s = zero(T)
@@ -132,4 +126,4 @@ function solve_chol(
 end
 
 solve_chol(X::AbstractMatrix{T}, y::AbstractVector{T}, w::AbstractVector{T}) where {T<:Real} =
-  solve_chol(X, Matrix(y), w)
+  solve_chol(X, reshape(y, :, 1), w)

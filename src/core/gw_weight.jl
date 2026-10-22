@@ -31,7 +31,7 @@ function gw_weight!(wv::AbstractVector{T}, vdist::AbstractVector{T}, bw::T;
 
   n = length(vdist)
   if adaptive
-    dn = bw / n # bw此时理解为n个点
+    dn = bw / n # adaptive: `bw` is a neighbour count
     if dn <= 1
       k = Int(bw)  # Julia is 1-indexed
       if buffer === nothing
@@ -50,14 +50,7 @@ function gw_weight!(wv::AbstractVector{T}, vdist::AbstractVector{T}, bw::T;
   return _apply_kernel!(wv, vdist, bw, kerf)
 end
 
-# function gw_weight(vdist::AbstractVector{T}, bw::T;
-#   kernel::Int=0, adaptive::Bool=true) where {T<:Real}
-#   wv = zeros(T, size(vdist))
-#   gw_weight!(wv, vdist, bw; kernel, adaptive)
-# end
-
-
-## 二维数据
+# Matrix form: one column of weights per target.
 function gw_weight!(ws::AbstractMatrix{T}, dist::AbstractMatrix{T}, bw::T;
   kernel::Int=0, adaptive::Bool=true) where {T<:Real}
   n_control, n_target = size(dist)

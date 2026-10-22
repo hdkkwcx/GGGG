@@ -9,24 +9,18 @@ function ST_GWR(X::AbstractMatrix{T}, Y::AbstractMatrix{T},
   wMat::AbstractMatrix{T}; Xpred::AbstractMatrix{T}) where {T<:Real}
   n_target = size(wMat, 2)
   ntime = size(Y, 2)
-  # k_local = size(X, 2)
-  # β = zeros(T, n_target, k_local, ntime)
-  n_target = size(wMat, 2)
-  solvers = map(i -> GWRSolver(X, Y), 1:get_nthread())
+  # One solver per thread. `:static` pins every iteration to one thread, which is what makes
+  # `threadid()` a safe index; under the default dynamic schedule a task can migrate.
+  solvers = map(_ -> GWRSolver(X, Y), 1:Threads.nthreads(:default))
+  thread_offset = Threads.nthreads(:interactive)
 
   Ypred = zeros(T, n_target, ntime)
   p = Progress(n_target)
-  @inbounds @threads for i in 1:n_target
+  @inbounds @threads :static for i in 1:n_target
     next!(p)
-    k = Threads.threadid()
-    solver = solvers[k]
-
-    w = @view wMat[:, i]
-    _β = solve_chol!(solver, X, Y, w) # [np, ntime]
-    # β[i, :, :] .= _β
-    _X = Xpred[i, :] # [np]
-    _pred = @view Ypred[i, :] # [ntime]
-    fitted!(_pred, _X, _β)
+    solver = solvers[Threads.threadid() - thread_offset]
+    β = solve_chol!(solver, X, Y, @view(wMat[:, i])) # [np, ntime]
+    fitted!(@view(Ypred[i, :]), Xpred[i, :], β)
   end
   return Ypred
 end
@@ -80,16 +74,3 @@ function ST_GWR_fast(X::AbstractMatrix{T}, Y::AbstractMatrix{T},
   inds, ws = gwr_neighbors(wMat, n_max)
   ST_GWR_fast(X, Y, inds, ws; Xpred)
 end
-
-
-
-
-
-
-"这段代码实现的是一种批量时序 GWR：
-
-对每个空间目标点单独建立一个局部加权回归；
-Y 的每一列代表一个时间点；
-同一目标点的所有时间点共用同一个空间权重向量；
-一次矩阵求解同时得到该目标点所有时间的局部系数；
-最终输出每个目标点、每个时间点的预测值"

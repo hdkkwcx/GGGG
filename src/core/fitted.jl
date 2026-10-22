@@ -1,5 +1,5 @@
 """
-时间上的处理
+One location, every time step: `R[t] = x ⋅ β[:, t]`.
 - x : [np]
 - β : [np, ntime]
 - R : [ntime]
@@ -18,7 +18,7 @@ function fitted!(R::AbstractVector{T},
 end
 
 """
-空间上的处理
+Every location, one time step: `R[i] = X[i, :] ⋅ β[i, :]`.
 - x : [n, np]
 - β : [n, np]
 - R : [n]
