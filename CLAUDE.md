@@ -41,9 +41,10 @@ That venv redraws the paper's figures byte for byte (checked on Fig. 4). `/paper
 `/merge-branch` (`.claude/skills/`) are the read-only paper check and the repo's merge-and-push
 routine.
 
-`runtests.jl` runs every file in `TEST_FILES` in its own Julia process, `Sys.CPU_THREADS` at a
-time (set `JULIA_CPU_THREADS` to change that), so a new test file must load everything it uses
-and be added to that list. `test/test-speed.jl` is a standalone benchmark, not in `runtests.jl`.
+`runtests.jl` runs `test-interpolation-benchmark.jl` in its own Julia process and `include`s the
+other files one after another alongside it. A new test file must still load everything it uses,
+and gets an `include` line there. `test/test-speed.jl` is a standalone benchmark, not in
+`runtests.jl`.
 
 `test-gwmodel.jl`, `test-solver.jl` and `test-ST_GWR.jl` use `data/prcp_st174_shiyan.csv`. They
 run together from `test-shiyan-fixture.jl`, and are skipped with a warning when that fixture is

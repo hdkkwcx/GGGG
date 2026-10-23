@@ -1,48 +1,44 @@
-# Runs each test file in its own Julia process, `Sys.CPU_THREADS` at a time (set JULIA_CPU_THREADS
-# to change that). Compiling the code under test dominates the suite, and a process compiles on one
-# core, so the files run side by side; each loads everything it needs. A file's output is printed
-# when it finishes.
+# test-interpolation-benchmark.jl is about half of the suite, so it runs in its own Julia process
+# while the other files run here one after another. Compiling the code under test dominates the
+# suite, and these files share what they compile; one process per file compiled it again for each
+# and made CI slower (test step 381 s against 295 s serially, on 4 vCPUs).
 
-# Slowest first: test-interpolation-benchmark.jl alone is about half of the serial suite.
-const TEST_FILES = [
-  "test-interpolation-benchmark.jl",
-  "test-mger-five-kernels.jl",
-  "test-shiyan-fixture.jl",
-  "test-gw-weight.jl",
-  "test-study-area.jl",
-  "test-satellite-fusion.jl",
-  "test-appeears-ndvi.jl",
-  "test-era5-land-stations.jl",
-  "test-era5-land-processing.jl",
-  "test-terrain-features.jl",
-  "test-era5-land-covariates.jl",
-  "test-mod13a2-ndvi-processing.jl",
-  "test-dem-terrain-experiment.jl",
-  "test-era5-variable-selection.jl",
-  "test-ndvi-variable-selection.jl",
-  "test-joint-variable-selection.jl",
-  "test-joint-covariate-models.jl",
-  "test-benchmark-diagnostics.jl",
-  "test-heavy-rain-events.jl",
-  "test-heavy-core-diagnostics.jl",
-  "test-landform-classification.jl",
-  "test-satellite-temporal-evaluation.jl",
-  "test-no-rain-evaluation.jl",
-  "test-grid-support-diagnostics.jl",
-  "test-run-provenance.jl",
-  "test-imerg-uncal-stations.jl",
-]
+# The child inherits this process's flags (Pkg.test's --check-bounds=yes) and environment. Its
+# output is printed when it finishes.
+const BENCHMARK_FILE = "test-interpolation-benchmark.jl"
+benchmark_output = IOBuffer()
+benchmark_cmd = `$(Base.julia_cmd()) --project=$(Base.active_project()) $(joinpath(@__DIR__, BENCHMARK_FILE))`
+benchmark = run(pipeline(benchmark_cmd; stdout=benchmark_output, stderr=benchmark_output); wait=false)
 
-# The child inherits this process's flags (Pkg.test's --check-bounds=yes) and environment.
-function run_test_file(file)
-  output = IOBuffer()
-  cmd = `$(Base.julia_cmd()) --project=$(Base.active_project()) $(joinpath(@__DIR__, file))`
-  seconds = @elapsed passed = success(pipeline(cmd; stdout=output, stderr=output))
-  status = passed ? "passed" : "FAILED"
-  print(string("\n── $file $status in $(round(seconds; digits=1)) s ──\n", String(take!(output))))
-  return passed
+try
+  include("test-shiyan-fixture.jl")
+  include("test-gw-weight.jl")
+  include("test-study-area.jl")
+  include("test-mger-five-kernels.jl")
+  include("test-satellite-fusion.jl")
+  include("test-appeears-ndvi.jl")
+  include("test-era5-land-stations.jl")
+  include("test-era5-land-processing.jl")
+  include("test-terrain-features.jl")
+  include("test-era5-land-covariates.jl")
+  include("test-mod13a2-ndvi-processing.jl")
+  include("test-dem-terrain-experiment.jl")
+  include("test-era5-variable-selection.jl")
+  include("test-ndvi-variable-selection.jl")
+  include("test-joint-variable-selection.jl")
+  include("test-joint-covariate-models.jl")
+  include("test-benchmark-diagnostics.jl")
+  include("test-heavy-rain-events.jl")
+  include("test-heavy-core-diagnostics.jl")
+  include("test-landform-classification.jl")
+  include("test-satellite-temporal-evaluation.jl")
+  include("test-no-rain-evaluation.jl")
+  include("test-grid-support-diagnostics.jl")
+  include("test-run-provenance.jl")
+  include("test-imerg-uncal-stations.jl")
+finally
+  # Wait for the benchmark even when a file above fails, so its output is never lost.
+  status = success(benchmark) ? "passed" : "FAILED"
+  print(string("\n── $BENCHMARK_FILE $status ──\n", String(take!(benchmark_output))))
 end
-
-passed = asyncmap(run_test_file, TEST_FILES; ntasks=Sys.CPU_THREADS)
-failed = TEST_FILES[.!passed]
-isempty(failed) || error("$(length(failed)) test files failed: $(join(failed, ", "))")
+success(benchmark) || error("$BENCHMARK_FILE failed")
