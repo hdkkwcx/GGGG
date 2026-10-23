@@ -50,6 +50,9 @@ run together from `test-shiyan-fixture.jl`, and are skipped with a warning when 
 absent (`HAS_SHIYAN_DATA` in `test/main_pkgs.jl`), e.g. on a fresh checkout or CI. Only `test-gwmodel.jl` needs R: it checks
 `GWR` against R's `GWmodel` via `RCall`, so it needs R with `GWmodel` installed. CI installs no R.
 
+CI (`.github/workflows/CI.yml`) runs only when started by hand: `gh workflow run CI`, then
+`gh run watch`. A push or a PR does not trigger it, so run the tests locally before committing.
+
 ### Threads and reproducibility
 
 - Run the interpolation benchmark with `-t 4`, **not** `-t auto` and not single-threaded:
