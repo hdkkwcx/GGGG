@@ -138,7 +138,7 @@
     [3], [Fusion: what does fusing it with the gauges gain, with which method and anchor?],
     [Gauge-only and fusion methods on GPM, GSMaP and their merge, scored at held-out gauges by spatial
     cross-validation],
-    [Answered, one choice open], [Choose the headline fusion method],
+    [Answered], [—],
     rule,
   )
 ]
@@ -210,7 +210,8 @@ Gauge-only interpolators (IDW, ADW, TPS, GWR) are the baseline. Fusion methods u
 as the anchor and correct it with the gauges (residual GWR, mixed GWR, MGWR), optionally blended with
 ADW where the satellite reports rain. The agreement blend chooses the ADW weight separately for each
 band of how many of the two products call the cell wet (≥ 0.1 mm h⁻¹) and the larger of their two
-rates (edges 0.1, 2.5 and 8 mm h⁻¹). Anchors are GPM (IMERG Uncal), GSMaP and an OLS merge of the two.
+rates (edges 0.1, 2.5 and 8 mm h⁻¹). MGWR with the agreement blend is the headline fusion method.
+Anchors are GPM (IMERG Uncal), GSMaP and an OLS merge of the two.
 Every method is scored at gauges held out of the fit, by balanced spatial 5-fold cross-validation over all
 26,304 hours of 2022–2024, using RMSE, correlation and CSI, overall and by intensity and distance to
 the nearest training gauge.
@@ -333,9 +334,7 @@ left before it is finished.
   GPM's evaluation mask. The run is from commit `94afc78`, with no uncommitted changes.],
 )
 
-*To finish.* Decide whether the newer stacked combination of MGWR and ADW replaces the agreement blend
-as the headline fusion method. The question is answered once Table 3 and Fig. 6 report the chosen
-method.
+*To finish.* Nothing: the question is answered.
 
 = Discussion
 
@@ -385,8 +384,7 @@ reports report against these three research contents.
 *Research content.*
 - RQ1 (space): complete.
 - RQ2 (time): complete.
-- RQ3 (fusion): choose the headline fusion method, the agreement blend or the stacked combination of
-  MGWR and ADW.
+- RQ3 (fusion): complete.
 - Literature (§4.2): fill the #refslot slots with papers actually read, so the Discussion can set each
   result against earlier work.
 
