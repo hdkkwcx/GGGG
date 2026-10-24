@@ -8,8 +8,7 @@
    "product": "GPM",
    "repr": "+39",
    "top3": "+75",
-   "peak_ratio": "0.27",
-   "cal": "0.8"
+   "peak_ratio": "0.27"
   },
   {
    "event_day": "2022-06-26",
@@ -17,8 +16,7 @@
    "product": "GPM_uncal",
    "repr": "+50",
    "top3": "+75",
-   "peak_ratio": "0.39",
-   "cal": "nan"
+   "peak_ratio": "0.39"
   },
   {
    "event_day": "2022-06-26",
@@ -26,8 +24,7 @@
    "product": "GSMaP",
    "repr": "+59",
    "top3": "+75",
-   "peak_ratio": "0.48",
-   "cal": "nan"
+   "peak_ratio": "0.48"
   },
   {
    "event_day": "2022-10-03",
@@ -35,8 +32,7 @@
    "product": "GPM",
    "repr": "+173",
    "top3": "+34",
-   "peak_ratio": "1.19",
-   "cal": "1.0"
+   "peak_ratio": "1.19"
   },
   {
    "event_day": "2022-10-03",
@@ -44,8 +40,7 @@
    "product": "GPM_uncal",
    "repr": "+78",
    "top3": "+34",
-   "peak_ratio": "1.11",
-   "cal": "nan"
+   "peak_ratio": "1.11"
   },
   {
    "event_day": "2022-10-03",
@@ -53,8 +48,7 @@
    "product": "GSMaP",
    "repr": "-14",
    "top3": "+34",
-   "peak_ratio": "1.90",
-   "cal": "nan"
+   "peak_ratio": "1.90"
   },
   {
    "event_day": "2023-06-17",
@@ -62,8 +56,7 @@
    "product": "GPM",
    "repr": "+46",
    "top3": "+48",
-   "peak_ratio": "0.99",
-   "cal": "1.2"
+   "peak_ratio": "0.99"
   },
   {
    "event_day": "2023-06-17",
@@ -71,8 +64,7 @@
    "product": "GPM_uncal",
    "repr": "+30",
    "top3": "+48",
-   "peak_ratio": "0.88",
-   "cal": "nan"
+   "peak_ratio": "0.88"
   },
   {
    "event_day": "2023-06-17",
@@ -80,8 +72,7 @@
    "product": "GSMaP",
    "repr": "-26",
    "top3": "+48",
-   "peak_ratio": "1.49",
-   "cal": "nan"
+   "peak_ratio": "1.49"
   },
   {
    "event_day": "2023-08-26",
@@ -89,8 +80,7 @@
    "product": "GPM",
    "repr": "+36",
    "top3": "+27",
-   "peak_ratio": "0.71",
-   "cal": "1.2"
+   "peak_ratio": "0.71"
   },
   {
    "event_day": "2023-08-26",
@@ -98,8 +88,7 @@
    "product": "GPM_uncal",
    "repr": "+25",
    "top3": "+27",
-   "peak_ratio": "0.55",
-   "cal": "nan"
+   "peak_ratio": "0.55"
   },
   {
    "event_day": "2023-08-26",
@@ -107,8 +96,7 @@
    "product": "GSMaP",
    "repr": "-22",
    "top3": "+27",
-   "peak_ratio": "2.78",
-   "cal": "nan"
+   "peak_ratio": "2.78"
   },
   {
    "event_day": "2023-09-10",
@@ -116,8 +104,7 @@
    "product": "GPM",
    "repr": "+17",
    "top3": "+87",
-   "peak_ratio": "0.20",
-   "cal": "0.9"
+   "peak_ratio": "0.20"
   },
   {
    "event_day": "2023-09-10",
@@ -125,8 +112,7 @@
    "product": "GPM_uncal",
    "repr": "+18",
    "top3": "+87",
-   "peak_ratio": "0.22",
-   "cal": "nan"
+   "peak_ratio": "0.22"
   },
   {
    "event_day": "2023-09-10",
@@ -134,8 +120,7 @@
    "product": "GSMaP",
    "repr": "+16",
    "top3": "+87",
-   "peak_ratio": "0.23",
-   "cal": "nan"
+   "peak_ratio": "0.23"
   },
   {
    "event_day": "2024-07-30",
@@ -143,8 +128,7 @@
    "product": "GPM",
    "repr": "+43",
    "top3": "+76",
-   "peak_ratio": "0.37",
-   "cal": "1.7"
+   "peak_ratio": "0.37"
   },
   {
    "event_day": "2024-07-30",
@@ -152,8 +136,7 @@
    "product": "GPM_uncal",
    "repr": "+25",
    "top3": "+76",
-   "peak_ratio": "0.20",
-   "cal": "nan"
+   "peak_ratio": "0.20"
   },
   {
    "event_day": "2024-07-30",
@@ -161,8 +144,7 @@
    "product": "GSMaP",
    "repr": "+24",
    "top3": "+76",
-   "peak_ratio": "0.16",
-   "cal": "nan"
+   "peak_ratio": "0.16"
   }
  ],
  "stats": {

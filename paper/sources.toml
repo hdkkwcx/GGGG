@@ -79,8 +79,7 @@ provenance = [
 # Numbers the paper cites. `scripts/export_paper_numbers.py` writes each block to
 # paper/numbers/<name>.json, which paper_plan.typ reads; the check re-exports them and fails on any
 # difference. `values` maps an output name to [source column, format]: Nf decimals (+Nf signed),
-# or pct1 / pct0, a fraction as a signed percentage. Uncal blocks are the primary run, Final blocks the
-# IMERG Final sensitivity run.
+# or pct1 / pct0, a fraction as a signed percentage. Every block reads an IMERG Uncal run.
 
 [[table]]
 name = "methods_uncal"
@@ -156,81 +155,7 @@ intercept = ["intercept_mean", "2f"]
 beta_gpm = ["beta_gpm_uncal_mean", "2f"]
 beta_gsmap = ["beta_gsmap_mean", "2f"]
 
-[[table]]
-name = "methods_final"
-label = "Table 3 and RQ3 text: pooled metrics (IMERG Final)"
-step = "fusion_final"
-source = "output/gauge_satellite_fusion_nofy4b/method_summary.csv"
-provenance = [
-    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
-]
-keys = ["product", "method"]
-[table.where]
-scheme = "balanced_spatial"
-method = ["adw", "idw", "tps", "gwr", "raw", "mgwr", "blend_agrenv_mgwr"]
-[table.values]
-RMSE = ["RMSE", "3f"]
-r = ["r", "3f"]
-CSI2 = ["CSI_2.0", "3f"]
-vs_raw = ["RMSE_improvement_vs_raw", "pct1"]
-vs_adw = ["RMSE_improvement_vs_adw", "pct1"]
-vs_raw0 = ["RMSE_improvement_vs_raw", "pct0"]
-vs_adw0 = ["RMSE_improvement_vs_adw", "pct0"]
-
-[[table]]
-name = "vs_adw_final"
-label = "RQ3 text: bootstrap comparisons with ADW (IMERG Final)"
-step = "fusion_final"
-source = "output/gauge_satellite_fusion_nofy4b/fusion_vs_gauge_only.csv"
-provenance = [
-    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
-]
-keys = ["product", "method", "stratum"]
-[table.where]
-method = ["mgwr", "blend_agrenv_mgwr"]
-[table.values]
-change = ["relative_improvement", "pct1"]
-p_holm = ["pvalue_holm_family", "2f"]
-
-[[table]]
-name = "strata_final"
-label = "RQ3 text: gain over ADW by intensity and distance (IMERG Final)"
-step = "fusion_final"
-source = "output/gauge_satellite_fusion_nofy4b/stratified_summary.csv"
-provenance = [
-    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
-]
-keys = ["product", "method", "group", "level"]
-[table.where]
-scheme = "balanced_spatial"
-method = ["mgwr", "blend_agrenv_mgwr"]
-group = ["rain_intensity", "nearest_train_km"]
-[table.values]
-change = ["RMSE_improvement_vs_adw", "pct1"]
-change0 = ["RMSE_improvement_vs_adw", "pct0"]
-
-[[table]]
-name = "merge_final"
-label = "RQ3 text: OLS merge weights (IMERG Final)"
-step = "fusion_final"
-source = "output/gauge_satellite_fusion_nofy4b/merged_anchor_coefficients.csv"
-provenance = [
-    "output/gauge_satellite_fusion_nofy4b/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv",
-]
-keys = ["product"]
-[table.where]
-scheme = "balanced_spatial"
-product = "MERGED_OLS"
-[table.values]
-intercept = ["intercept_mean", "2f"]
-beta_gpm = ["beta_gpm_mean", "2f"]
-beta_gsmap = ["beta_gsmap_mean", "2f"]
-
-# RQ1: the six heavy-rain events (IMERG Uncal run; the Final run for the calibration comparison).
+# RQ1: the six heavy-rain events (IMERG Uncal run).
 
 [[table]]
 name = "rq1_summary"
@@ -238,21 +163,6 @@ label = "RQ1 text: mean over the six events (IMERG Uncal)"
 step = "rq1_events"
 source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/event_metrics_summary.csv"
 provenance = ["output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"]
-keys = ["product"]
-[table.where]
-window = "full_day"
-statistic = "mean_over_events"
-[table.values]
-r = ["r", "2f"]
-MB = ["Bias", "+1f"]
-RMSE = ["RMSE", "1f"]
-
-[[table]]
-name = "rq1_summary_final"
-label = "RQ1 text: mean over the six events (IMERG Final)"
-step = "rq1_events_final"
-source = "output/heavy_rain_events_gpm_gsmap/event_metrics_summary.csv"
-provenance = ["output/heavy_rain_events_gpm_gsmap/provenance.csv"]
 keys = ["product"]
 [table.where]
 window = "full_day"
@@ -288,20 +198,6 @@ fmt = "2f"
 where = { event_day = "2022-06-26", product = ["GPM_uncal", "GSMaP"] }
 
 [[table]]
-name = "rq1_events_final"
-label = "RQ1 text: scores per event (IMERG Final)"
-step = "rq1_events_final"
-source = "output/heavy_rain_events_gpm_gsmap/event_metrics.csv"
-provenance = ["output/heavy_rain_events_gpm_gsmap/provenance.csv"]
-keys = ["event_day", "event_type", "product"]
-[table.where]
-window = "full_day"
-[table.values]
-r = ["r", "2f"]
-MB0 = ["Bias", "+0f"]
-CSI50 = ["CSI_50", "2f"]
-
-[[table]]
 name = "rq1_cores"
 label = "RQ1 text: storm-core deficit per event and product"
 step = "rq1_cores"
@@ -312,7 +208,6 @@ keys = ["event_day", "event_type", "product"]
 repr = ["representativeness_share", "pct0"]
 top3 = ["median_top3_share_of_obs", "pct0"]
 peak_ratio = ["median_peak_ratio", "2f"]
-cal = ["final_over_uncal", "1f"]
 # Over the two localized events and both products (IMERG Final excluded).
 [table.stats.repr_local]
 stat = "range"
@@ -366,17 +261,6 @@ column = "r"
 fmt = "2f"
 where = { event_day = "2022-06-26", product = ["GPM_uncal", "GSMaP"] }
 
-[[table]]
-name = "pixel_cores"
-label = "Uncertainties text: core gauges where IMERG Final and Uncal read neighbouring pixels"
-step = "pixel_check"
-source = "output/imerg_pixel_agreement/calibration_ratio.csv"
-provenance = ["output/imerg_pixel_agreement/provenance.csv"]
-keys = ["event_day"]
-[table.values]
-n_core = ["n_core", "0f"]
-n_mismatched = ["n_mismatched", "0f"]
-cal_same_pixel = ["final_over_uncal_earth_engine_pixel", "1f"]
 
 # RQ2: hourly evaluation over the full 2022-2024 record (IMERG Uncal run without FY4B).
 
@@ -601,11 +485,8 @@ Engine took the southern and/or western cell (south 33, west 13, south-west 3). 
 calibrated/uncalibrated ratio, which is near-constant within a month only at the matching pixel \
 (median spread 0.011 there vs 0.414 at this series' pixel; 0.008 at interior gauges). Neither pixel \
 is wrong, the gauge lies on their edge, but gauge-level comparisons of GPM_uncal with GPM (and \
-merges with the Earth Engine products) mix in the pixel choice at those 49 gauges. The cited \
-storm-core calibration ratio (rq1_cores `cal`, 2024-07-30, 5 of 20 core gauges affected) is 1.681 \
-as run and 1.724 with Uncal at Earth Engine's pixel, both printed 1.7; 2023-09-10 (uncited) would \
-print 1.0 instead of 0.9. Not rerun with Earth Engine's pixels. Reproduced, and its numbers asserted, by \
-scripts/verify_imerg_pixel_agreement.jl (tables in output/imerg_pixel_agreement/)."""
+merges with the Earth Engine products) mix in the pixel choice at those 49 gauges. Reproduced, and \
+its numbers asserted, by scripts/verify_imerg_pixel_agreement.jl (tables in output/imerg_pixel_agreement/)."""
 
 [[step]]
 id = "raw_imerg_uncal"
@@ -668,28 +549,12 @@ marker = "output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal"]
 
 [[step]]
-id = "rq1_events_final"
-kind = "analysis"
-reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
-command = ["julia", "--project=.", "scripts/run_heavy_rain_event_evaluation.jl", "--gpm-gsmap", "--gpm-cal"]
-marker = "output/heavy_rain_events_gpm_gsmap/provenance.csv"
-needs = ["prep_study_area"]
-
-[[step]]
 id = "rq1_cores"
 kind = "analysis"
 reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
 command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl"]
 marker = "output/heavy_core_diagnostics_gpmuncal/provenance.csv"
 needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
-
-[[step]]
-id = "pixel_check"
-kind = "analysis"
-reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
-command = ["julia", "--project=.", "scripts/verify_imerg_pixel_agreement.jl"]
-marker = "output/imerg_pixel_agreement/provenance.csv"
-needs = ["rq1_cores", "prep_study_area", "raw_imerg_uncal"]
 
 [[step]]
 id = "rq2"
@@ -707,11 +572,11 @@ command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl
 marker = "output/satellite_temporal_evaluation_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
 
-# The two benchmark runs predate the `command` row, so their commands were rebuilt from the run
-# folder names. Checked on 2026-10-21: parsed by run_interpolation_benchmark.jl's own `main`
-# (stopped before the run), each yields its run's folder and benchmark_scope.csv settings, and the
-# settings line it prints is identical to the one the run wrote into
-# output/full_benchmark_fusedanchor_nofy4b[_gpmuncal].log.
+# The benchmark run predates the `command` row, so its command was rebuilt from the run folder
+# name. Checked on 2026-10-21: parsed by run_interpolation_benchmark.jl's own `main` (stopped
+# before the run), it yields the run's folder and benchmark_scope.csv settings, and the settings
+# line it prints is identical to the one the run wrote into
+# output/full_benchmark_fusedanchor_nofy4b_gpmuncal.log.
 [[step]]
 id = "benchmark"
 kind = "analysis"
@@ -723,16 +588,6 @@ marker = "output/interpolation_benchmark_full_joint_covariates_nested_mgwrinterc
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep_ndvi"]
 
 [[step]]
-id = "benchmark_final"
-kind = "analysis"
-reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
-command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
-           "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
-           "--fused-anchor", "--gpm-cal"]
-marker = "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/benchmark_scope.csv"
-needs = ["prep_study_area", "prep_terrain", "prep_era5", "prep_ndvi"]
-
-[[step]]
 id = "claims"
 kind = "analysis"
 reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
@@ -742,15 +597,6 @@ marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covari
 needs = ["benchmark", "prep_study_area", "prep_gpm_uncal"]
 
 [[step]]
-id = "claims_final"
-kind = "analysis"
-reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
-command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
-           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b"]
-marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b/claim_provenance.csv"
-needs = ["benchmark_final", "prep_study_area"]
-
-[[step]]
 id = "fusion"
 kind = "analysis"
 reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
@@ -758,15 +604,6 @@ command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal"]
 marker = "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv"
 needs = ["claims"]
-
-[[step]]
-id = "fusion_final"
-kind = "analysis"
-reviewed = "6cc2f6952f16f0eb8614e00837f869229b88aaef"
-command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
-           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b"]
-marker = "output/gauge_satellite_fusion_nofy4b/source_provenance.csv"
-needs = ["claims_final"]
 
 [[step]]
 id = "fig_study_area"

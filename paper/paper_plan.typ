@@ -6,15 +6,14 @@
 // Numbers are read from the CSVs beside those figures in output/.
 // Fig. 1 is scripts/plot_study_area_map.py's output/study_area_map/figures/fig1_study_area.png, drawn
 // straight from data/ (its plot_provenance.csv records the inputs' SHA-256).
-// Table 3 and Figs. 6-7 come from clean benchmark runs at commit 94afc78 (git_dirty=false, recorded
-// in each run's benchmark_scope.csv with its Manifest.toml and a SHA-256 for every input file):
-// ..._fusedanchor_nofy4b_gpmuncal and, for the GPM (Final) rows, ..._fusedanchor_nofy4b. They
-// reproduce the earlier runs at ec320ab and on uncommitted code (ef3616d) byte for byte.
+// Table 3 and Figs. 6-7 come from a clean benchmark run at commit 94afc78 (git_dirty=false, recorded
+// in its benchmark_scope.csv with its Manifest.toml and a SHA-256 for every input file):
+// ..._fusedanchor_nofy4b_gpmuncal. It reproduces the earlier runs at ec320ab and on uncommitted code
+// (ef3616d) byte for byte.
 // RQ1/RQ2 and Figs. 2-4 come from clean IMERG Uncal runs at commit 3bce549, plotted at 072eef6:
 // output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal,
 // satellite_temporal_evaluation_nofy4b_gpmuncal and, for the Scope paragraph's FY4B numbers,
-// satellite_temporal_evaluation_gpmuncal. The IMERG Final runs (no _gpmuncal) reproduce the
-// earlier Final-based text.
+// satellite_temporal_evaluation_gpmuncal.
 // scripts/make_paper.jl rebuilds every figure and number here in dependency order; the [[step]]
 // graph in paper/sources.toml records each step's command and what it needs.
 
@@ -60,15 +59,11 @@
 // prints a red "?".
 #let load(name) = json("numbers/" + name + ".json").rows
 #let mu = load("methods_uncal")   // pooled metrics, IMERG Uncal run (Table 3)
-#let mf = load("methods_final")   // pooled metrics, IMERG Final sensitivity run
 #let cu = load("vs_adw_uncal")    // bootstrap comparisons with ADW, by stratum
 #let su = load("strata_uncal")    // gain over ADW by rain intensity and distance to a gauge
-#let sf = load("strata_final")
 #let r1 = load("rq1_summary")      // RQ1: mean over the six events, IMERG Uncal run
 #let e1 = load("rq1_events")       // RQ1: scores per event
-#let e1f = load("rq1_events_final")
 #let k1 = load("rq1_cores")        // RQ1: storm-core deficit per event and product
-#let px = load("pixel_cores")      // core gauges where IMERG Final and Uncal read neighbouring pixels
 #let c2 = load("rq2_classes")      // RQ2: by intensity class, season and relief
 #let v2 = load("rq2_events")       // RQ2: rain-event detection and timing
 #let a2 = load("rq2_areal")        // RQ2: areal-mean series
@@ -182,12 +177,11 @@ RQ3 uses it.
 
 #val(n0, "n", region: "all") hourly gauges in the Shiyan study area, 2022–2024 (values quantised to 0.5 mm). All sit in hills
 and mountains: by local relief from the Copernicus GLO-30 DEM, #val(n0, "n", region: "relief_lt500") are below 500 m, #val(n0, "n", region: "relief_500_1000") at 500–1000 m
-and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 and GSMaP v8 operational (`hourlyPrecipRate`), both at
+and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 Uncal and GSMaP v8 operational (`hourlyPrecipRate`), both at
 0.1°, are sampled at the gauge pixels: IMERG Uncal from NASA GES DISC's half-hourly files, averaged to
-hours, and IMERG Final and GSMaP through Google Earth Engine. The primary GPM product is IMERG Uncal, so that neither
-product carries gauge information: IMERG Final is calibrated monthly to GPCC gauge totals, GSMaP
-operational has no gauge correction. IMERG Final is kept as a sensitivity check
-for all three questions. Days run 08–08 Beijing time.
+hours, and GSMaP through Google Earth Engine. Neither carries gauge information: IMERG Uncal is the
+multi-satellite estimate before IMERG's monthly gauge calibration, and GSMaP operational has no gauge
+correction. Days run 08–08 Beijing time.
 
 #figure(
   image("figures/fig01_study_area.png", width: 80%),
@@ -216,9 +210,8 @@ Gauge-only interpolators (IDW, ADW, TPS, GWR) are the baseline. Fusion methods u
 as the anchor and correct it with the gauges (residual GWR, mixed GWR, MGWR), optionally blended with
 ADW where the satellite reports rain. The agreement blend chooses the ADW weight separately for each
 band of how many of the two products call the cell wet (≥ 0.1 mm h⁻¹) and the larger of their two
-rates (edges 0.1, 2.5 and 8 mm h⁻¹). Anchors are GPM (IMERG Uncal), GSMaP and an OLS merge of the two;
-the whole fusion is repeated with IMERG Final in place of IMERG Uncal as a sensitivity run. Every
-method is scored at gauges held out of the fit, by balanced spatial 5-fold cross-validation over all
+rates (edges 0.1, 2.5 and 8 mm h⁻¹). Anchors are GPM (IMERG Uncal), GSMaP and an OLS merge of the two.
+Every method is scored at gauges held out of the fit, by balanced spatial 5-fold cross-validation over all
 26,304 hours of 2022–2024, using RMSE, correlation and CSI, overall and by intensity and distance to
 the nearest training gauge.
 
@@ -288,8 +281,7 @@ left before it is finished.
 *Questions to answer.*
 - Does fusion beat both the raw product and gauges alone, overall and on heavy hours?
 - How does the gain change with distance to the nearest gauge?
-- Which fusion method and which anchor product are best, and does gauge calibration of the anchor
-  (IMERG Final) change that?
+- Which fusion method and which anchor product are best?
 
 *Findings so far.*
 - *Fusion beats both of its inputs on GPM, not on GSMaP.* MGWR followed by a blend with ADW where the
@@ -306,9 +298,6 @@ left before it is finished.
   better anchor, with neither product gauge-calibrated (raw RMSE #val(mu, "RMSE", product: G, method: "raw") vs #val(mu, "RMSE", product: "GSMaP", method: "raw") mm h⁻¹), and only
   fused GPM beats ADW significantly. Merging the two gives a better raw field (RMSE #val(mu, "RMSE", product: "MERGED_OLS", method: "raw")) but adds
   almost nothing after fusion (#val(mu, "RMSE", product: "MERGED_OLS", method: B) vs #val(mu, "RMSE", product: G, method: B)).
-- *Gauge calibration of the anchor does not change the fused result.* IMERG Final has higher raw error
-  than IMERG Uncal (RMSE #val(mf, "RMSE", product: "GPM", method: "raw") vs #val(mu, "RMSE", product: G, method: "raw") mm h⁻¹), but after fusion the two are level
-  (#val(mf, "RMSE", product: "GPM", method: B) vs #val(mu, "RMSE", product: G, method: B)\; #val(mf, "vs_adw", product: "GPM", method: B)% vs #val(mu, "vs_adw", product: G, method: B)% over ADW).
 
 #figure(
   image("figures/fig06b_fusion_methods.png", width: 100%),
@@ -336,16 +325,12 @@ left before it is finished.
     [GSMaP], [MGWR + agreement blend], ..t3(mu, "GSMaP", "blend_agrenv_mgwr"),
     [Merged (OLS)], [raw], ..t3(mu, "MERGED_OLS", "raw"),
     [Merged (OLS)], [MGWR + agreement blend], ..t3(mu, "MERGED_OLS", "blend_agrenv_mgwr"),
-    thin,
-    [GPM (Final)], [raw], ..t3(mf, "GPM", "raw"),
-    [GPM (Final)], [MGWR + agreement blend], ..t3(mf, "GPM", "blend_agrenv_mgwr"),
     rule,
   ),
   caption: [Draft Table 3. Held-out gauges, balanced spatial CV over all 26,304 hours of 2022–2024;
   RMSE in mm h⁻¹; improvements are RMSE reductions; CSI at 2 mm h⁻¹. GPM is IMERG Uncal. No row uses
-  FY4B: the merge and the agreement blend are built from GPM and GSMaP only. The GPM (Final) rows are a
-  sensitivity run with IMERG Final in IMERG Uncal's place, otherwise identical. Gauge-only rows are on
-  GPM's evaluation mask. Both runs are from commit `94afc78`, with no uncommitted changes.],
+  FY4B: the merge and the agreement blend are built from GPM and GSMaP only. Gauge-only rows are on
+  GPM's evaluation mask. The run is from commit `94afc78`, with no uncommitted changes.],
 )
 
 *To finish.* Decide whether the newer stacked combination of MGWR and ADW replaces the agreement blend
@@ -361,12 +346,6 @@ method.
   pixel averaging explains #stat("rq1_cores", "repr_local")% of the core deficit, and the rest comes from the products spreading
   short bursts over too many hours.
 - *Gauge resolution.* The 0.5 mm quantisation limits what can be said about the lightest class.
-- *Independence of GPM.* All three questions use IMERG Uncal, which carries no gauge information;
-  IMERG Final, calibrated monthly to GPCC gauges, gives the same fused result. Calibration matters most
-  for the storm cores: it raises GPM's 2024-07-30 core rain ×#val(k1, "cal", product: "GPM", event_day: "2024-07-30") and its CSI from
-  #val(e1, "CSI50", product: G, event_day: "2024-07-30") to #val(e1f, "CSI50", product: "GPM", event_day: "2024-07-30"). IMERG Final and Uncal were sampled separately, and at a gauge on a pixel
-  edge they can read neighbouring pixels: on 2024-07-30 that is #val(px, "n_mismatched", event_day: "2024-07-30") of the #val(px, "n_core", event_day: "2024-07-30") core
-  gauges, and reading Final's pixel there leaves the factor at ×#val(px, "cal_same_pixel", event_day: "2024-07-30").
 - *Small samples.* Only #val(n0, "n", region: "relief_ge1000") gauges lie at relief ≥ 1000 m, too few to interpret; heavy hours and the six
   events are few, so their intervals are wide.
 - *Residual heavy-rain deficit.* Fusion narrows but does not close the underestimation at ≥ 20 mm h⁻¹.
