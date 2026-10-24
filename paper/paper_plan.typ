@@ -114,7 +114,7 @@
 #align(center)[
   #text(size: 17pt, weight: "semibold", font: "Arial")[Research plan]
   #v(0.2em)
-  #text(size: 11.5pt, fill: luma(60))[Can GPM and GSMaP stand in for gauges where the network is sparse, and what does fusing them with the gauges gain?]
+  #text(size: 11.5pt, fill: luma(60))[Correcting GPM and GSMaP satellite precipitation against rain gauges with GWR / MGWR]
 ]
 
 #note[
@@ -123,8 +123,9 @@
   intensity and hour is poorly known, and so is what fusing them with the gauges adds far from the
   gauges and on heavy hours.
 
-  *Objective.* To establish how far GPM and GSMaP can stand in for gauges in a sparse mountain network,
-  and what fusing them with the gauges gains: three research contents, one results section each (§3).
+  *Objective.* To correct GPM and GSMaP satellite precipitation against rain gauges with GWR / MGWR.
+  RQ1 and RQ2 measure the errors to correct, in space and in time; RQ3 tests the correction. Three
+  research contents, one results section each (§3).
   #v(0.3em)
   #table(
     columns: (auto, 1.4fr, 1.8fr, 0.8fr, 1.1fr),
@@ -161,9 +162,9 @@ fusion is widely used to correct the products, but it is usually judged by avera
 adds *far from the gauges* and *on heavy hours*, which is exactly the sparse-network flood case, is less
 clear.
 
-*Objective.* To establish how far GPM and GSMaP can stand in for gauges in a sparse mountain network,
-and what fusing them with the gauges gains, through three research questions. §3 takes each as a
-research content, with the questions it must answer:
+*Objective.* To correct GPM and GSMaP satellite precipitation against rain gauges with GWR / MGWR.
+RQ1 and RQ2 measure the errors to correct, in space and in time; RQ3 tests the correction. §3 takes
+each as a research content, with the questions it must answer:
 
 - *RQ1 — Space.* Does the satellite field reproduce *where* heavy rain falls?
 - *RQ2 — Time.* Does it reproduce *how rain evolves in time* at each intensity?
