@@ -83,7 +83,7 @@ provenance = [
 
 [[table]]
 name = "methods_uncal"
-label = "Table 3 and RQ3 text: pooled metrics (IMERG Uncal)"
+label = "Table 3 and RQ3 text: pooled metrics and frequency bias (IMERG Uncal)"
 step = "fusion"
 source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/method_summary.csv"
 provenance = [
@@ -100,6 +100,8 @@ r = ["r", "3f"]
 CSI2 = ["CSI_2.0", "3f"]
 vs_raw = ["RMSE_improvement_vs_raw", "pct1"]
 vs_adw = ["RMSE_improvement_vs_adw", "pct1"]
+FBI8 = ["FBI_8.0", "2f"]
+FBI20 = ["FBI_20.0", "2f"]
 vs_raw0 = ["RMSE_improvement_vs_raw", "pct0"]
 vs_adw0 = ["RMSE_improvement_vs_adw", "pct0"]
 
