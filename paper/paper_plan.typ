@@ -185,9 +185,12 @@ and mountains: by local relief from the Copernicus GLO-30 DEM, #val(n0, "n", reg
 and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 Uncal @huffman_integrated_2020 @huffman_nasa_2023 and GSMaP v8 @kubota_global_2020, both at
 0.1°, are sampled at the gauge pixels: IMERG Uncal from NASA GES DISC's half-hourly files, averaged to
 hours, and GSMaP as the satellite-only `hourlyPrecipRate` of Google Earth Engine's operational
-collection, which for 2022–2024 holds the permanent standard product GSMaP_MVK. Neither carries gauge
-information: IMERG Uncal is the multi-satellite estimate before IMERG's monthly calibration to the
-GPCC gauge analysis, and GSMaP_MVK has no gauge correction. Days run 08–08 Beijing time.
+collection, which for 2022–2024 holds the permanent standard product GSMaP_MVK. Neither is adjusted
+to gauges. IMERG Uncal is the multi-satellite estimate before IMERG's monthly calibration to the GPCC
+gauge analysis. Its microwave estimates are calibrated to GPM's radar–radiometer product, and V07
+applies a climatological ratio to the satellite–gauge GPCP analysis only over high-latitude oceans
+@huffman_nasa_2023; in V05 that ratio also covered all land @huffman_integrated_2020. GSMaP_MVK has no
+gauge correction @kubota_global_2020. Days run 08–08 Beijing time.
 
 #figure(
   image("figures/fig01_study_area.png", width: 80%),
@@ -384,7 +387,7 @@ left before it is finished.
   @tang_evaluation_2023 @wang_comparison_2023 @guo_has_2024. #cite(<zhou_capability_2021>, form: "prose")
   scored IMERG V6 Early, Late and Final on four Hubei storms, one of them in Shiyan in June 2016. These
   studies score IMERG Final or its near-real-time runs, and #cite(<tang_evaluation_2023>, form: "prose") the
-  gauge-adjusted GSMaP_Gauge; here neither product carries gauge information, and the error is split
+  gauge-adjusted GSMaP_Gauge; here neither product is adjusted to gauges, and the error is split
   into placement (RQ1) and hourly magnitude by class (RQ2). In a mountain catchment of south-west China
   the accuracy of IMERG and GSMaP falls with elevation and slope @tang_evaluation_2023, and across
   mainland China IMERG's errors change with elevation @guo_has_2024. Here class biases barely differ
