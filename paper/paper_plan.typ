@@ -182,7 +182,7 @@ RQ3 uses it.
 
 #val(n0, "n", region: "all") hourly gauges in the Shiyan study area, 2022–2024 (values quantised to 0.5 mm). All sit in hills
 and mountains: by local relief from the Copernicus GLO-30 DEM, #val(n0, "n", region: "relief_lt500") are below 500 m, #val(n0, "n", region: "relief_500_1000") at 500–1000 m
-and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 Uncal @huffman_integrated_2020 and GSMaP v8 @kubota_global_2020, both at
+and #val(n0, "n", region: "relief_ge1000") at 1000 m or more. GPM IMERG V07 Uncal @huffman_integrated_2020 @huffman_nasa_2023 and GSMaP v8 @kubota_global_2020, both at
 0.1°, are sampled at the gauge pixels: IMERG Uncal from NASA GES DISC's half-hourly files, averaged to
 hours, and GSMaP as the satellite-only `hourlyPrecipRate` of Google Earth Engine's operational
 collection, which for 2022–2024 holds the permanent standard product GSMaP_MVK. Neither carries gauge
@@ -306,7 +306,7 @@ left before it is finished.
   (≥ 8 mm h⁻¹) MGWR alone improves on ADW by #pct(cu, "change", product: G, method: "mgwr", stratum: "8_plus") (GPM) and #pct(cu, "change", product: "GSMaP", method: "mgwr", stratum: "8_plus") (GSMaP), the agreement
   blend by #pct(cu, "change", product: G, method: B, stratum: "8_plus") and #pct(cu, "change", product: "GSMaP", method: B, stratum: "8_plus"), all significant. Unblended MGWR *hurts* dry, light and moderate hours,
   which is why the blend is needed. On GPM the improvement over ADW is #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "0_20") within 20 km of a training gauge,
-  #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "20_50") at 20–50 km and #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "50_100") at 50–100 km. #cite(<hu_satellite_2015>, form: "prose") found the same when thinning a gauge network:
+  #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "20_50") at 20–50 km and #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "50_100") at 50–100 km. #cite(<hu_satellite_2015>, form: "prose") found a matching pattern by thinning a gauge network:
   merging gains little over interpolation where gauges are dense. At ≥ 20 mm h⁻¹ the mean bias of fused GPM is #bias20(G, B) mm h⁻¹, against
   #bias20(G, "raw") for raw GPM and #bias20(G, "adw") for gauge-only ADW. On GSMaP the fused field (#bias20("GSMaP", B)) is drier there than the
   raw product (#bias20("GSMaP", "raw")). Sorting by the gauge's reading pulls every estimate low on these
@@ -372,30 +372,36 @@ left before it is finished.
   held-out gauge. Part of this is built into the scores and the methods: sorting hours by the gauge's
   reading pulls the bias low, and averaging or least-squares fitting smooths peaks. Event or basin
   totals would measure the lost volume with neither effect. Matching the satellite's intensity
-  distribution to the gauges before merging, as in China's merged analysis @xie_conceptual_2011, or
-  quantile mapping @belay_merging_2022, targets this loss; it is not tested here.
+  distribution to the gauges before merging targets this loss: PDF matching, as
+  #cite(<xie_conceptual_2011>, form: "prose") do over China, or the quantile mapping that
+  #cite(<belay_merging_2022>, form: "prose") recommend. It is not tested here.
 - *Generality.* One region and three years; the transfer to other climates and denser or sparser
   networks is untested.
 
 == How others have studied these problems
 
 - Validation of IMERG and GSMaP in complex terrain, and by rain intensity @tang_comparative_2020
-  @tang_evaluation_2023 @wang_comparison_2023 @guo_has_2024; #cite(<zhou_capability_2021>, form: "prose")
-  scored IMERG V6 on a Shiyan storm of June 2016. Most report pooled or daily scores; here the error is
-  decomposed into placement (RQ1) and hourly magnitude by class (RQ2). Studies in south-west China and
-  mainland China find errors grow with elevation and slope @tang_evaluation_2023 @guo_has_2024. Here
-  class biases barely differ between relief classes (§3.2), perhaps because local relief is not
-  elevation, and only two relief classes have enough gauges.
+  @tang_evaluation_2023 @wang_comparison_2023 @guo_has_2024. #cite(<zhou_capability_2021>, form: "prose")
+  scored IMERG V6 Early, Late and Final on four Hubei storms, one of them in Shiyan in June 2016. These
+  studies score IMERG Final or its near-real-time runs, and #cite(<tang_evaluation_2023>, form: "prose") the
+  gauge-adjusted GSMaP_Gauge; here neither product carries gauge information, and the error is split
+  into placement (RQ1) and hourly magnitude by class (RQ2). In a mountain catchment of south-west China
+  the accuracy of IMERG and GSMaP falls with elevation and slope @tang_evaluation_2023, and across
+  mainland China IMERG's errors change with elevation @guo_has_2024. Here class biases barely differ
+  between relief classes (§3.2), perhaps because local relief is not elevation, and only two relief
+  classes have enough gauges.
 - Satellite–gauge merging by residual interpolation (kriging, IDW, optimal interpolation)
   @xie_conceptual_2011 @belay_merging_2022, geographically weighted regression
-  @brunsdon_geographically_1996 @hu_satellite_2015 and machine learning @shen_merging_2022. This study
+  @brunsdon_geographically_1996, used for merging by #cite(<hu_satellite_2015>, form: "prose"), and machine
+  learning @shen_merging_2022. This study
   compares them on held-out gauges and asks where, not only whether, the satellite adds skill.
 - Multiscale GWR, which lets each covariate have its own bandwidth @oshan_mgwr_2019.
   #cite(<tu_spatial_2024>, form: "prose") use it to downscale annual and monthly IMERG; here it corrects
   hourly rain, as the correction step of the fusion.
-- Spatial rather than random cross-validation for interpolation and merging @ploton_spatial_2020. Random
-  splits leave a held-out gauge next to a training one and overstate skill far from the network; the
-  balanced spatial folds used here measure that case directly.
+- Spatial rather than random cross-validation: for large-scale mapping models,
+  #cite(<ploton_spatial_2020>, form: "prose") show that random splits suggest skill that spatial splits
+  remove. Here random splits would leave a held-out gauge next to a training one and overstate skill far
+  from the network; the balanced spatial folds used here measure that case directly.
 - Satellite rainfall as input to flood and rainfall–runoff models @saouabe_evaluation_2020
   @seo_hydrologic_2023, which motivates the outlook below.
 
@@ -420,9 +426,10 @@ reports report against these three research contents.
 - RQ1 (space): complete.
 - RQ2 (time): complete.
 - RQ3 (fusion): complete.
-- Literature (§4.2): the citations are the 18 papers read so far. The 15 GGGG items in Zotero without
-  a PDF are still to read, among them the MGWR paper of Fotheringham et al. (2017), the two
-  machine-learning merging papers and two spatial cross-validation papers.
+- Literature (§4.2): the citations come from the 18 papers with a PDF in Zotero and the IMERG V07 ATBD.
+  Claude checked each cited sentence against the paper's full text; the author has still to read
+  them. The other 14 GGGG items without a PDF are unread, among them the MGWR paper of Fotheringham et
+  al. (2017), the two machine-learning merging papers and two spatial cross-validation papers.
 
 *Paper preparation* (presentation only; no research question depends on it).
 - Fig. 1: add a location inset and the river basins, which need boundary and basin data not yet in
