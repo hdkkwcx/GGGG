@@ -121,7 +121,7 @@ p_holm = ["pvalue_holm_family", "2f"]
 
 [[table]]
 name = "strata_uncal"
-label = "RQ3 text: gain over ADW by intensity and distance (IMERG Uncal)"
+label = "RQ3 text: gain over ADW and mean bias by intensity and distance (IMERG Uncal)"
 step = "fusion"
 source = "output/gauge_satellite_fusion_nofy4b_gpmuncal/stratified_summary.csv"
 provenance = [
@@ -131,11 +131,12 @@ provenance = [
 keys = ["product", "method", "group", "level"]
 [table.where]
 scheme = "balanced_spatial"
-method = ["mgwr", "blend_agrenv_mgwr"]
+method = ["raw", "adw", "mgwr", "blend_agrenv_mgwr"]
 group = ["rain_intensity", "nearest_train_km"]
 [table.values]
 change = ["RMSE_improvement_vs_adw", "pct1"]
 change0 = ["RMSE_improvement_vs_adw", "pct0"]
+bias = ["Bias", "1f"]
 
 [[table]]
 name = "merge_uncal"

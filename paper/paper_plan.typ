@@ -60,7 +60,7 @@
 #let load(name) = json("numbers/" + name + ".json").rows
 #let mu = load("methods_uncal")   // pooled metrics, IMERG Uncal run (Table 3)
 #let cu = load("vs_adw_uncal")    // bootstrap comparisons with ADW, by stratum
-#let su = load("strata_uncal")    // gain over ADW by rain intensity and distance to a gauge
+#let su = load("strata_uncal")    // gain over ADW and mean bias by rain intensity and distance to a gauge
 #let r1 = load("rq1_summary")      // RQ1: mean over the six events, IMERG Uncal run
 #let e1 = load("rq1_events")       // RQ1: scores per event
 #let k1 = load("rq1_cores")        // RQ1: storm-core deficit per event and product
@@ -105,6 +105,10 @@
   if raw [#val(rows, "vs_raw", product: product, method: method)%] else [—],
   [#val(rows, "vs_adw", product: product, method: method)%],
 )
+
+/// Mean bias (mm h⁻¹) of one anchor and method on hours of ≥ 20 mm h⁻¹ at the held-out gauges.
+#let bias20(product, method) = val(su, "bias", product: product, method: method,
+  group: "rain_intensity", level: "severe_rainstorm")
 
 #align(center)[
   #text(size: 17pt, weight: "semibold", font: "Arial")[Research plan]
@@ -289,11 +293,14 @@ left before it is finished.
   satellites report rain cuts RMSE by #pct(mu, "vs_raw", product: G, method: B) from raw GPM and #pct(mu, "vs_raw", product: "GSMaP", method: B) from raw GSMaP. Against gauge-only ADW it
   gains #pct(mu, "vs_adw", product: G, method: B) on GPM and #pct(mu, "vs_adw", product: "MERGED_OLS", method: B) on the merged anchor, both significant, but only
   #pct(mu, "vs_adw", product: "GSMaP", method: B) on GSMaP, which is not (p = #val(cu, "p_holm", product: "GSMaP", method: B, stratum: "overall")).
-- *The gain is where floods need it: on heavy hours and far from the gauges.* On heavy hours
+- *The gain holds on heavy hours and grows far from the gauges, but the heavy-rain volume is not
+  restored.* On heavy hours
   (≥ 8 mm h⁻¹) MGWR alone improves on ADW by #pct(cu, "change", product: G, method: "mgwr", stratum: "8_plus") (GPM) and #pct(cu, "change", product: "GSMaP", method: "mgwr", stratum: "8_plus") (GSMaP), the agreement
   blend by #pct(cu, "change", product: G, method: B, stratum: "8_plus") and #pct(cu, "change", product: "GSMaP", method: B, stratum: "8_plus"), all significant. Unblended MGWR *hurts* dry, light and moderate hours,
   which is why the blend is needed. On GPM the improvement over ADW is #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "0_20") within 20 km of a training gauge,
-  #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "20_50") at 20–50 km and #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "50_100") at 50–100 km.
+  #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "20_50") at 20–50 km and #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "50_100") at 50–100 km. At ≥ 20 mm h⁻¹ the mean bias of fused GPM is #bias20(G, B) mm h⁻¹, against
+  #bias20(G, "raw") for raw GPM and #bias20(G, "adw") for gauge-only ADW. On GSMaP the fused field (#bias20("GSMaP", B)) is drier there than the
+  raw product (#bias20("GSMaP", "raw")).
 - *Best method and product.* Among gauge-only interpolators ADW is best, with IDW indistinguishable
   (#val(mu, "RMSE", product: G, method: "adw") vs #val(mu, "RMSE", product: G, method: "idw") mm h⁻¹). The best fusion is MGWR + blend. GPM is the
   better anchor, with neither product gauge-calibrated (raw RMSE #val(mu, "RMSE", product: G, method: "raw") vs #val(mu, "RMSE", product: "GSMaP", method: "raw") mm h⁻¹), and only
@@ -347,7 +354,9 @@ left before it is finished.
 - *Gauge resolution.* The 0.5 mm quantisation limits what can be said about the lightest class.
 - *Small samples.* Only #val(n0, "n", region: "relief_ge1000") gauges lie at relief ≥ 1000 m, too few to interpret; heavy hours and the six
   events are few, so their intervals are wide.
-- *Residual heavy-rain deficit.* Fusion narrows but does not close the underestimation at ≥ 20 mm h⁻¹.
+- *Residual heavy-rain deficit.* Fusion lowers the RMSE of heavy hours but restores almost none of
+  their missing volume (§3.3). Gauge-only ADW is as low as raw GPM there, so neither input carries the
+  peak to a held-out gauge.
 - *Generality.* One region and three years; the transfer to other climates and denser or sparser
   networks is untested.
 
@@ -369,8 +378,8 @@ left before it is finished.
 == Outlook: flood forecasting
 
 RQ2 shows that raw satellite rain loses #stat("rq2_classes", "loss_heavy")% of the volume at 8 mm h⁻¹ and above, the input
-flood models are most sensitive to, so raw products should not drive them; fusion recovers part of
-this (RQ3). A follow-up outside RQ1–RQ3: aggregate raw, gauge-only and fused fields to basin-mean
+flood models are most sensitive to, so raw products should not drive them; fusion lowers the error on
+these hours but recovers little of the missing volume (RQ3). A follow-up outside RQ1–RQ3: aggregate raw, gauge-only and fused fields to basin-mean
 rainfall for the gauged catchments during the six RQ1 events and the wettest seasons, correlate it (and
 antecedent totals) with observed discharge, and only if fused rain correlates clearly better, drive a
 simple rainfall–runoff model as a demonstration. This needs discharge data, which the project does not
