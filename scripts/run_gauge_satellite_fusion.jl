@@ -99,6 +99,8 @@ end
 """
 Overall accuracy and detection skill per (scheme, product, method), with RMSE also expressed as a
 relative improvement over the product's own satellite field (`raw`) and over gauge-only `adw`.
+`FBI_<thr>` is the frequency bias, POD / (1 - FAR) = (hits + false alarms) / (hits + misses): how
+often the estimate reaches the threshold over how often the gauge does, NaN without a hit.
 """
 function method_summary(pooled::DataFrame)
     index = Dict((row.scheme, row.product, row.method, row.group, row.level) => row
@@ -110,9 +112,11 @@ function method_summary(pooled::DataFrame)
         rmse = value("overall", "all", :RMSE)
         raw = _value(index, scheme, product, "raw", "overall", "all", :RMSE)
         reference = _value(index, scheme, product, REFERENCE, "overall", "all", :RMSE)
-        events = (; (Symbol("$(metric)_$(threshold)") =>
+        event(threshold, metric) = metric === :FBI ?
+            event(threshold, :POD) / (1 - event(threshold, :FAR)) :
             value("event_threshold", string(threshold), metric)
-            for threshold in EVENT_THRESHOLDS for metric in (:POD, :FAR, :CSI))...)
+        events = (; (Symbol("$(metric)_$(threshold)") => event(threshold, metric)
+            for threshold in EVENT_THRESHOLDS for metric in (:POD, :FAR, :CSI, :FBI))...)
         push!(rows, merge((;
             scheme, product, method,
             n=Int(value("overall", "all", :n)), coverage=value("overall", "all", :coverage),

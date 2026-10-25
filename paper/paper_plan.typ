@@ -263,9 +263,15 @@ left before it is finished.
 - Are areal means better than single points?
 
 *Findings so far.*
-- *Underestimation grows with intensity, in every season.* GPM relative bias runs from #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "light")% on light
+- *Sorted by the gauge's class, the shortfall grows with intensity, in every season.* GPM relative bias runs from #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "light")% on light
   rain to #val(c2, "RB0", product: G, season: "all", region: "all", gauge_class: "severe_rainstorm")% at ≥ 20 mm h⁻¹, GSMaP's from #val(c2, "RB0", product: "GSMaP", season: "all", region: "all", gauge_class: "light")% to #val(c2, "RB0", product: "GSMaP", season: "all", region: "all", gauge_class: "severe_rainstorm")%; GPM is the drier of the two
   in every class. At ≥ 8 mm h⁻¹ at most #stat("rq2_classes", "hit_heavy_max")% of hours land in the right class.
+  Sorting hours by the gauge's own reading makes any imperfect estimate look low on its heaviest hours,
+  so part of this shortfall comes from the sorting. Counted without it, raw GPM reaches ≥ 20 mm h⁻¹
+  #val(mu, "FBI20", product: G, method: "raw") times as often as the gauges, and GSMaP #val(mu, "FBI20", product: "GSMaP", method: "raw") times. A 0.1° pixel averages a short burst over
+  about 10 km, so even a perfect product would reach that rate less often than a point gauge. But
+  GSMaP, on the same grid, reaches it more often than the gauges, so pixel size alone does not explain
+  GPM's shortfall: GPM is short of heavy hours, and GSMaP has them in the wrong place or hour.
 - *Detection and timing are not the problem; magnitude is.* Rain events peaking at 2–4 mm h⁻¹ or more
   are detected #stat("rq2_events", "pod")% of the time, and median rain-centre timing errors stay between
   #stat("rq2_events", "centroid_min") and #stat("rq2_events", "centroid_max") h.
@@ -293,14 +299,17 @@ left before it is finished.
   satellites report rain cuts RMSE by #pct(mu, "vs_raw", product: G, method: B) from raw GPM and #pct(mu, "vs_raw", product: "GSMaP", method: B) from raw GSMaP. Against gauge-only ADW it
   gains #pct(mu, "vs_adw", product: G, method: B) on GPM and #pct(mu, "vs_adw", product: "MERGED_OLS", method: B) on the merged anchor, both significant, but only
   #pct(mu, "vs_adw", product: "GSMaP", method: B) on GSMaP, which is not (p = #val(cu, "p_holm", product: "GSMaP", method: B, stratum: "overall")).
-- *The gain holds on heavy hours and grows far from the gauges, but the heavy-rain volume is not
+- *The gain holds on heavy hours and grows far from the gauges, but the heavy-rain peaks are not
   restored.* On heavy hours
   (≥ 8 mm h⁻¹) MGWR alone improves on ADW by #pct(cu, "change", product: G, method: "mgwr", stratum: "8_plus") (GPM) and #pct(cu, "change", product: "GSMaP", method: "mgwr", stratum: "8_plus") (GSMaP), the agreement
   blend by #pct(cu, "change", product: G, method: B, stratum: "8_plus") and #pct(cu, "change", product: "GSMaP", method: B, stratum: "8_plus"), all significant. Unblended MGWR *hurts* dry, light and moderate hours,
   which is why the blend is needed. On GPM the improvement over ADW is #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "0_20") within 20 km of a training gauge,
   #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "20_50") at 20–50 km and #pct(su, "change", product: G, method: B, group: "nearest_train_km", level: "50_100") at 50–100 km. At ≥ 20 mm h⁻¹ the mean bias of fused GPM is #bias20(G, B) mm h⁻¹, against
   #bias20(G, "raw") for raw GPM and #bias20(G, "adw") for gauge-only ADW. On GSMaP the fused field (#bias20("GSMaP", B)) is drier there than the
-  raw product (#bias20("GSMaP", "raw")).
+  raw product (#bias20("GSMaP", "raw")). Sorting by the gauge's reading pulls every estimate low on these
+  hours. Counted without it, fused GPM reaches ≥ 20 mm h⁻¹ #val(mu, "FBI20", product: G, method: B) times as often as the gauges, against
+  #val(mu, "FBI20", product: G, method: "raw") for raw GPM and #val(mu, "FBI20", product: G, method: "adw") for gauge-only ADW. Fusion flattens the peaks further, as
+  expected: an average of gauges, or a fit for the lowest mean error, pulls extremes toward typical values.
 - *Best method and product.* Among gauge-only interpolators ADW is best, with IDW indistinguishable
   (#val(mu, "RMSE", product: G, method: "adw") vs #val(mu, "RMSE", product: G, method: "idw") mm h⁻¹). The best fusion is MGWR + blend. GPM is the
   better anchor, with neither product gauge-calibrated (raw RMSE #val(mu, "RMSE", product: G, method: "raw") vs #val(mu, "RMSE", product: "GSMaP", method: "raw") mm h⁻¹), and only
@@ -350,13 +359,16 @@ left before it is finished.
 - *Point versus pixel.* A gauge samples a point, the products a 0.1° pixel. Where rain varies below
   10 km (2022-06-26, the localized cores) part of the "error" is representativeness, not product skill;
   pixel averaging explains #stat("rq1_cores", "repr_local")% of the core deficit, and the rest comes from the products spreading
-  short bursts over too many hours.
+  short bursts over too many hours. The same averaging means a pixel reaches heavy rates less often
+  than a gauge (§3.2).
 - *Gauge resolution.* The 0.5 mm quantisation limits what can be said about the lightest class.
 - *Small samples.* Only #val(n0, "n", region: "relief_ge1000") gauges lie at relief ≥ 1000 m, too few to interpret; heavy hours and the six
   events are few, so their intervals are wide.
-- *Residual heavy-rain deficit.* Fusion lowers the RMSE of heavy hours but restores almost none of
-  their missing volume (§3.3). Gauge-only ADW is as low as raw GPM there, so neither input carries the
-  peak to a held-out gauge.
+- *Residual heavy-rain deficit.* Fusion lowers the RMSE of heavy hours but does not restore their
+  peaks (§3.3). Gauge-only ADW is as low as raw GPM there, so neither input carries the peak to a
+  held-out gauge. Part of this is built into the scores and the methods: sorting hours by the gauge's
+  reading pulls the bias low, and averaging or least-squares fitting smooths peaks. Event or basin
+  totals would measure the lost volume with neither effect.
 - *Generality.* One region and three years; the transfer to other climates and denser or sparser
   networks is untested.
 
@@ -377,12 +389,14 @@ left before it is finished.
 
 == Outlook: flood forecasting
 
-RQ2 shows that raw satellite rain loses #stat("rq2_classes", "loss_heavy")% of the volume at 8 mm h⁻¹ and above, the input
-flood models are most sensitive to, so raw products should not drive them; fusion lowers the error on
-these hours but recovers little of the missing volume (RQ3). A follow-up outside RQ1–RQ3: aggregate raw, gauge-only and fused fields to basin-mean
+On hours when the gauge records 8 mm h⁻¹ or more, raw satellite rain is #stat("rq2_classes", "loss_heavy")% below it (RQ2), and
+raw GPM reaches those rates only #val(mu, "FBI8", product: G, method: "raw") times as often as the gauges. Flood models are most
+sensitive to these hours, so raw products should not drive them. Fusion lowers the error on these
+hours but does not restore the peaks (RQ3). A follow-up outside RQ1–RQ3: aggregate raw, gauge-only and fused fields to basin-mean
 rainfall for the gauged catchments during the six RQ1 events and the wettest seasons, correlate it (and
 antecedent totals) with observed discharge, and only if fused rain correlates clearly better, drive a
-simple rainfall–runoff model as a demonstration. This needs discharge data, which the project does not
+simple rainfall–runoff model as a demonstration. Basin means also sidestep the point-versus-pixel
+mismatch. This needs discharge data, which the project does not
 yet have.
 
 = Research plan: what remains
