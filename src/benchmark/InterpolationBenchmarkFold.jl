@@ -15,6 +15,7 @@ function _run_fold_auto!(
     repeat_seed::Int, val_idx, y_obs, y_sat_val, y_obs_train, y_sat_train, train_lonlat,
     selection_groups, joint_selection_contexts, joint_inputs, nested_joint::Bool,
     fold_selected, fold_predictions, predictions, auto_selection_rows, run_status_rows,
+    twins::Dict{String,String}=Dict{String,String}(),
 )
 
     # `auto`: choose one GWR-family method for this fold on the inner split alone.
@@ -38,14 +39,19 @@ function _run_fold_auto!(
         for (mode, method) in AUTO_CANDIDATE_RUNS
             output_method = _output_method(mode, method)
             haskey(fold_selected, output_method) || continue
+            # A method whose fit was copied from its twin (`twins`) re-predicts exactly as the
+            # twin does, so its inner-split prediction is copied too.
+            twin = haskey(twins, output_method) ?
+                findfirst(entry -> entry.method == twins[output_method], auto_contenders) : nothing
             try
                 push!(auto_contenders, (; method=output_method,
-                    prediction=inner_selection_prediction(
-                        fold_selected[output_method], method, mode, train_lonlat,
-                        y_obs_train, y_sat_train, selection_groups;
-                        joint_contexts=joint_selection_contexts,
-                        time_indices=auto_time_indices,
-                    )))
+                    prediction=twin !== nothing ? copy(auto_contenders[twin].prediction) :
+                        inner_selection_prediction(
+                            fold_selected[output_method], method, mode, train_lonlat,
+                            y_obs_train, y_sat_train, selection_groups;
+                            joint_contexts=joint_selection_contexts,
+                            time_indices=auto_time_indices,
+                        )))
             catch e
                 push!(auto_failures, "$output_method: $(sprint(showerror, e))")
             end
@@ -479,21 +485,50 @@ function _run_benchmark_fold!(
     # Winning hyperparameters per method, kept so `auto` can re-predict them across the
     # inner split and choose between the methods without seeing a held-out station.
     fold_selected = Dict{String,Any}()
+    # Each method's rows in `all_scan_rows`, so a method that coincides with one already scanned
+    # can copy them instead of rescanning.
+    scan_ranges = Dict{String,UnitRange{Int}}()
+    # Methods whose fit was copied from a twin, keyed to that twin. `_run_fold_auto!` copies their
+    # inner-split prediction the same way.
+    twins = Dict{String,String}()
     for (mode, method) in BENCHMARK_RUNS
         output_method = _output_method(mode, method)
+        method_scan_start = length(all_scan_rows) + 1
         try
-            selected = select_interpolation_parameter!(
-                all_scan_rows, cfg, method, mode, scheme_symbol, product, fold,
-                train_lonlat, y_obs_train, y_sat_train;
-                dem_context, joint_context, hurdle_context,
-                selection_groups, joint_selection_contexts, repeat_seed,
-                repeat_index,
-            )
-            fold_predictions[output_method] = predict_selected(
-                selected, method, mode, train_lonlat, val_lonlat,
-                y_obs_train, y_sat_train, y_sat_val;
-                dem_context, joint_context, hurdle_context,
-            )
+            # `mixed_gwr` is `residual_gwr` under another name whenever this fold's role map has
+            # no "global" role (`joint_models_coincide`): the same design, searched over the same
+            # grid by the same scorer. Its scan rows and predictions are therefore copied instead
+            # of refitted, which saves a whole joint model's tuning and prediction on most folds.
+            # `test-joint-covariate-models.jl` checks that the two fits agree.
+            twin = output_method == "mixed_gwr" && joint_context !== nothing &&
+                haskey(fold_selected, "residual_gwr") &&
+                joint_models_coincide(joint_context, "mixed_gwr", "residual_gwr") ?
+                "residual_gwr" : nothing
+            selected = if twin === nothing
+                chosen = select_interpolation_parameter!(
+                    all_scan_rows, cfg, method, mode, scheme_symbol, product, fold,
+                    train_lonlat, y_obs_train, y_sat_train;
+                    dem_context, joint_context, hurdle_context,
+                    selection_groups, joint_selection_contexts, repeat_seed,
+                    repeat_index,
+                )
+                fold_predictions[output_method] = predict_selected(
+                    chosen, method, mode, train_lonlat, val_lonlat,
+                    y_obs_train, y_sat_train, y_sat_val;
+                    dem_context, joint_context, hurdle_context,
+                )
+                chosen
+            else
+                # Only the group name tells the two scans apart: `shared_local` here,
+                # `shared_all_local` in the twin's.
+                group = only(joint_group_names(joint_context, output_method))
+                for index in scan_ranges[twin]
+                    push!(all_scan_rows, merge(all_scan_rows[index], (; method, group)))
+                end
+                fold_predictions[output_method] = copy(fold_predictions[twin])
+                twins[output_method] = twin
+                merge(fold_selected[twin], (; joint_method=output_method))
+            end
             predictions[output_method][val_idx, :] = fold_predictions[output_method]
             fold_selected[output_method] = selected
             eligible = .!isnan.(y_obs[val_idx, :]) .& .!isnan.(y_sat_val)
@@ -516,22 +551,7 @@ function _run_benchmark_fold!(
                 error=sprint(showerror, e), prediction_coverage=0.0,
             ))
         end
-    end
-
-    # `mixed_gwr` and `residual_gwr` are the same model whenever this fold's role map has no
-    # "global" role, so the second of the two scans is redundant work. It is kept rather than
-    # skipped, and turned into a check: the two search the same grid through the same scorer over
-    # the same designs, so if they ever disagree here, the designs or the grids have drifted
-    # apart and the `duplicate_of` column in `run_status.csv` is lying.
-    if joint_context !== nothing &&
-            haskey(fold_predictions, "mixed_gwr") && haskey(fold_predictions, "residual_gwr") &&
-            joint_models_coincide(joint_context, "mixed_gwr", "residual_gwr") &&
-            !isequal(fold_predictions["mixed_gwr"], fold_predictions["residual_gwr"])
-        @warn(
-            "mixed_gwr and residual_gwr have identical designs on this fold but produced " *
-            "different predictions",
-            scheme, product, fold, repeat=repeat_index,
-        )
+        scan_ranges[output_method] = method_scan_start:length(all_scan_rows)
     end
 
     for index in scan_start:length(all_scan_rows)
@@ -544,7 +564,7 @@ function _run_benchmark_fold!(
         cfg, fold, scheme, product, repeat_index, repeat_seed, val_idx, y_obs, y_sat_val,
         y_obs_train, y_sat_train, train_lonlat, selection_groups, joint_selection_contexts,
         joint_inputs, nested_joint, fold_selected, fold_predictions, predictions,
-        auto_selection_rows, run_status_rows,
+        auto_selection_rows, run_status_rows, twins,
     )
     if cfg.satellite_wet_blend
         blend_band_train = Dict(axis => band[train_idx, :] for (axis, band) in blend_bands)
