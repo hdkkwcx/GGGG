@@ -691,6 +691,40 @@ end
     )
 end
 
+@testset "Joint inner predictions at the tuning hours are the full record's columns" begin
+    f = synthetic_joint_benchmark_fixture()
+    train_idx = collect(1:22)
+    roles = Dict("elevation" => "local")
+    groups = [collect(1:7), collect(8:14), collect(15:22)]
+    contexts = [(target_positions=group, context=JointCovariateModels.build_joint_fold_context(
+        "FY4B", roles, train_idx[setdiff(1:length(train_idx), group)], train_idx[group],
+        f.lonlat, f.y_obs, f.y_sat, f.terrain, f.era5, nothing, f.joint_cfg,
+    )) for group in groups]
+    train_lonlat = f.lonlat[train_idx, :]
+    y_obs_train = f.y_obs[train_idx, :]
+    y_sat_train = f.y_sat[train_idx, :]
+    hours = [11, 2, 7, 3]
+    for (method, joint_method, bandwidths) in (
+        ("gwr", "residual_gwr", [8.0]), ("mixed_gwr", "mixed_gwr", [8.0]),
+        ("mgwr", "mgwr", [8.0, 10.0]),
+    )
+        selected = (; bandwidths, shrink=0.5, kernel=BISQUARE, adaptive=true,
+            joint_model=true, joint_method)
+        full = inner_selection_prediction(selected, method, "residual", train_lonlat,
+            y_obs_train, y_sat_train, groups; joint_contexts=contexts)
+        tuned = inner_selection_prediction(selected, method, "residual", train_lonlat,
+            y_obs_train, y_sat_train, groups; joint_contexts=contexts, time_indices=hours)
+        @test size(tuned) == (length(train_idx), length(hours))
+        @test count(isfinite, tuned) > 0
+        @test isequal(tuned, full[:, hours])
+    end
+    # Every other method is handed pre-sliced inputs, so it refuses the hours.
+    @test_throws ArgumentError predict_selected(
+        (; power=2.0, neighbors=missing), "idw", "direct", train_lonlat, f.lonlat[23:30, :],
+        y_obs_train, y_sat_train, f.y_sat[23:30, :]; time_indices=hours,
+    )
+end
+
 @testset "DEM and joint mixed_gwr/mgwr sweep every kernel and bandwidth family" begin
     # Mirrors the baseline-path parity test above: `select_dem_parameter!`/
     # `select_joint_parameter!` used to fix `mixed_gwr`/`mgwr` at kernel=BISQUARE and, even after
