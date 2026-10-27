@@ -553,7 +553,8 @@ tested on the *inner-split* prediction, but the caller goes on to consume
 `fold_predictions[chosen]`, the *outer-fold* prediction. For this pair the two are the same model
 end to end, so collapsing cannot move a number. For any other pair an inner-split tie would not
 carry that guarantee, and dropping one of them could silently change which outer-fold prediction
-`auto` reports. The `@warn` in `_run_benchmark_fold!` is what checks the guarantee still holds.
+`auto` reports. `_run_benchmark_fold!` relies on the same guarantee to copy `residual_gwr`'s fit to
+`mixed_gwr` instead of refitting it, and `test-joint-covariate-models.jl` is what checks it holds.
 
 `COLLAPSIBLE_PAIR` order decides which name survives, keeping the more constrained model
 (`residual_gwr` before `mixed_gwr`) rather than letting the alphabetical tie-break below pick —

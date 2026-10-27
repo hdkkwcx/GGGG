@@ -114,6 +114,7 @@ function predict_selected(
     train_lonlat::Matrix{Float64}, target_lonlat::Matrix{Float64},
     y_obs_train::Matrix{Float64}, y_sat_train::Matrix{Float64}, y_sat_target::Matrix{Float64};
     dem_context=nothing, joint_context=nothing, hurdle_context=nothing,
+    time_indices::Union{Nothing,Vector{Int}}=nothing,
 )
     (mode, method) in BENCHMARK_RUNS ||
         throw(ArgumentError("unsupported benchmark method/mode pair: $method/$mode"))
@@ -121,11 +122,17 @@ function predict_selected(
     is_dem_model = dem_context !== nothing && hasproperty(selected, :dem_model) && selected.dem_model
     is_joint_model = joint_context !== nothing &&
         hasproperty(selected, :joint_model) && selected.joint_model
+    # `time_indices` picks the hours (columns, in that order) a joint model predicts. A
+    # `JointFoldContext` indexes hours itself, so the joint model takes the full matrices and the
+    # hours separately; every other method is handed pre-sliced inputs instead.
+    time_indices === nothing || (is_joint_model && mode == "residual") ||
+        throw(ArgumentError("time_indices applies only to a joint residual model"))
     interpolated = if is_joint_model && mode == "residual"
         prediction, converged = dynamic_covariate_predict(
             joint_context, values, selected.joint_method,
             Float64.(selected.bandwidths), selected.kernel;
             adaptive=selected.adaptive,
+            time_indices=something(time_indices, collect(axes(values, 2))),
         )
         any(.!converged) && @warn(
             "joint dynamic model did not converge for some hours",
@@ -198,6 +205,7 @@ function predict_selected(
     else
         throw(ArgumentError("unknown method: $method"))
     end
+    time_indices === nothing || (y_sat_target = y_sat_target[:, time_indices])
     return mode == "direct" ? max.(interpolated, 0.0) : max.(y_sat_target .+ interpolated, 0.0)
 end
 
@@ -221,12 +229,12 @@ a context with the wrong stations.
 
 `time_indices` restricts the result to the tuning hours, so `auto` compares methods over exactly
 the hours the scan scored them on. The two model families need it applied at different points: a
-`JointFoldContext` indexes hours internally and `predict_selected` hands it the full residual
-matrix, so the joint methods predict every hour and are subset afterwards, while everything else
-can be given pre-sliced inputs and never touches the other hours at all. Predicting the full
-record for the joint methods and slicing costs roughly 5-10% of their scan, which is why this
-does not thread a `time_indices` keyword through `predict_selected` and risk the reported
-prediction path for it.
+`JointFoldContext` indexes hours internally, so the joint methods get the full matrices plus
+`predict_selected`'s `time_indices` and predict only those hours, while everything else is given
+pre-sliced inputs. Neither ever touches the other hours. `dynamic_covariate_predict` fits each
+hour on its own, so an hour's prediction does not depend on which other hours are predicted with
+it. On the 26,304-hour grid, predicting every hour and slicing cost the joint methods about twice
+their whole scan, a third of each fold's time.
 """
 function inner_selection_prediction(
     selected, method::String, mode::String, train_lonlat::Matrix{Float64},
@@ -240,7 +248,7 @@ function inner_selection_prediction(
     obs = is_joint ? y_obs_train : y_obs_train[:, columns]
     sat = is_joint ? y_sat_train : y_sat_train[:, columns]
     n_train = size(obs, 1)
-    out_of_fold = _selection_oof(selection_groups, n_train, size(obs, 2), function (inner_train, group)
+    out_of_fold = _selection_oof(selection_groups, n_train, length(columns), function (inner_train, group)
         joint_context = if joint_contexts === nothing
             nothing
         else
@@ -254,10 +262,10 @@ function inner_selection_prediction(
             selected, method, mode,
             train_lonlat[inner_train, :], train_lonlat[group, :],
             obs[inner_train, :], sat[inner_train, :], sat[group, :];
-            joint_context,
+            joint_context, time_indices=is_joint ? time_indices : nothing,
         )
     end)
-    return is_joint ? out_of_fold[:, columns] : out_of_fold
+    return out_of_fold
 end
 
 """
