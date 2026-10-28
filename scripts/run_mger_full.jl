@@ -34,11 +34,7 @@ function main(args=ARGS)
                 full_year ? "hubei_gpm_hourly_2022_2024_full_aligned.csv" :
                     "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv",
             ),
-            "GSMaP" => joinpath(
-                STUDY_DATA,
-                full_year ? "hubei_gsmap_hourly_2022_2024_full_aligned.csv" :
-                    "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv",
-            ),
+            "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
         ),
         outdir=joinpath(
             ROOT, "output",

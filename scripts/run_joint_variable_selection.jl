@@ -76,7 +76,7 @@ function experiment_inputs(mode::Symbol)
             "FY4B" => joinpath(STUDY_DATA,
                 "hubei_fy4b_hourly_2022_2025_JunSep_strict_navcorrected.csv"),
             "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv"),
-            "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv"),
+            "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
         ),
         outdir=outdir,
         analysis_start=DateTime(2022, 6, 1, 9),

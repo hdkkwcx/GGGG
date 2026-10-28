@@ -126,13 +126,11 @@ function benchmark_config(
             smoke ? "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv" :
                 "hubei_gpm_hourly_2022_2024_full_aligned.csv",
         )
+    # GSMaP reads the full-year file in both modes; the window clips smoke to June. The old Jun-Sep
+    # file is a different GSMaP field (no wet value matches v8 `hourlyPrecipRate`), not a subset.
     sat_paths = Dict(
         gpm,
-        "GSMaP" => joinpath(
-            STUDY_DATA,
-            smoke ? "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv" :
-                "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
-        ),
+        "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
     )
     # `fy4b=false` (the CLI default) leaves FY4B out of every product-derived step at once: the
     # merges, the agreement-envelope and stack bands, and the common time grid all read

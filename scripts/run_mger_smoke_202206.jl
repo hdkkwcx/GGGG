@@ -28,7 +28,7 @@ function main(args=ARGS)
             ),
             "GSMaP" => joinpath(
                 STUDY_DATA,
-                "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv",
+                "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
             ),
         ),
         outdir=joinpath(

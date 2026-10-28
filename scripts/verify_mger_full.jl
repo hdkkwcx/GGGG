@@ -50,18 +50,17 @@ function main(args=ARGS)
     study_ids = string.(station_meta.station_id)
     @assert issorted(study_ids)
 
-    satellite_inputs = full_year ?
-        [fy4b_name, "hubei_gpm_hourly_2022_2024_full_aligned.csv",
-         "hubei_gsmap_hourly_2022_2024_full_aligned.csv"] :
-        [fy4b_name, "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv",
-         "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv"]
+    # GSMaP reads the full-year file in both windows (see run_mger_full.jl).
+    gpm_name = full_year ? "hubei_gpm_hourly_2022_2024_full_aligned.csv" :
+        "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv"
+    gsmap_name = "hubei_gsmap_hourly_2022_2024_full_aligned.csv"
+    satellite_inputs = [fy4b_name, gpm_name, gsmap_name]
     for name in vcat("hubei_obs_hourly_2022_2025_JunSep.csv", satellite_inputs)
         assert_station_columns(joinpath(STUDY_DATA, name), study_ids)
     end
     assert_wide(joinpath(STUDY_DATA, fy4b_name), fy4b_rows, 237)
-    for name in satellite_inputs[2:end]
-        assert_wide(joinpath(STUDY_DATA, name), full_year ? 26_304 : 11_712, 237)
-    end
+    assert_wide(joinpath(STUDY_DATA, gpm_name), full_year ? 26_304 : 11_712, 237)
+    assert_wide(joinpath(STUDY_DATA, gsmap_name), 26_304, 237)
 
     # The Jun-Sep audit is the one `scripts/audit_mger_inputs.jl` produces without flags. There
     # is no full-year audit directory, so that window is verified against the run itself only.
