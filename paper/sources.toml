@@ -583,7 +583,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
 [[step]]
 id = "benchmark"
 kind = "analysis"
-reviewed = "c97208621f483e5fcbeb8417df3b41938435fc63"
+reviewed = "fad08089f9056274f007ee897e0fd70782c56465"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
            "--fused-anchor"]

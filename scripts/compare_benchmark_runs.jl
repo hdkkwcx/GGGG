@@ -48,11 +48,7 @@ function load_common_data(outdir::AbstractString; smoke::Bool=false)
                 smoke ? "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv" :
                     "hubei_gpm_hourly_2022_2024_full_aligned.csv",
             ),
-            "GSMaP" => joinpath(
-                STUDY_DATA,
-                smoke ? "hubei_gsmap_hourly_2022_2025_JunSep_aligned.csv" :
-                    "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
-            ),
+            "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
         ),
         outdir=outdir,
         rain_threshold=0.1,
