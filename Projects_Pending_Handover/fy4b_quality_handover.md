@@ -1,11 +1,61 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-10-30 · **State:** waiting for the raw FY4B NetCDFs · **Next step:** copy them in,
-then read about a dozen files' attributes before re-extracting
+**Date:** 2026-10-31 · **State:** Parts A and B done, full runs scored · **Next step:** the user
+picks the paper framing (§0), then a paper step and the scope-note rewrite
 
 ---
 
-## 0. Latest (2026-10-31): Part A done, waiting for the download
+## 0. Latest (2026-10-31): Part B done, both full runs scored
+
+- **Branch `fy4b/with-fy4b-benchmark`**, not merged or pushed. Since master:
+  - rebuild code: `37e27d7`, `14d70d4`, `0924141` (duplicate-copy fix);
+  - `FY4B_QM`: `ede88b8`; CLI flags `--fy4b-file`, `--fy4b-qm`: `3c6361d`;
+  - review bumps `ef64be0`, `2ae2dbc`, `ca52142`, `d492f42`; this note.
+- **Download:** the strict 4-of-4 record went from 13,474 to 20,087 complete hours.
+  - Still missing: 2022 Jan–May, Feb 2024, scattered gaps, and the 14:15 UTC file every day. So
+    the 22–23 Beijing hour never exists.
+  - One corrupt file with no good copy: `...NOM_20220710071500_20220710072959...`.
+- **Full runs:** `-t 4`, clean tree; the rebuild was reproduced byte for byte first. Both used
+  `full --nested-covariates --satellite-wet-blend --blend-axis agreement_envelope --fused-anchor --with-fy4b`.
+  - `..._fusedanchor_fy4bw3h0_fy4bqm_gpmuncal`: `--fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --fy4b-qm`.
+  - `..._fusedanchor_fy4bw1h0_gpmuncal`: `--fy4b-file .../fy4b_w1_h0.csv` (completeness only).
+- **Paired analysis** on shared cells, with a day-block bootstrap: `output/fy4b_partB_analysis/`
+  (`paired.csv`, `pooled.txt`, and the scripts that made them).
+
+Balanced spatial, change in RMSE (mm/h); "sig" means the 95% CI excludes 0:
+
+| step | raw | mgwr | blend_agrenv_mgwr |
+|---|---|---|---|
+| 3×3 window vs centre pixel (w3 vs w1) | −0.7% sig | −0.5% sig | −0.1% sig |
+| shift + quantile map vs w3 (`FY4B_QM`) | −10.0% sig | −1.2%, CI spans 0 | −0.25%, CI spans 0 |
+
+- **What the quantile map does to raw FY4B:**
+  - bias +0.022 → −0.004 mm/h;
+  - dry-hour RMSE 0.746 → 0.623;
+  - r 0.223 → 0.237;
+  - CSI at ≥ 8 mm/h 0.047 → 0.059.
+- **Where it helps:** the gains are in Mar, Apr and Sep (RMSE roughly halves in Mar and Sep).
+  Jul and Aug get worse (1.55 → 1.71, 1.44 → 1.66): the map restores the gauge tail onto
+  misplaced convective cells.
+- **The shift is a stable property of the product.** Every fold, in both schemes, picks the
+  same or an adjacent shift (dx east+, dy south+):
+  - 133E V1.0: dx −2/−3 (west);
+  - 133E V1.0.0: (+1, −1);
+  - 105E: (+2/+3, −1), i.e. east and north.
+- **Standing:**
+  - Raw `FY4B_QM` RMSE is now below GSMaP's (1.029 vs 1.079, CI spans 0).
+  - Its r stays far lower: 0.24, against 0.38 for GSMaP and 0.44 for GPM_uncal.
+  - With the headline blend, `FY4B_QM` stays 2.4% behind GPM_uncal and 1.1% behind GSMaP (both
+    sig).
+- **FY4B in the merges:**
+  - MERGED_OLS gives FY4B a weight of about 0.02. With and without FY4B, the merged raw series is
+    unchanged.
+  - The blend moves by ≤ 0.5%, and that comparison is confounded by the two runs' different hour
+    grids.
+- **Reading:** the quality steps clearly raise raw FY4B. The GWR corrections absorb most of the
+  same systematic error themselves, so the corrected fields barely move.
+
+## 0a. Earlier (2026-10-31): Part A done, waiting for the download
 
 - **Branch `fy4b/with-fy4b-benchmark`**, not merged or pushed:
   - `37e27d7`: rebuild code;
@@ -27,8 +77,8 @@ then read about a dozen files' attributes before re-extracting
     1–4 px.
   - The user chose (2026-10-30) to fix it with a **per-fold, per-regime shift picked on training
     gauges** (Part B).
-- **One corrupt raw file:** `...NOM_20240608064500_20240608065959...` (HDF error). It is treated as
-  missing; add it to the download if possible.
+- **One corrupt raw file:** `...NOM_20240608064500_20240608065959...` (HDF error). Later recovered:
+  the download brought a good duplicate, which `0924141` now picks.
 - **Tomorrow, once the download is on the T9:**
   1. Run `find /Volumes/T9/FY4B -name '._*' | wc -l`. The reader skips such files anyway.
   2. Rescan coverage with the scratch script `fy4b_missing_list.jl` (the plan has its path).
@@ -214,13 +264,12 @@ must then be plugged in for every FY4B step.
 1. ~~Read the NetCDF attributes~~ Done 2026-10-30, see §4.1. The raw data is on the T9 and linked
    as `data/FY4B`.
 2. Check coverage: count files per month and disk tag, and list the months that are still missing.
-3. Download the missing 15-minute files (`output/fy4b_download/`). Then re-extract with the
+3. ~~Download, re-extract, per-fold fixes~~ Done 2026-10-31, see §0. (Plan text kept:) Download the missing 15-minute files (`output/fy4b_download/`). Then re-extract with the
    strict 4-of-4 rule, censoring at 20, and parallax plus neighbourhood. The seasonal threshold and
    quantile map are fitted per fold inside the benchmark. The full plan is
    `~/.claude/plans/mutable-dazzling-bengio.md`. The reusable parts go in `src/sources/`; the run goes
    in a `scripts/prepare_fy4b_*.jl`; results go to `output/` or `data/processed/` per CLAUDE.md.
-4. Rerun the with-FY4B benchmark (§3.1) on the new file. Compare it with the run above using
-   `scripts/compare_benchmark_runs.jl`.
+4. ~~Rerun the with-FY4B benchmark (§3.1) on the new file~~ Done 2026-10-31, see §0.
 5. Paper:
    - Add a `[[step]]` for the with-FY4B run in `paper/sources.toml`, plus `[[table]]` blocks
      for every cited number.
