@@ -35,11 +35,15 @@ function benchmark_config(
     blend_axes::Vector{Symbol}=[:constant], fused_anchor::Bool=false,
     fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
     fy4b::Bool=true, fy4b_file::Union{Nothing,String}=nothing, fy4b_qm::Bool=false,
+    fy4b_qm_adaptive::Bool=false, fy4b_qm_fusion::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
     fy4b_file === nothing || fy4b || throw(ArgumentError("--fy4b-file needs --with-fy4b"))
     fy4b_qm && fy4b_file === nothing && throw(ArgumentError(
         "--fy4b-qm needs --fy4b-file: it reads the offset grid written beside a rebuilt series",
+    ))
+    (fy4b_qm_adaptive || fy4b_qm_fusion) && !fy4b_qm && throw(ArgumentError(
+        "--fy4b-qm-adaptive and --fy4b-qm-fusion change FY4B_QM, which needs --fy4b-qm",
     ))
     nested_covariates && legacy_dem && throw(ArgumentError(
         "--nested-covariates only applies to the joint-covariate path, not --legacy-dem",
@@ -87,10 +91,12 @@ function benchmark_config(
             (fused_anchor_lagnbr ? "_fusedlagnbr" : "") *
             (stacked_blend ? "_stackblend" : "") *
             # A rebuilt FY4B series is named after its variant (`fy4b_w3_h0.csv` -> `_fy4bw3h0`),
-            # and the per-fold calibrated product adds `_fy4bqm`.
+            # and the per-fold calibrated product adds `_fy4bqm`, then its options.
             (fy4b_file === nothing ? "" :
                 "_" * replace(splitext(basename(fy4b_file))[1], "_" => "")) *
             (fy4b_qm ? "_fy4bqm" : "") *
+            (fy4b_qm_adaptive ? "_fy4bqmadapt" : "") *
+            (fy4b_qm_fusion ? "_qmfusion" : "") *
             # Before `_gpmuncal`, which the report scripts detect with `endswith`.
             (fy4b ? "" : "_nofy4b") *
             (gpm_uncal ? "_gpmuncal" : "") *
@@ -265,6 +271,8 @@ function benchmark_config(
             fused_anchor_lagnbr ? [:ols_lagnbr] : Symbol[],
         ),
         fy4b_qm_grid=fy4b_qm ? joinpath(dirname(fy4b_file), "fy4b_offset_grid.nc") : nothing,
+        fy4b_qm_adaptive=fy4b_qm_adaptive,
+        fy4b_qm_fusion=fy4b_qm_fusion,
         # The joint path without nested selection reads a full-data spec, which the config
         # validator refuses unless the run admits it is exploratory. --no-nested-covariates is
         # exactly that admission, so it is the only way this turns on.
@@ -447,10 +455,19 @@ function main(args=ARGS)
     # every fold on training stations only (`fy4b_qm_shift_selection.csv`, `fy4b_qm_maps.csv`).
     # Needs --fy4b-file, beside which the offset grid lives. See `SatelliteCalibration`.
     fy4b_qm = "--fy4b-qm" in args
+    # With --fy4b-qm: apply each season-by-regime map only as strongly as the fold's training
+    # gauges support, down to none (`strength` in `fy4b_qm_maps.csv`). Changes FY4B_QM's rows.
+    fy4b_qm_adaptive = "--fy4b-qm-adaptive" in args
+    # With --fy4b-qm: the fused anchors (MERGED_*) and the agreement-envelope bands take each
+    # fold's FY4B_QM in place of the plain FY4B, so the fusion sees the calibrated product. Changes
+    # those products' rows and every blend row by design; not with --fused-anchor-lagnbr or
+    # --stacked-blend, whose designs are built once from the plain sources.
+    fy4b_qm_fusion = "--fy4b-qm-fusion" in args
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
-        fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm)
+        fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm,
+        fy4b_qm_adaptive, fy4b_qm_fusion)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -476,6 +493,8 @@ function main(args=ARGS)
         "fy4b=$fy4b, " *
         (fy4b_file === nothing ? "" : "fy4b_file=$fy4b_file, ") *
         (fy4b_qm ? "fy4b_qm=true, " : "") *
+        (fy4b_qm_adaptive ? "fy4b_qm_adaptive=true, " : "") *
+        (fy4b_qm_fusion ? "fy4b_qm_fusion=true, " : "") *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
     println("Finished: $(nrow(result.metrics)) metric rows, $(nrow(result.scans)) scan rows")

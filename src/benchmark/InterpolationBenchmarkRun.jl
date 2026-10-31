@@ -69,6 +69,17 @@ function _prepare_fy4b_calibration!(cfg::InterpolationBenchmarkConfig, ids, prod
         cache=Dict{Int,Matrix{Float64}}())
 end
 
+"""
+`sources` (named by `names`) as one fold feeds them to a fused anchor or the blend bands: as they
+are, or under `fy4b_qm_fusion` with FY4B swapped for that fold's calibrated anchor.
+"""
+function _fold_sources(cfg::InterpolationBenchmarkConfig, names, sources, fold_calibration, fold)
+    cfg.fy4b_qm_fusion || return sources
+    swapped = copy(sources)
+    swapped[something(findfirst(==("FY4B"), names))] = first(fold_calibration[fold])
+    return swapped
+end
+
 function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     mkpath(cfg.mger.outdir)
     # Read before any work: the code that runs is the code checked out now, not at the end.
@@ -97,6 +108,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     # are built once here rather than per fold. The constant axis keeps its own code path in
     # `_run_fold_blend!` so that turning another axis on cannot perturb what it reports.
     blend_bands = Dict{Symbol,Matrix{Int}}()
+    band_sources = Matrix{Float64}[]
     if cfg.satellite_wet_blend
         band_sources = [Matrix{Float64}(product_data[name].Y_sat) for name in source_products]
         for axis in cfg.blend_axes
@@ -158,6 +170,29 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
             )
             _write_split(joinpath(scheme_dir, "split_common.csv"), ids, folds, scheme_symbol)
             id_map = Dict(id => index for (index, id) in enumerate(ids))
+            # A fold's calibrated FY4B depends only on its training stations, so it is built once
+            # per fold here: for FY4B_QM itself and, under `fy4b_qm_fusion`, for the fused anchors
+            # and blend bands it feeds.
+            fold_calibration = fy4b_calibration === nothing ? nothing : map(1:cfg.k) do fold
+                _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+                calibrate_fold(
+                    fy4b_calibration.grid, fy4b_calibration.sums,
+                    product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                    fy4b_calibration.regime_of_time, fy4b_calibration.cells;
+                    cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                    adaptive=cfg.fy4b_qm_adaptive,
+                )
+            end
+            fold_bands = if cfg.fy4b_qm_fusion && !isempty(blend_bands)
+                map(1:cfg.k) do fold
+                    sources = _fold_sources(cfg, source_products, band_sources, fold_calibration, fold)
+                    Dict(axis => blend_band_matrix(
+                        axis, first(sources), sources, cfg.mger.rain_threshold,
+                    ) for axis in keys(blend_bands))
+                end
+            else
+                nothing
+            end
 
             for product in products
                 data = product_data[product]
@@ -180,12 +215,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                             _fold_station_indices(folds, id_map, cfg.k, fold)
                         # Shift and map fitted on the training stations, applied everywhere, for
                         # the same reason as the fused anchors below.
-                        fold_sat, shift_rows, map_rows = calibrate_fold(
-                            fy4b_calibration.grid, fy4b_calibration.sums, y_obs,
-                            calibration_train_idx, fy4b_calibration.regimes,
-                            fy4b_calibration.regime_of_time, fy4b_calibration.cells;
-                            cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
-                        )
+                        fold_sat, shift_rows, map_rows = fold_calibration[fold]
                         predictions["raw"][calibration_val_idx, :] =
                             fold_sat[calibration_val_idx, :]
                         context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
@@ -221,13 +251,16 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                     elseif fusion !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
+                        sources = _fold_sources(
+                            cfg, fusion.source_names, fusion.sources, fold_calibration, fold,
+                        )
                         coefficients, used, fell_back = fusion_coefficients(
-                            fusion.variant, y_obs, fusion.sources, fusion_train_idx,
+                            fusion.variant, y_obs, sources, fusion_train_idx,
                         )
                         # Fitted on the training stations, applied everywhere: the fold's own
                         # training rows need the same anchor its held-out rows get, or the
                         # residual target would mean two different things inside one fit.
-                        fold_sat = apply_satellite_fusion(fusion.sources, coefficients)
+                        fold_sat = apply_satellite_fusion(sources, coefficients)
                         predictions["raw"][fusion_val_idx, :] = fold_sat[fusion_val_idx, :]
                         push!(fused_anchor_rows, merge(
                             (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
@@ -243,7 +276,8 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         cfg, fold, folds, id_map, ids, products, product,
                         data, lonlat, y_obs, fold_sat, terrain, joint_inputs, nested_joint,
                         scheme, scheme_symbol, repeat_index, repeat_seed,
-                        predictions, nearest_train_distance, blend_bands,
+                        predictions, nearest_train_distance,
+                        fold_bands === nothing ? blend_bands : fold_bands[fold],
                         dem_store, joint_store, joint_scaling_tables, joint_qc_tables,
                         all_metric_rows, all_scan_rows, run_status_rows, auto_selection_rows,
                         blend_selection_rows, hurdle_rows, selection_fallback_cells,

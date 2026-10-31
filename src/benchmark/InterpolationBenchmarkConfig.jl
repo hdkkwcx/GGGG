@@ -213,6 +213,14 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # stations alone (see `SatelliteCalibration`), next to the plain FY4B it is measured against.
     # `fy4b_hour_meta.csv` must sit beside it. Output directory suffix `_fy4bqm`.
     fy4b_qm_grid::Union{Nothing,String} = nothing
+    # Apply each season-by-regime map only as strongly as the fold's training gauges support
+    # (`SatelliteCalibration.QM_STRENGTHS`), down to the shifted series alone. Changes
+    # `FY4B_QM_PRODUCT`'s rows only. Output directory suffix `_fy4bqmadapt`.
+    fy4b_qm_adaptive::Bool = false
+    # Feed each fold's `FY4B_QM_PRODUCT` anchor, in place of the plain FY4B, to the fused anchors
+    # and the blend's non-constant bands. Changes those products' rows and every blend row by
+    # design; the products' own raw and unblended rows stay put. Output directory suffix `_qmfusion`.
+    fy4b_qm_fusion::Bool = false
     # Acknowledges that this run's numbers are not admissible as a result.
     #
     # `joint_covariates.spec_path` names a variable set and local/global role map screened over
@@ -450,6 +458,19 @@ function _validate_benchmark_config(cfg::InterpolationBenchmarkConfig, n_station
         # Same reason as the fused products: it has no file, so no fixed specification entry.
         cfg.joint_covariates === nothing || cfg.joint_selection !== nothing ||
             throw(ArgumentError("$FY4B_QM_PRODUCT needs nested per-fold covariate selection"))
+    end
+    (cfg.fy4b_qm_adaptive || cfg.fy4b_qm_fusion) && cfg.fy4b_qm_grid === nothing &&
+        throw(ArgumentError("fy4b_qm_adaptive and fy4b_qm_fusion need fy4b_qm_grid"))
+    if cfg.fy4b_qm_fusion
+        # The grouped variants and the stack build their designs and bands once from the sources,
+        # so they cannot take a source that changes with the fold.
+        any(in(GROUPED_FUSION_VARIANTS), cfg.fused_anchor_variants) && throw(ArgumentError(
+            "fy4b_qm_fusion cannot feed the grouped fusion variants $GROUPED_FUSION_VARIANTS"))
+        cfg.stacked_blend && throw(ArgumentError("fy4b_qm_fusion cannot feed the stacked blend"))
+        isempty(cfg.fused_anchor_variants) &&
+            !(cfg.satellite_wet_blend && any(!=(:constant), cfg.blend_axes)) &&
+            throw(ArgumentError("fy4b_qm_fusion needs a fused anchor or a non-constant blend " *
+                "axis to feed"))
     end
     # 0.0 is load-bearing twice over: it is the "do not blend" option, so a fold that cannot be
     # helped is not forced to blend anyway, and it is the reference `unblended_RMSE` that

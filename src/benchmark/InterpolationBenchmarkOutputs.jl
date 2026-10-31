@@ -393,6 +393,20 @@ function _write_benchmark_outputs(
             ],
         ))
     end
+    if cfg.fy4b_qm_adaptive
+        append!(scope, DataFrame(key=["fy4b_qm_adaptive"], value=[
+            "each season-by-regime map applied only as strongly as the fold's training stations " *
+            "support (strength $(join(QM_STRENGTHS, "/")) after the wet threshold, or no " *
+            "adjustment), chosen by training squared error; see strength in fy4b_qm_maps.csv",
+        ]))
+    end
+    if cfg.fy4b_qm_fusion
+        append!(scope, DataFrame(key=["fy4b_qm_fusion"], value=[
+            "the fused anchors and the blend's non-constant bands take each fold's " *
+            "$(FY4B_QM_PRODUCT) anchor in place of the plain FY4B; the products with files keep " *
+            "the raw and unblended rows of a run without this option",
+        ]))
+    end
     grouped = [v for v in sort(cfg.fused_anchor_variants) if v in GROUPED_FUSION_VARIANTS]
     if !isempty(grouped)
         append!(scope, DataFrame(
