@@ -146,8 +146,8 @@ using Main.BenchmarkDiagnostics
   never join `MASK_METHODS`. The flags themselves are documented where they are parsed in
   `scripts/run_interpolation_benchmark.jl`.
 - Two options of `FY4B_QM` change rows by design and so get their own suffix, as `--fy4b-file`
-  does. `--fy4b-qm-adaptive` (`_fy4bqmadapt`) applies each season-by-regime map only as strongly
-  as the fold's training gauges support, and changes only `FY4B_QM`'s rows. `--fy4b-qm-fusion`
+  does. `--fy4b-qm-adaptive` (`_fy4bqmadapt`) applies the season-by-regime map, month by month,
+  only as strongly as the fold's training gauges support, and changes only `FY4B_QM`'s rows. `--fy4b-qm-fusion`
   (`_qmfusion`) feeds each fold's `FY4B_QM` to the fused anchors and the agreement bands instead
   of the plain FY4B, so `MERGED_*` and every blend row move; the real products' raw and
   unblended rows do not.

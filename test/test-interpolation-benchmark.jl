@@ -1872,7 +1872,9 @@ end
         @test all(maps.pool .== "pooled")
         qm_scope = CSV.read(joinpath(outdir_qm, "benchmark_scope.csv"), DataFrame)
         @test "fy4b_qm" in qm_scope.key
-        @test all(maps.strength .== 1.0) && all(maps.threshold_applied)
+        @test !("strength" in names(maps))
+        strengths = CSV.read(joinpath(outdir_qm, "fy4b_qm_strengths.csv"), DataFrame)
+        @test all(strengths.strength .== 1.0) && all(strengths.threshold_applied)
 
         # `fy4b_qm_fusion`: the fused anchors and the agreement bands take each fold's FY4B_QM.
         # Against the same run without it, the merged products move, while every real product's
@@ -1909,10 +1911,13 @@ end
         fed_betas = CSV.read(joinpath(outdir_fed, "fused_anchor_selection.csv"), DataFrame)
         plain_betas = CSV.read(joinpath(temp_dir, "qm_plain", "fused_anchor_selection.csv"), DataFrame)
         @test fed_betas.beta_fy4b != plain_betas.beta_fy4b
-        fed_maps = CSV.read(joinpath(outdir_fed, "fy4b_qm_maps.csv"), DataFrame)
-        @test all(in(QM_STRENGTHS), fed_maps.strength)
-        @test all(fed_maps.train_rmse_chosen .<= min.(fed_maps.train_rmse_none,
-            fed_maps.train_rmse_full) .+ 1e-12)
+        # One strength per fold, regime and month, chosen on the training stations.
+        fed_strengths = CSV.read(joinpath(outdir_fed, "fy4b_qm_strengths.csv"), DataFrame)
+        @test nrow(fed_strengths) == 3 * length(unique(zip(
+            [h <= 4 ? 1 : 2 for h in eachindex(times)], Dates.yearmonth.(times))))
+        @test all(in(QM_STRENGTHS), fed_strengths.strength)
+        @test all(fed_strengths.train_rmse_chosen .<= min.(fed_strengths.train_rmse_none,
+            fed_strengths.train_rmse_full) .+ 1e-12)
         # Refused where it cannot feed anything, or feeds a design built once from the sources.
         base = fusion_cfg(outdir_fed; fusion=true)
         refuse(; kwargs...) = @test_throws ArgumentError _validate_benchmark_config(

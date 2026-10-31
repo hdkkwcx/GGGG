@@ -120,6 +120,18 @@ end
     scrambled = copy(truth)
     scrambled[8:10, :] .= 100.0
     @test choose_strength(scrambled, unrelated, maps, train, cells)[3].candidate == choice[3].candidate
+    # The choice can be finer than the map: one season map, two months. In the first the
+    # satellite is the gauges' amounts doubled and the map helps; in the second it is unrelated
+    # rain and the map hurts. A per-month choice keeps the first and holds back on the second.
+    half = n_time ÷ 2
+    mixed = hcat(scaled[:, 1:half], unrelated[:, (half + 1):end])
+    months = [t <= half ? 1 : 2 for t in 1:n_time]
+    season_maps = fit_quantile_map(truth, mixed, train, cells; min_wet=100)
+    by_month = choose_strength(truth, mixed, season_maps, train, cells, months)
+    @test sort(collect(keys(by_month))) == [1, 2]
+    @test by_month[1].candidate == full
+    @test by_month[2].candidate < full
+    @test by_month[1].n_pairs + by_month[2].n_pairs == length(train) * n_time
     # Every candidate is monotone in the satellite value.
     m = maps[3]
     xs = collect(0.0:0.01:12.0)
@@ -137,7 +149,7 @@ end
         sums = shift_sums(grid, s.rain, regime_of_time, 2)
         cells = calibration_cells(s.times, regime_of_time)
         cache = Dict{Int,Matrix{Float64}}()
-        anchor, shift_rows, map_rows = calibrate_fold(
+        anchor, shift_rows, map_rows, strength_rows = calibrate_fold(
             grid, sums, s.rain, 1:6, labels, regime_of_time, cells; cache)
         @test size(anchor) == size(s.rain)
         @test [(row.dx, row.dy) for row in shift_rows] == collect(s.true_shift)
@@ -153,11 +165,19 @@ end
         end
         plain = apply_quantile_map(fit_quantile_map(s.rain, shifted, 1:6, cells), shifted, cells)
         @test isequal(anchor, plain)
-        @test all(row.strength == 1.0 && row.threshold_applied for row in map_rows)
-        @test all(row.train_rmse_chosen == row.train_rmse_full for row in map_rows)
-        adapted, _, adapted_rows = calibrate_fold(
-            grid, sums, s.rain, 1:6, labels, regime_of_time, cells; cache, adaptive=true)
+        @test !hasproperty(first(map_rows), :strength)
+        @test all(row.strength == 1.0 && row.threshold_applied for row in strength_rows)
+        @test all(row.train_rmse_chosen == row.train_rmse_full for row in strength_rows)
+        # Adaptive, with the strength chosen per month cell as the benchmark does.
+        month_labels, months = strength_cells(s.times, regime_of_time)
+        @test month_labels == ["2022-06", "2022-06"]           # one month, split by the regimes
+        adapted, _, adapted_maps, adapted_rows = calibrate_fold(
+            grid, sums, s.rain, 1:6, labels, regime_of_time, cells; cache, adaptive=true,
+            choice_of_time=months, choice_labels=month_labels)
         @test size(adapted) == size(anchor)
+        @test adapted_maps == map_rows
+        @test [(row.regime, row.cell) for row in adapted_rows] ==
+            [(labels[1], "2022-06"), (labels[2], "2022-06")]
         @test all(row.strength in QM_STRENGTHS for row in adapted_rows)
         @test all(row.train_rmse_chosen <= min(row.train_rmse_none, row.train_rmse_full)
                   for row in adapted_rows)

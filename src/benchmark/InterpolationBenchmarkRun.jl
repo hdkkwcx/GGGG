@@ -64,8 +64,9 @@ function _prepare_fy4b_calibration!(cfg::InterpolationBenchmarkConfig, ids, prod
     product_data[FY4B_QM_PRODUCT] = (;
         source.times, source.ids, source.Y_obs, Y_sat=fill(NaN, size(source.Y_obs)),
     )
+    month_labels, month_of_time = strength_cells(source.times, regime_of_time)
     return (; grid, sums, regimes, regime_of_time,
-        cells=calibration_cells(source.times, regime_of_time),
+        cells=calibration_cells(source.times, regime_of_time), month_labels, month_of_time,
         cache=Dict{Int,Matrix{Float64}}())
 end
 
@@ -143,6 +144,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     fused_grouped_rows = NamedTuple[]
     fy4b_shift_rows = NamedTuple[]
     fy4b_map_rows = NamedTuple[]
+    fy4b_strength_rows = NamedTuple[]
     hurdle_rows = NamedTuple[]
     # Cells where the fold was too small for an inner selection split and fell back to
     # leave-one-out. Reported in `benchmark_scope.csv` so the fallback is never silent.
@@ -180,7 +182,8 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                     product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
                     fy4b_calibration.regime_of_time, fy4b_calibration.cells;
                     cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
-                    adaptive=cfg.fy4b_qm_adaptive,
+                    adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
+                    choice_labels=fy4b_calibration.month_labels,
                 )
             end
             fold_bands = if cfg.fy4b_qm_fusion && !isempty(blend_bands)
@@ -215,13 +218,15 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                             _fold_station_indices(folds, id_map, cfg.k, fold)
                         # Shift and map fitted on the training stations, applied everywhere, for
                         # the same reason as the fused anchors below.
-                        fold_sat, shift_rows, map_rows = fold_calibration[fold]
+                        fold_sat, shift_rows, map_rows, strength_rows = fold_calibration[fold]
                         predictions["raw"][calibration_val_idx, :] =
                             fold_sat[calibration_val_idx, :]
                         context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
                             n_train_station=length(calibration_train_idx))
                         append!(fy4b_shift_rows, [merge(context, row) for row in shift_rows])
                         append!(fy4b_map_rows, [merge(context, row) for row in map_rows])
+                        append!(fy4b_strength_rows,
+                            [merge(context, row) for row in strength_rows])
                     elseif fusion !== nothing && fusion.design !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
@@ -340,6 +345,11 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     # One row per fold x season x regime: the wet threshold and the map's pool and anchor knots.
     isempty(fy4b_map_rows) ||
         CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_maps.csv"), DataFrame(fy4b_map_rows))
+    # One row per fold x regime x month: how strongly the map was applied, and the training error
+    # with no adjustment, with the full map and with what was applied.
+    isempty(fy4b_strength_rows) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_strengths.csv"),
+            DataFrame(fy4b_strength_rows))
 
     return _write_benchmark_outputs(
         cfg, products, seeds, nested_joint, joint_inputs,

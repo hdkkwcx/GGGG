@@ -15,8 +15,9 @@ two faults that no gauge-free step can remove:
   false rain in dry hours. Per season and regime, a threshold sets FY4B's wet frequency to the
   training gauges' and a quantile map gives its wet amounts their distribution. Above the top
   knot values are scaled by the top knots' ratio, which keeps the product's 20 mm/h cap a lower
-  bound instead of a ceiling. The full map raised July and August's error, so an `adaptive`
-  calibration applies each cell's map only as strongly as its training gauges support.
+  bound instead of a ceiling. The full map helped June but raised July and August's error, so an
+  `adaptive` calibration applies the map, month by month, only as strongly as the training
+  gauges support.
 
 Leakage is the point of the `train` arguments, as in `SatelliteFusion`: the benchmark passes a
 fold's training stations, applies the result to every station, and so no held-out gauge shapes
@@ -28,7 +29,7 @@ module SatelliteCalibration
 using CSV, DataFrames, Dates, NCDatasets, Statistics
 
 export OffsetGrid, open_offset_grid, read_shift, shift_sums, choose_shift
-export product_regimes, calibration_cells, fit_quantile_map, apply_quantile_map
+export product_regimes, calibration_cells, strength_cells, fit_quantile_map, apply_quantile_map
 export QM_STRENGTHS, choose_strength, calibrate_fold
 
 """Quantile knots of the map; the outermost 0.5% on each side is left to the tail rules."""
@@ -68,6 +69,21 @@ end
 """Season-by-regime cell of every time: `(regime - 1) * 4 + season`."""
 calibration_cells(times, regime_of_time) =
     [(regime - 1) * 4 + season_index(t) for (t, regime) in zip(times, regime_of_time)]
+
+"""
+Month cell of every time, as `(labels, cell_of_time)`: one per regime and calendar month of one
+year, labelled by the month (`"2022-07"`); a month split between two regimes gets two cells.
+
+An adaptive map chooses its strength per month cell, finer than the season cell its map is fitted
+on: in one summer the full map helped June and hurt July and August.
+"""
+function strength_cells(times::AbstractVector{DateTime}, regime_of_time::AbstractVector{<:Integer})
+    keys = [(regime, year(t), month(t)) for (t, regime) in zip(times, regime_of_time)]
+    unique_keys = sort(unique(keys))
+    index = Dict(key => i for (i, key) in enumerate(unique_keys))
+    labels = ["$(y)-$(lpad(m, 2, '0'))" for (_, y, m) in unique_keys]
+    return labels, [index[key] for key in keys]
+end
 
 """
 The rebuild's shifted grid, aligned to a benchmark's stations and hours.
@@ -252,27 +268,32 @@ function _adjusted_value(x, mapped, tau, candidate)
 end
 
 """
-Per cell, the candidate (see `QM_STRENGTHS`) with the lowest squared error on the `train`
-stations, as `Dict(cell => (; candidate, rmse_none, rmse_full, rmse_chosen))`.
+Per choice cell, the candidate (see `QM_STRENGTHS`) with the lowest squared error on the `train`
+stations, as `Dict(choice => (; candidate, n_pairs, rmse_none, rmse_full, rmse_chosen))`.
 
-The full map restores the gauges' distribution, which raises the error wherever FY4B places rain
-badly (July and August, where it put the gauge tail onto misplaced convective cells). A tie goes
-to the smaller adjustment, and a cell with no training pairs keeps the full map.
+Each pair is adjusted with the map of its own cell (`cell_of_time`) and scored in its choice cell
+(`choice_of_time`), so the choice can be finer than the map: per month (`strength_cells`) while
+the map is per season. The full map restores the gauges' distribution, which raises the error
+wherever FY4B places rain badly (July and August, where it put the gauge tail onto misplaced
+convective cells). A tie goes to the smaller adjustment, and a cell with no training pairs keeps
+the full map.
 """
 function choose_strength(y_obs::AbstractMatrix{<:Real}, y_sat::AbstractMatrix{<:Real}, maps,
-                         train::AbstractVector{<:Integer}, cell_of_time::AbstractVector{<:Integer})
+                         train::AbstractVector{<:Integer}, cell_of_time::AbstractVector{<:Integer},
+                         choice_of_time::AbstractVector{<:Integer}=cell_of_time)
     n_candidate = length(QM_STRENGTHS) + 1
-    sse = Dict(cell => zeros(n_candidate) for cell in keys(maps))
-    n = Dict(cell => 0 for cell in keys(maps))
+    choices = unique(choice_of_time)
+    sse = Dict(choice => zeros(n_candidate) for choice in choices)
+    n = Dict(choice => 0 for choice in choices)
     for time in axes(y_sat, 2)
-        cell = cell_of_time[time]
-        m = maps[cell]
-        s = sse[cell]
+        choice = choice_of_time[time]
+        m = maps[cell_of_time[time]]
+        s = sse[choice]
         for station in train
             x = y_sat[station, time]
             y = y_obs[station, time]
             (isnan(x) || isnan(y)) && continue
-            n[cell] += 1
+            n[choice] += 1
             mapped = _map_value(m, x)
             for c in 0:(n_candidate - 1)
                 s[c + 1] += (_adjusted_value(x, mapped, m.tau, c) - y)^2
@@ -280,30 +301,33 @@ function choose_strength(y_obs::AbstractMatrix{<:Real}, y_sat::AbstractMatrix{<:
         end
     end
     full = length(QM_STRENGTHS)
-    return Dict(map(collect(keys(maps))) do cell
-        rmse = sqrt.(sse[cell] ./ n[cell])
-        candidate = n[cell] == 0 ? full : argmin(rmse) - 1
-        cell => (; candidate, rmse_none=rmse[1], rmse_full=rmse[end],
+    return Dict(map(choices) do choice
+        rmse = sqrt.(sse[choice] ./ n[choice])
+        candidate = n[choice] == 0 ? full : argmin(rmse) - 1
+        choice => (; candidate, n_pairs=n[choice], rmse_none=rmse[1], rmse_full=rmse[end],
             rmse_chosen=rmse[candidate + 1])
     end)
 end
 
 """
-One fold's calibrated anchor for every station, as `(anchor, shift_rows, map_rows)`.
+One fold's calibrated anchor for every station, as `(anchor, shift_rows, map_rows, strength_rows)`.
 
 Per regime, the shift is chosen on `train` (`choose_shift`) and that shift's series is used for
 the regime's hours at every station; the quantile map is then fitted on `train` and applied
 everywhere. `cache` keeps the shifts already read, since folds tend to agree.
 
-`adaptive` applies each cell's map only as strongly as `choose_strength` finds best on `train`,
-down to leaving the shifted series alone; without it every cell gets the full map. Either way the
-map rows report the training error of no adjustment, of the full map and of what was applied.
+`adaptive` applies the map only as strongly as `choose_strength` finds best on `train` in each
+choice cell (`choice_of_time`, labelled by `choice_labels`; the benchmark passes month cells from
+`strength_cells`), down to leaving the shifted series alone; without it every hour gets the full
+map. Either way the strength rows report each choice cell's training error with no adjustment,
+with the full map and with what was applied.
 """
 function calibrate_fold(grid::OffsetGrid, sums, y_obs::AbstractMatrix{<:Real},
                         train::AbstractVector{<:Integer}, regimes::AbstractVector{<:AbstractString},
                         regime_of_time::AbstractVector{<:Integer}, cell_of_time;
                         cache::AbstractDict=Dict{Int,Matrix{Float64}}(), wet::Real=0.1,
-                        adaptive::Bool=false)
+                        adaptive::Bool=false, choice_of_time::AbstractVector{<:Integer}=cell_of_time,
+                        choice_labels=nothing)
     shifted = fill(NaN, size(y_obs))
     shift_rows = NamedTuple[]
     for (g, label) in enumerate(regimes)
@@ -317,25 +341,31 @@ function calibrate_fold(grid::OffsetGrid, sums, y_obs::AbstractMatrix{<:Real},
             n_hours=length(cols)))
     end
     maps = fit_quantile_map(y_obs, shifted, train, cell_of_time; wet)
-    strengths = choose_strength(y_obs, shifted, maps, train, cell_of_time)
-    full = length(QM_STRENGTHS)
-    applied(cell) = adaptive ? strengths[cell].candidate : full
     map_rows = [(; regime=regimes[(cell - 1) ÷ 4 + 1], season=SEASONS[(cell - 1) % 4 + 1],
         pool=m.pool, tau=m.tau, n_pairs=m.n_pairs, n_wet_sat=m.n_wet_sat, n_wet_obs=m.n_wet_obs,
-        q50_sat=m.qx[100], q50_obs=m.qy[100], q99_sat=m.qx[198], q99_obs=m.qy[198],
-        threshold_applied=applied(cell) >= 1,
-        strength=applied(cell) == 0 ? 0.0 : QM_STRENGTHS[applied(cell)],
-        train_rmse_none=strengths[cell].rmse_none, train_rmse_full=strengths[cell].rmse_full,
-        train_rmse_chosen=adaptive ? strengths[cell].rmse_chosen : strengths[cell].rmse_full)
+        q50_sat=m.qx[100], q50_obs=m.qy[100], q99_sat=m.qx[198], q99_obs=m.qy[198])
         for (cell, m) in sort(collect(maps); by=first)]
-    adaptive || return apply_quantile_map(maps, shifted, cell_of_time), shift_rows, map_rows
+    strengths = choose_strength(y_obs, shifted, maps, train, cell_of_time, choice_of_time)
+    full = length(QM_STRENGTHS)
+    applied(choice) = adaptive ? strengths[choice].candidate : full
+    strength_rows = map(sort(collect(keys(strengths)))) do choice
+        first_time = findfirst(==(choice), choice_of_time)
+        s = strengths[choice]
+        (; regime=regimes[regime_of_time[first_time]],
+            cell=choice_labels === nothing ? SEASONS[(choice - 1) % 4 + 1] : choice_labels[choice],
+            n_pairs=s.n_pairs, threshold_applied=applied(choice) >= 1,
+            strength=applied(choice) == 0 ? 0.0 : QM_STRENGTHS[applied(choice)],
+            train_rmse_none=s.rmse_none, train_rmse_full=s.rmse_full,
+            train_rmse_chosen=adaptive ? s.rmse_chosen : s.rmse_full)
+    end
+    adaptive || return apply_quantile_map(maps, shifted, cell_of_time), shift_rows, map_rows,
+        strength_rows
     anchor = [begin
-            cell = cell_of_time[time]
-            m = maps[cell]
+            m = maps[cell_of_time[time]]
             x = shifted[station, time]
-            _adjusted_value(x, _map_value(m, x), m.tau, strengths[cell].candidate)
+            _adjusted_value(x, _map_value(m, x), m.tau, strengths[choice_of_time[time]].candidate)
         end for station in axes(shifted, 1), time in axes(shifted, 2)]
-    return anchor, shift_rows, map_rows
+    return anchor, shift_rows, map_rows, strength_rows
 end
 
 end # module

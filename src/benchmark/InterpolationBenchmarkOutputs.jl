@@ -395,9 +395,10 @@ function _write_benchmark_outputs(
     end
     if cfg.fy4b_qm_adaptive
         append!(scope, DataFrame(key=["fy4b_qm_adaptive"], value=[
-            "each season-by-regime map applied only as strongly as the fold's training stations " *
-            "support (strength $(join(QM_STRENGTHS, "/")) after the wet threshold, or no " *
-            "adjustment), chosen by training squared error; see strength in fy4b_qm_maps.csv",
+            "each regime's season map applied, month by month (regime x year-month), only as " *
+            "strongly as the fold's training stations support (strength " *
+            "$(join(QM_STRENGTHS, "/")) after the wet threshold, or no adjustment), chosen by " *
+            "training squared error; see fy4b_qm_strengths.csv",
         ]))
     end
     if cfg.fy4b_qm_fusion

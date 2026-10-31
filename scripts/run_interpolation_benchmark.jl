@@ -455,8 +455,9 @@ function main(args=ARGS)
     # every fold on training stations only (`fy4b_qm_shift_selection.csv`, `fy4b_qm_maps.csv`).
     # Needs --fy4b-file, beside which the offset grid lives. See `SatelliteCalibration`.
     fy4b_qm = "--fy4b-qm" in args
-    # With --fy4b-qm: apply each season-by-regime map only as strongly as the fold's training
-    # gauges support, down to none (`strength` in `fy4b_qm_maps.csv`). Changes FY4B_QM's rows.
+    # With --fy4b-qm: apply the season-by-regime map, month by month, only as strongly as the
+    # fold's training gauges support, down to none (`fy4b_qm_strengths.csv`). Changes FY4B_QM's
+    # rows.
     fy4b_qm_adaptive = "--fy4b-qm-adaptive" in args
     # With --fy4b-qm: the fused anchors (MERGED_*) and the agreement-envelope bands take each
     # fold's FY4B_QM in place of the plain FY4B, so the fusion sees the calibrated product. Changes

@@ -213,9 +213,9 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # stations alone (see `SatelliteCalibration`), next to the plain FY4B it is measured against.
     # `fy4b_hour_meta.csv` must sit beside it. Output directory suffix `_fy4bqm`.
     fy4b_qm_grid::Union{Nothing,String} = nothing
-    # Apply each season-by-regime map only as strongly as the fold's training gauges support
-    # (`SatelliteCalibration.QM_STRENGTHS`), down to the shifted series alone. Changes
-    # `FY4B_QM_PRODUCT`'s rows only. Output directory suffix `_fy4bqmadapt`.
+    # Apply the season-by-regime map, month by month, only as strongly as the fold's training
+    # gauges support (`SatelliteCalibration.QM_STRENGTHS`), down to the shifted series alone.
+    # Changes `FY4B_QM_PRODUCT`'s rows only. Output directory suffix `_fy4bqmadapt`.
     fy4b_qm_adaptive::Bool = false
     # Feed each fold's `FY4B_QM_PRODUCT` anchor, in place of the plain FY4B, to the fused anchors
     # and the blend's non-constant bands. Changes those products' rows and every blend row by
