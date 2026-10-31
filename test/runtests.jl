@@ -34,6 +34,7 @@ try
   include("test-satellite-temporal-evaluation.jl")
   include("test-no-rain-evaluation.jl")
   include("test-grid-support-diagnostics.jl")
+  include("test-fy4b-rebuild.jl")
   include("test-run-provenance.jl")
   include("test-imerg-uncal-stations.jl")
 finally

@@ -4,7 +4,8 @@ module FY4BPreprocessing
 using NCDatasets, CSV, DataFrames, Dates
 using Main.TableIO: write_csv_atomic
 
-export aggregate_fy4b_hourly, build_hourly_qc, find_nc_files, parse_nc_filename
+export aggregate_fy4b_hourly, aggregate_fy4b_variants, build_hourly_qc, find_nc_files,
+    parse_nc_filename
 
 # =========================
 # FY4B Aggregation: 15min NetCDF -> Hourly CSV
@@ -32,13 +33,18 @@ const STATION_TIME_OFFSET = Hour(8) # FY4B filenames are UTC; station timestamps
 const SAT_DISTANCE = SAT_HEIGHT - EARTH_RADIUS  # Distance from surface to satellite
 
 """
-    latlon_to_scan_angles(lat, lon, sat_lon=DEFAULT_SAT_LON)
+    latlon_to_scan_angles(lat, lon, sat_lon=DEFAULT_SAT_LON; height=0.0)
 
 Convert latitude/longitude to scan angles (x, y in radians) for geostationary projection.
 Uses standard geostationary projection formula (similar to GOES-R ABI).
 Returns: (scan_x, scan_y) in radians, or (NaN, NaN) if not visible.
+
+`height` (metres) lifts the point along the local vertical before projecting, which gives where
+a cloud top at that height over the spot appears in the image: the parallax-displaced position.
+Over Hubei a 10 km top is displaced about 10 km toward the NW from 133E and about 8 km toward
+the N from 105E. `height == 0` is the surface point, computed exactly as before.
 """
-function latlon_to_scan_angles(lat, lon, sat_lon=DEFAULT_SAT_LON)
+function latlon_to_scan_angles(lat, lon, sat_lon=DEFAULT_SAT_LON; height=0.0)
     # Convert to radians
     φ = deg2rad(lat)
     λ = deg2rad(lon - sat_lon)  # Relative longitude
@@ -59,6 +65,13 @@ function latlon_to_scan_angles(lat, lon, sat_lon=DEFAULT_SAT_LON)
     xs = rc * cos(φ_c) * cos(λ)
     ys = rc * cos(φ_c) * sin(λ)
     zs = rc * sin(φ_c)
+
+    # Lift along the geodetic normal; skipped at zero so the surface path stays bit-identical.
+    if height != 0
+        xs += height * cos(φ) * cos(λ)
+        ys += height * cos(φ) * sin(λ)
+        zs += height * sin(φ)
+    end
 
     # Visibility check: point must be on Earth side facing the satellite
     # The satellite is at (SAT_HEIGHT, 0, 0) in this coordinate system
@@ -180,14 +193,16 @@ end
 aligned_hour_end(hour_start::DateTime) = hour_start + Hour(1) + STATION_TIME_OFFSET
 
 """
-    latlon_to_xy(lat, lon, sat_lon=DEFAULT_SAT_LON)
+    latlon_to_xy(lat, lon, sat_lon=DEFAULT_SAT_LON; height=0.0)
 
 Convert latitude/longitude to FY4B fixed grid x/y coordinates.
 Uses geostationary projection formulas.
 Returns: (x, y) in grid coordinates (0-based index)
+
+`height` is the cloud-top height (metres) of the parallax correction; see `latlon_to_scan_angles`.
 """
-function latlon_to_xy(lat, lon, sat_lon=DEFAULT_SAT_LON)
-    scan_x, scan_y = latlon_to_scan_angles(lat, lon, sat_lon)
+function latlon_to_xy(lat, lon, sat_lon=DEFAULT_SAT_LON; height=0.0)
+    scan_x, scan_y = latlon_to_scan_angles(lat, lon, sat_lon; height)
     return scan_angles_to_grid(scan_x, scan_y)
 end
 
@@ -344,6 +359,243 @@ function aggregate_hourly(file_groups, stations_df)
     return results
 end
 
+# ---------------------------------------------------------------------------------------------
+# Rebuild variants: a neighbourhood window and a parallax shift, sampled in one pass. None of the
+# choices is tuned on gauges, so the rebuilt series can enter cross-validation without leaking.
+# ---------------------------------------------------------------------------------------------
+
+"""The 15-minute product's ceiling: it declares `valid_range = [0, 20]` mm/h."""
+const FY4B_CAP = 20.0
+
+"""
+`true` when a raw value and its quality flag pass `extract_precipitation`'s rule. The `> 30`
+bound is what drops the 65533 and 65535 sentinels: the files name their fill attribute
+`FillValue`, not CF `_FillValue`, so nothing masks them on read, and valid values stop at 20.
+"""
+accepts_value(value, quality) =
+    !ismissing(value) && !ismissing(quality) && value != Float32(65534.0) &&
+    value >= 0 && value <= 30 && Int(quality) < 2
+
+"""
+Value of the `window`×`window` box centred on disk pixel `(ix, iy)` (1-based), as
+`(value, cap_fraction)`; `block[1, 1]` is disk pixel `(x0, y0)` and `quality` its DQF block.
+
+`window == 1` is the centre pixel exactly as `extract_precipitation` reads it. A wider window
+averages the accepted pixels and needs more than half of them (5 of 9 for 3×3), a rule fixed in
+advance rather than tuned; otherwise it is `NaN`. `cap_fraction` is the share of accepted pixels
+at `FY4B_CAP`, where the product truncates heavier rain.
+"""
+function _window_value(block, quality, ix, iy, window; x0=1, y0=1)
+    half = window ÷ 2
+    total = 0.0
+    accepted = 0
+    capped = 0
+    for jy in (iy - half):(iy + half), jx in (ix - half):(ix + half)
+        bx = jx - x0 + 1
+        by = jy - y0 + 1
+        (1 <= bx <= size(block, 1) && 1 <= by <= size(block, 2)) || continue
+        value = block[bx, by]
+        accepts_value(value, quality === nothing ? 0 : quality[bx, by]) || continue
+        total += Float64(value)
+        accepted += 1
+        Float64(value) >= FY4B_CAP && (capped += 1)
+    end
+    needed = window == 1 ? 1 : window^2 ÷ 2 + 1
+    accepted >= needed || return (NaN, NaN)
+    return (window == 1 ? total : total / accepted, capped / accepted)
+end
+
+_pixel(x, y) = isnan(x) || isnan(y) ? (0, 0) : (round(Int, x) + 1, round(Int, y) + 1)
+
+"""
+Every variant at every station from one FY4B segment, as
+`(values, cap_fraction, sat_lon, software)` with the matrices `[station, variant]`.
+
+`variants` holds `(name, window, height)`: the box size in pixels and the parallax cloud-top
+height in metres (0 = none). The file is opened once and a single block covering every needed
+pixel is read, so extra variants cost almost nothing. Grid coordinates are cached per
+`(sat_lon, height)`, the satellite longitude coming from the file as in `extract_precipitation`.
+"""
+function sample_variants(nc_file, stations_df, variants, coord_cache)
+    ds = Dataset(nc_file)
+    try
+        sat_lon = dataset_satellite_lon(ds, basename(nc_file))
+        software = string(get(ds.attrib, "Version Of Software", ""))
+        centres = map(variants) do variant
+            coords = get!(coord_cache, (sat_lon, Float64(variant.height))) do
+                [latlon_to_xy(row.lat, row.lon, sat_lon; height=variant.height)
+                 for row in eachrow(stations_df)]
+            end
+            [_pixel(x, y) for (x, y) in coords]
+        end
+        reach = maximum(variant.window ÷ 2 for variant in variants)
+        inside = [c for cs in centres for c in cs if c != (0, 0)]
+        n, nv = nrow(stations_df), length(variants)
+        values = fill(NaN, n, nv)
+        caps = fill(NaN, n, nv)
+        isempty(inside) && return values, caps, sat_lon, software
+        x1 = clamp(minimum(first, inside) - reach, 1, GRID_SIZE)
+        x2 = clamp(maximum(first, inside) + reach, 1, GRID_SIZE)
+        y1 = clamp(minimum(last, inside) - reach, 1, GRID_SIZE)
+        y2 = clamp(maximum(last, inside) + reach, 1, GRID_SIZE)
+        # NCDatasets exposes the NetCDF y/x dimensions as [x, y], as in extract_precipitation.
+        block = ds["Precipitation"][x1:x2, y1:y2]
+        quality = haskey(ds, "DQF") ? ds["DQF"][x1:x2, y1:y2] : nothing
+        for (k, variant) in enumerate(variants), i in 1:n
+            ix, iy = centres[k][i]
+            values[i, k], caps[i, k] =
+                _window_value(block, quality, ix, iy, variant.window; x0=x1, y0=y1)
+        end
+        return values, caps, sat_lon, software
+    finally
+        close(ds)
+    end
+end
+
+"""
+Hourly series for every variant from strict-complete hours, as
+`(; times, values, cap_fraction, sat_lon, software)`.
+
+`values` and `cap_fraction` map each variant name to a `[time, station]` matrix; `times` are the
+hour-ending Beijing labels of `aggregate_hourly`, and `sat_lon`/`software` describe each hour's
+first segment, from which the product regimes are read. The arithmetic is `aggregate_hourly`'s -
+the four rates summed in file order and divided by 4, one missing segment voiding the
+station-hour - so the `window == 1`, `height == 0` variant reproduces it bit for bit.
+"""
+function aggregate_hourly_variants(file_groups, stations_df, variants; progress_every::Int=500)
+    hours = sort(collect(keys(file_groups)))
+    n, nv = nrow(stations_df), length(variants)
+    values = [fill(NaN, length(hours), n) for _ in 1:nv]
+    caps = [fill(NaN, length(hours), n) for _ in 1:nv]
+    sat_lons = fill(NaN, length(hours))
+    software = fill("", length(hours))
+    coord_cache = Dict{Tuple{Float64, Float64}, Vector{Tuple{Float64, Float64}}}()
+
+    for (h, hour_start) in enumerate(hours)
+        files = file_groups[hour_start]
+        minutes = sort([minute(first(parse_nc_filename(basename(file)))) for file in files])
+        @assert length(files) == 4 && minutes == [0, 15, 30, 45] "Non-complete hour reached aggregation: $hour_start"
+        sums = zeros(n, nv)
+        cap_sums = zeros(n, nv)
+        gap = falses(n, nv)
+        for (segment, nc_file) in enumerate(files)
+            segment_values, segment_caps, sat_lon, version = try
+                sample_variants(nc_file, stations_df, variants, coord_cache)
+            catch error_value
+                error("Failed to extract $(nc_file): $(sprint(showerror, error_value))")
+            end
+            if segment == 1
+                sat_lons[h] = sat_lon
+                software[h] = version
+            end
+            for k in 1:nv, i in 1:n
+                if isnan(segment_values[i, k])
+                    gap[i, k] = true
+                else
+                    sums[i, k] += segment_values[i, k]
+                    cap_sums[i, k] += segment_caps[i, k]
+                end
+            end
+        end
+        for k in 1:nv, i in 1:n
+            gap[i, k] && continue
+            values[k][h, i] = sums[i, k] / 4.0
+            caps[k][h, i] = cap_sums[i, k] / 4.0
+        end
+        if progress_every > 0 && (h % progress_every == 0 || h == length(hours))
+            println("  Sampled $h / $(length(hours)) strict hours")
+        end
+    end
+
+    variant_names = [variant.name for variant in variants]
+    return (;
+        times=aligned_hour_end.(hours),
+        values=Dict(zip(variant_names, values)),
+        cap_fraction=Dict(zip(variant_names, caps)),
+        sat_lon=sat_lons,
+        software,
+    )
+end
+
+"""Wide `time, <station>...` table in the layout `aggregate_fy4b_hourly` writes."""
+function _wide_table(time_text, station_ids, matrix)
+    table = DataFrame(time=time_text)
+    for (column, station_id) in enumerate(station_ids)
+        table[!, station_id] = matrix[:, column]
+    end
+    return table
+end
+
+"""
+    aggregate_fy4b_variants(; kwargs...)
+
+Rebuild the hourly FY4B station series in several variants from one pass over the raw tree.
+
+Hour selection is `aggregate_fy4b_hourly`'s: strict-complete hours only, from 15-minute files.
+Writes to `outdir`:
+- `fy4b_<variant>.csv`: the wide series per variant;
+- `fy4b_<variant>_capfrac.csv`: per station-hour, the share of accepted pixels at the 20 mm/h
+  cap, so a later step can treat them as censored;
+- `fy4b_hourly_qc.csv`: the per-hour completeness audit;
+- `fy4b_hour_meta.csv`: each hour's satellite longitude and software version.
+"""
+function aggregate_fy4b_variants(;
+    data_dir::AbstractString=FY4B_DATA_DIR,
+    station_meta_file::AbstractString,
+    outdir::AbstractString,
+    variants,
+    years=2022:2024,
+    months=1:12,
+)
+    variant_names = [variant.name for variant in variants]
+    allunique(variant_names) || error("Variant names must be unique: $variant_names")
+    all(variant -> isodd(variant.window) && variant.window >= 1 && variant.height >= 0, variants) ||
+        error("Variant windows must be odd and positive, heights non-negative")
+
+    stations_df = load_stations(station_meta_file)
+    all(name -> name in names(stations_df), ["station_id", "lon", "lat"]) ||
+        error("Station metadata must contain station_id, lon, and lat columns")
+    nrow(unique(stations_df, :station_id)) == nrow(stations_df) ||
+        error("Station metadata contains duplicate station_id values")
+    println("Loaded $(nrow(stations_df)) stations; variants: $(join(variant_names, ", "))")
+
+    selected_months = normalize_month_selection(months, 1, 13)
+    file_groups = find_nc_files(data_dir; years, months=selected_months)
+    unreadable_files = find_unreadable_files(file_groups)
+    for (file, message) in sort(collect(unreadable_files); by=first)
+        @warn "Unreadable FY4B segment; treating as missing" file message
+    end
+    native_hours = find_native_hourly_times(data_dir)
+    qc_df, complete_groups = build_hourly_qc(
+        file_groups, native_hours; unreadable_files, years, months=selected_months,
+    )
+    write_csv_atomic(joinpath(outdir, "fy4b_hourly_qc.csv"), qc_df)
+    complete_count = length(complete_groups)
+    println("Strict complete hours: $complete_count of $(nrow(qc_df))")
+    complete_count > 0 || error("No strict complete FY4B hours were found; QC is in $outdir")
+
+    result = aggregate_hourly_variants(complete_groups, stations_df, variants)
+    time_text = Dates.format.(result.times, dateformat"yyyy-mm-ddTHH:MM:SS") .* "Z"
+    station_ids = string.(stations_df.station_id)
+    for name in variant_names
+        write_csv_atomic(joinpath(outdir, "fy4b_$(name).csv"),
+            _wide_table(time_text, station_ids, result.values[name]))
+        write_csv_atomic(joinpath(outdir, "fy4b_$(name)_capfrac.csv"),
+            _wide_table(time_text, station_ids, result.cap_fraction[name]))
+    end
+    write_csv_atomic(joinpath(outdir, "fy4b_hour_meta.csv"),
+        DataFrame(time=time_text, sat_lon=result.sat_lon, software=result.software))
+    println("Wrote $(length(variant_names)) variants x $complete_count hours to $outdir")
+    return (; outdir, complete_count, unreadable_files)
+end
+
+"""
+`true` for a macOS AppleDouble companion (`._<name>`), which macOS writes beside each file
+copied to a non-Apple volume such as the exFAT drive holding the raw tree. It carries the real
+file's name, so it would pass the name filter - and sort ahead of the real file.
+"""
+is_appledouble(filename) = startswith(filename, "._")
+
 """
     find_nc_files(data_dir)
 
@@ -356,6 +608,7 @@ function find_nc_files(data_dir; years=2022:2025, months=6:9)
 
     # Downloads are stored below per-year batch directories, not year/month.
     for (dir, _, files) in walkdir(data_dir), file in files
+        is_appledouble(file) && continue
         endswith(uppercase(file), ".NC") || continue
         is_15min_file(file) || continue
         start_dt, _, sat_lon = parse_nc_filename(file)
@@ -410,6 +663,7 @@ end
 function find_native_hourly_times(data_dir)
     native_hours = Set{DateTime}()
     for (dir, _, files) in walkdir(data_dir), file in files
+        is_appledouble(file) && continue
         endswith(file, ".NC") || continue
         dt_info = parse_nc_filename(file)
         dt_info === nothing && continue
