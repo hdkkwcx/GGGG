@@ -107,3 +107,25 @@ end
         end
     end
 end
+
+@testset "a broken copy sorting first does not shadow a good one" begin
+    mktempdir() do dir
+        name = "FY4B-_AGRI--_N_DISK_1050E_L2-_QPE-_MULT_NOM_20240608064500_20240608065959_4000M_V0001.NC"
+        mkpath(joinpath(dir, "a")); mkpath(joinpath(dir, "b"))
+        write(joinpath(dir, "a", name), "truncated download")             # sorts first, will not open
+        NCDataset(joinpath(dir, "b", name), "c") do ds
+            defDim(ds, "x", FY4B.GRID_SIZE); defDim(ds, "y", FY4B.GRID_SIZE)
+            defVar(ds, "Precipitation", Float32, ("x", "y"); deflatelevel=1)
+        end
+        @test FY4B.segment_problem(joinpath(dir, "a", name)) isa String
+        @test FY4B.segment_problem(joinpath(dir, "b", name)) === nothing
+        groups = FY4B.find_nc_files(dir; years=2024:2024, months=6:6)
+        @test only(groups[DateTime(2024, 6, 8, 6)]) == joinpath(dir, "b", name)
+        # With no good copy the first is still kept, so the hour is reported unreadable, not lost.
+        rm(joinpath(dir, "b", name))
+        write(joinpath(dir, "b", name), "also broken")
+        groups = FY4B.find_nc_files(dir; years=2024:2024, months=6:6)
+        @test only(groups[DateTime(2024, 6, 8, 6)]) == joinpath(dir, "a", name)
+        @test haskey(FY4B.find_unreadable_files(groups), joinpath(dir, "a", name))
+    end
+end

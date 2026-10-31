@@ -747,7 +747,11 @@ function find_nc_files(data_dir; years=2022:2025, months=6:9)
         sort!(paths)
         duplicate_file_count += length(paths) - 1
         hour_start = DateTime(year(start_dt), month(start_dt), day(start_dt), hour(start_dt))
-        push!(get!(file_groups, hour_start, String[]), first(paths))
+        # Of several copies keep the first that opens, so a truncated download sorting first
+        # cannot shadow a good copy elsewhere in the tree. A lone copy is kept as is.
+        index = length(paths) == 1 ? 1 :
+            something(findfirst(path -> segment_problem(path) === nothing, paths), 1)
+        push!(get!(file_groups, hour_start, String[]), paths[index])
     end
 
     # Sort files within each hour group
@@ -759,24 +763,31 @@ function find_nc_files(data_dir; years=2022:2025, months=6:9)
     return file_groups
 end
 
+"""`nothing` when `file` opens as a full-disk FY4B segment, otherwise the reason it does not."""
+function segment_problem(file)
+    try
+        ds = Dataset(file)
+        try
+            haskey(ds, "Precipitation") || error("missing Precipitation variable")
+            precipitation_size = size(ds["Precipitation"])
+            precipitation_size == (GRID_SIZE, GRID_SIZE) ||
+                error("unexpected Precipitation size $precipitation_size")
+        finally
+            close(ds)
+        end
+    catch error_value
+        return sprint(showerror, error_value)
+    end
+    return nothing
+end
+
 """Open every selected NetCDF and return the paths that fail structural validation."""
 function find_unreadable_files(file_groups)
     files = sort(unique(vcat(values(file_groups)...)))
     unreadable = Dict{String, String}()
     for (index, file) in enumerate(files)
-        try
-            ds = Dataset(file)
-            try
-                haskey(ds, "Precipitation") || error("missing Precipitation variable")
-                precipitation_size = size(ds["Precipitation"])
-                precipitation_size == (GRID_SIZE, GRID_SIZE) ||
-                    error("unexpected Precipitation size $precipitation_size")
-            finally
-                close(ds)
-            end
-        catch error_value
-            unreadable[file] = sprint(showerror, error_value)
-        end
+        problem = segment_problem(file)
+        problem === nothing || (unreadable[file] = problem)
         if index % 5_000 == 0 || index == length(files)
             println("  Validated $index / $(length(files)) NetCDF files")
         end
