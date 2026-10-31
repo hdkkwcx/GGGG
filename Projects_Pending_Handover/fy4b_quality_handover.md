@@ -1,11 +1,66 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-10-31 · **State:** Parts A and B done, full runs scored · **Next step:** the user
-picks the paper framing (§0), then a paper step and the scope-note rewrite
+**Date:** 2026-10-31 · **State:** Parts A and B done; adaptive map and QM-fed fusion scored ·
+**Next step:** the user picks the paper framing (§0), then a paper step, or the two-stage model
+(`ROADMAP.md`)
 
 ---
 
-## 0. Latest (2026-10-31): Part B done, both full runs scored
+## 0. Latest (2026-10-31): adaptive map and QM-fed fusion scored
+
+- **Commits on `fy4b/with-fy4b-benchmark`** (not merged or pushed), after §0a's:
+  - `48f61df` this note; `4896f92` `ROADMAP.md` (the two-stage occurrence/amount model);
+  - `e683517` adaptive map, `cdbd860` CLI flags `--fy4b-qm-adaptive`, `--fy4b-qm-fusion`;
+  - `2e9f0e4` strength chosen per month, not per season;
+  - review bumps `693b2bf`, `b55a3a9`.
+- **What the two options do:**
+  - `--fy4b-qm-adaptive` (`_fy4bqmadapt`): in each fold the training gauges pick, per regime ×
+    year-month, how strongly the season map applies: none, threshold only, or 25/50/75/100%.
+    The map itself is still fitted per season × regime. Choices: `fy4b_qm_strengths.csv`.
+  - `--fy4b-qm-fusion` (`_qmfusion`): each fold's `FY4B_QM` replaces plain FY4B in
+    MERGED_MEAN/MERGED_OLS and in the agreement-envelope bands.
+- **Full run:** `..._fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal`, at `b55a3a9`, clean
+  tree, the §0a flags plus both options. FY4B's and GPM_uncal's raw and mgwr rows are identical
+  to §0a's run (checked cell by cell).
+- **Analysis:** `output/fy4b_partB_analysis/qmfusion/` (`paired_qmfusion.csv` against §0a's
+  run, `rank_qmfusion.csv` within this run, `monthly_qm.txt`, and their scripts).
+
+Balanced spatial, change in RMSE; "sig" means the 95% day-block CI excludes 0:
+
+| comparison | raw | mgwr | blend_agrenv_mgwr |
+|---|---|---|---|
+| adaptive `FY4B_QM` vs full-map `FY4B_QM` | −7.6% sig | −4.2% sig | −0.44% sig |
+| adaptive `FY4B_QM` vs plain FY4B (w3) | −16.9% sig | −5.4% sig | −0.80% sig |
+| MERGED_MEAN fed `FY4B_QM` vs fed FY4B | −4.6% sig | −1.2% sig | −0.42% sig |
+| MERGED_OLS fed `FY4B_QM` vs fed FY4B | −0.07%, CI spans 0 | −0.12% sig | −0.11% sig |
+
+- **July–August are repaired and June keeps its gain** (raw RMSE, plain / full map / adaptive):
+  - Jun 1.261 / 1.182 / 1.171; Jul 1.551 / 1.707 / 1.528; Aug 1.438 / 1.664 / 1.397;
+  - May also improves (1.001 → 0.944). Spring and autumn months are unchanged.
+  - r 0.223 (plain) → 0.237 (full) → 0.246 (adaptive).
+- **What the gauges chose, consistently across folds:**
+  - 2022 summer (133E V1.0): the full map (Aug 2022: 0.75 in two folds of five);
+  - summer 2023 and 2024 (May–Aug 2023 under V1.0.0, Jun–Aug 2024): no adjustment at all, not
+    even the threshold; also Dec 2023–Feb 2024;
+  - spring and autumn: the full map. The 8-hour "2025-01" cell is all dry and takes "none".
+  - So the July–August loss came from the later two regimes, where FY4B's convective cells are
+    displaced too much for amount mapping to help.
+- **Standing** (paired, balanced spatial):
+  - mgwr: `FY4B_QM` is 1.6% behind GPM_uncal (CI spans 0) and 6.8% ahead of GSMaP (sig).
+  - blend: 2.0% behind GPM_uncal (sig), 0.5% behind GSMaP (CI spans 0).
+  - Every blend on one shared mask: MERGED_OLS 0.7189, MERGED_MEAN 0.7211, GPM_uncal 0.7257,
+    GSMaP 0.7361, `FY4B_QM` 0.7400, FY4B 0.7459.
+- **Fusion:** MERGED_OLS's FY4B weight rises from 0.022 to 0.063 (GPM_uncal 0.47, GSMaP 0.15).
+  QM-fed bands leave the real products' blends where they were: FY4B +0.10% (CI spans 0),
+  GPM_uncal 0.00%, GSMaP +0.08%.
+- **Caveats:**
+  - Random split: past raw, the gain mostly vanishes (mgwr −0.12%, CI spans 0). Neighbouring
+    gauges in training already give MGWR the local field.
+  - Raw CSI at 2 mm/h dips 0.128 → 0.123. The months left unmapped keep FY4B's false light rain.
+  - The strength is chosen on the same month's training gauges, as the map is. This is
+    in-period calibration under spatial CV, like the hourly GWR fits, not a forecast.
+
+## 0a. Earlier (2026-10-31): Part B done, both full runs scored
 
 - **Branch `fy4b/with-fy4b-benchmark`**, not merged or pushed. Since master:
   - rebuild code: `37e27d7`, `14d70d4`, `0924141` (duplicate-copy fix);
@@ -55,7 +110,7 @@ Balanced spatial, change in RMSE (mm/h); "sig" means the 95% CI excludes 0:
 - **Reading:** the quality steps clearly raise raw FY4B. The GWR corrections absorb most of the
   same systematic error themselves, so the corrected fields barely move.
 
-## 0a. Earlier (2026-10-31): Part A done, waiting for the download
+## 0b. Earlier (2026-10-31): Part A done, waiting for the download
 
 - **Branch `fy4b/with-fy4b-benchmark`**, not merged or pushed:
   - `37e27d7`: rebuild code;
@@ -264,12 +319,12 @@ must then be plugged in for every FY4B step.
 1. ~~Read the NetCDF attributes~~ Done 2026-10-30, see §4.1. The raw data is on the T9 and linked
    as `data/FY4B`.
 2. Check coverage: count files per month and disk tag, and list the months that are still missing.
-3. ~~Download, re-extract, per-fold fixes~~ Done 2026-10-31, see §0. (Plan text kept:) Download the missing 15-minute files (`output/fy4b_download/`). Then re-extract with the
+3. ~~Download, re-extract, per-fold fixes~~ Done 2026-10-31, see §0a. (Plan text kept:) Download the missing 15-minute files (`output/fy4b_download/`). Then re-extract with the
    strict 4-of-4 rule, censoring at 20, and parallax plus neighbourhood. The seasonal threshold and
    quantile map are fitted per fold inside the benchmark. The full plan is
    `~/.claude/plans/mutable-dazzling-bengio.md`. The reusable parts go in `src/sources/`; the run goes
    in a `scripts/prepare_fy4b_*.jl`; results go to `output/` or `data/processed/` per CLAUDE.md.
-4. ~~Rerun the with-FY4B benchmark (§3.1) on the new file~~ Done 2026-10-31, see §0.
+4. ~~Rerun the with-FY4B benchmark (§3.1) on the new file~~ Done 2026-10-31, see §0a; adaptive map and QM-fed fusion in §0.
 5. Paper:
    - Add a `[[step]]` for the with-FY4B run in `paper/sources.toml`, plus `[[table]]` blocks
      for every cited number.
