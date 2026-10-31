@@ -49,6 +49,26 @@ function _build_fused_products!(
     return derived, specifications
 end
 
+"""
+Everything `FY4B_QM_PRODUCT` needs that does not depend on the fold, or `nothing` when the
+run does not score it: the offset grid aligned to the run's stations and hours, each hour's
+regime and season-by-regime cell, and the correlation sums from which a fold picks its shift.
+Registers the derived product's data, with an anchor that only a fold can fill.
+"""
+function _prepare_fy4b_calibration!(cfg::InterpolationBenchmarkConfig, ids, product_data)
+    cfg.fy4b_qm_grid === nothing && return nothing
+    source = product_data["FY4B"]
+    regimes, regime_of_time = product_regimes(_fy4b_hour_meta_path(cfg), source.times)
+    grid = open_offset_grid(something(cfg.fy4b_qm_grid), ids, source.times)
+    sums = shift_sums(grid, source.Y_obs, regime_of_time, length(regimes))
+    product_data[FY4B_QM_PRODUCT] = (;
+        source.times, source.ids, source.Y_obs, Y_sat=fill(NaN, size(source.Y_obs)),
+    )
+    return (; grid, sums, regimes, regime_of_time,
+        cells=calibration_cells(source.times, regime_of_time),
+        cache=Dict{Int,Matrix{Float64}}())
+end
+
 function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     mkpath(cfg.mger.outdir)
     # Read before any work: the code that runs is the code checked out now, not at the end.
@@ -63,6 +83,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     # product, which a product with no file cannot appear in, and which the config validation has
     # already ruled out alongside a fused anchor.
     _, fused_specifications = _build_fused_products!(cfg, source_products, product_data, lonlat)
+    fy4b_calibration = _prepare_fy4b_calibration!(cfg, ids, product_data)
     products = benchmark_products(cfg, source_products)
     terrain = _dem_enabled(cfg) ? load_aligned_terrain(something(cfg.terrain_path), ids) : nothing
     dem_store = _empty_dem_store()
@@ -108,6 +129,8 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     stack_selection_rows = NamedTuple[]
     fused_anchor_rows = NamedTuple[]
     fused_grouped_rows = NamedTuple[]
+    fy4b_shift_rows = NamedTuple[]
+    fy4b_map_rows = NamedTuple[]
     hurdle_rows = NamedTuple[]
     # Cells where the fold was too small for an inner selection split and fell back to
     # leave-one-out. Reported in `benchmark_scope.csv` so the fallback is never silent.
@@ -141,17 +164,35 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                 y_obs = data.Y_obs
                 y_sat = data.Y_sat
                 fusion = get(fused_specifications, product, nothing)
+                calibrated = product == FY4B_QM_PRODUCT
                 predictions = Dict(
                     method => fill(NaN, size(y_obs)) for method in benchmark_methods(cfg)
                 )
                 # A derived product has no anchor until a fold says which stations may be used to
                 # fit one, so `raw` is filled per fold below instead of in one assignment here.
-                fusion === nothing && (predictions["raw"] .= y_sat)
+                fusion === nothing && !calibrated && (predictions["raw"] .= y_sat)
                 nearest_train_distance = fill(NaN, length(ids))
 
                 for fold in 1:cfg.k
                     fold_sat = y_sat
-                    if fusion !== nothing && fusion.design !== nothing
+                    if calibrated
+                        _, _, calibration_train_idx, calibration_val_idx =
+                            _fold_station_indices(folds, id_map, cfg.k, fold)
+                        # Shift and map fitted on the training stations, applied everywhere, for
+                        # the same reason as the fused anchors below.
+                        fold_sat, shift_rows, map_rows = calibrate_fold(
+                            fy4b_calibration.grid, fy4b_calibration.sums, y_obs,
+                            calibration_train_idx, fy4b_calibration.regimes,
+                            fy4b_calibration.regime_of_time, fy4b_calibration.cells;
+                            cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                        )
+                        predictions["raw"][calibration_val_idx, :] =
+                            fold_sat[calibration_val_idx, :]
+                        context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
+                            n_train_station=length(calibration_train_idx))
+                        append!(fy4b_shift_rows, [merge(context, row) for row in shift_rows])
+                        append!(fy4b_map_rows, [merge(context, row) for row in map_rows])
+                    elseif fusion !== nothing && fusion.design !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
                         design = fusion.design
@@ -257,6 +298,14 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     # fit, and its weight on every `STACK_FEATURES` member.
     isempty(stack_selection_rows) ||
         CSV.write(joinpath(cfg.mger.outdir, "stack_selection.csv"), DataFrame(stack_selection_rows))
+    # One row per fold x FY4B regime: the pixel shift chosen on the training stations, with the
+    # pooled training r it reached and the unshifted r it is measured against.
+    isempty(fy4b_shift_rows) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_shift_selection.csv"),
+            DataFrame(fy4b_shift_rows))
+    # One row per fold x season x regime: the wet threshold and the map's pool and anchor knots.
+    isempty(fy4b_map_rows) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_maps.csv"), DataFrame(fy4b_map_rows))
 
     return _write_benchmark_outputs(
         cfg, products, seeds, nested_joint, joint_inputs,

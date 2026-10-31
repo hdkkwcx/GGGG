@@ -10,7 +10,7 @@ load_pipeline("MGERPipeline")
 load_standalone_modules(
     "TraditionalInterpolation", "DEMTerrainExperiment", "JointCovariateModels",
     "ERA5VariableSelection", "NDVIVariableSelection", "JointVariableSelection",
-    "SatelliteFusion", "HurdleGWR", "RunProvenance",
+    "SatelliteFusion", "SatelliteCalibration", "HurdleGWR", "RunProvenance",
 )
 
 using .TraditionalInterpolation
@@ -20,6 +20,7 @@ using .DEMTerrainExperiment: terrain_model_designs, terrain_groups, terrain_colu
 using .JointCovariateModels
 using .JointVariableSelection: JointSelectionConfig, select_joint_covariates
 using .SatelliteFusion
+using .SatelliteCalibration
 using .HurdleGWR
 using .RunProvenance: start_provenance, git_provenance
 

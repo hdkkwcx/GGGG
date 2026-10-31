@@ -378,6 +378,21 @@ function _write_benchmark_outputs(
             ],
         ))
     end
+    if cfg.fy4b_qm_grid !== nothing
+        append!(scope, DataFrame(
+            key=["fy4b_qm", "fy4b_qm_leakage"],
+            value=[
+                "derived product $(FY4B_QM_PRODUCT): FY4B from $(cfg.fy4b_qm_grid), its sample " *
+                "pixel shifted per regime (satellite longitude x software version) and then " *
+                "quantile-mapped per season and regime, with a wet threshold matching the " *
+                "gauges' wet frequency. Its `raw` row is a gauge-trained predictor that uses only " *
+                "FY4B at prediction time",
+                "shift and map chosen inside every fold on that fold's training stations alone " *
+                "and applied to every station, so a held-out gauge never reaches the anchor its " *
+                "own prediction is built on; see fy4b_qm_shift_selection.csv and fy4b_qm_maps.csv",
+            ],
+        ))
+    end
     grouped = [v for v in sort(cfg.fused_anchor_variants) if v in GROUPED_FUSION_VARIANTS]
     if !isempty(grouped)
         append!(scope, DataFrame(

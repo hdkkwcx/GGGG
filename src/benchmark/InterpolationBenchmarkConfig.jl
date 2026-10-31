@@ -139,16 +139,27 @@ function benchmark_methods(cfg)
     return methods
 end
 
-"""
-The products a run scores: the ones with files, plus one derived product per fusion variant.
+# FY4B calibrated per fold against training gauges: shifted, then quantile-mapped. Derived like the
+# fused products, so it has no file of its own.
+const FY4B_QM_PRODUCT = "FY4B_QM"
 
-Sorted so the order does not depend on how the variants were listed, matching
-`load_global_common_product_data`, which sorts `sat_paths`.
+"""The rebuild writes each hour's satellite longitude and software beside the offset grid."""
+_fy4b_hour_meta_path(cfg) = joinpath(dirname(something(cfg.fy4b_qm_grid)), "fy4b_hour_meta.csv")
+
 """
-benchmark_products(cfg, products::Vector{String}) = isempty(cfg.fused_anchor_variants) ?
-    products :
-    vcat(products, sort([_fused_product_name(variant)
-                         for variant in cfg.fused_anchor_variants]))
+The products a run scores: the ones with files, plus one derived product per fusion variant, plus
+`FY4B_QM_PRODUCT` when `fy4b_qm_grid` is set.
+
+The fused names are sorted so the order does not depend on how the variants were listed, matching
+`load_global_common_product_data`, which sorts `sat_paths`; the calibrated product comes last.
+"""
+function benchmark_products(cfg, products::Vector{String})
+    derived = sort([_fused_product_name(variant) for variant in cfg.fused_anchor_variants])
+    # `hasproperty` so a caller describing the options as a partial NamedTuple need not name it.
+    hasproperty(cfg, :fy4b_qm_grid) && cfg.fy4b_qm_grid !== nothing &&
+        push!(derived, FY4B_QM_PRODUCT)
+    return isempty(derived) ? products : vcat(products, derived)
+end
 
 const AUTO_METHOD = "auto"
 # The runs `auto` may choose between: the GWR family only.
@@ -197,6 +208,11 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # training stations alone (see `SatelliteFusion`). Empty means the run scores only the
     # products that have files. Output directory suffix `_fusedanchor`.
     fused_anchor_variants::Vector{Symbol} = Symbol[]
+    # The rebuild's `fy4b_offset_grid.nc` (`FY4BPreprocessing.aggregate_fy4b_variants`). Set, it
+    # adds `FY4B_QM_PRODUCT`: FY4B shifted and quantile-mapped per fold on that fold's training
+    # stations alone (see `SatelliteCalibration`), next to the plain FY4B it is measured against.
+    # `fy4b_hour_meta.csv` must sit beside it. Output directory suffix `_fy4bqm`.
+    fy4b_qm_grid::Union{Nothing,String} = nothing
     # Acknowledges that this run's numbers are not admissible as a result.
     #
     # `joint_covariates.spec_path` names a variable set and local/global role map screened over
@@ -425,6 +441,16 @@ function _validate_benchmark_config(cfg::InterpolationBenchmarkConfig, n_station
             "from other products has no entry in a fixed full-data specification, so " *
             "joint_inputs.specification.role_maps would have nothing to hand it",
         ))
+    if cfg.fy4b_qm_grid !== nothing
+        haskey(cfg.mger.sat_paths, "FY4B") || throw(ArgumentError(
+            "fy4b_qm_grid calibrates FY4B, which this run does not load"))
+        for path in (cfg.fy4b_qm_grid, _fy4b_hour_meta_path(cfg))
+            isfile(path) || throw(ArgumentError("fy4b_qm_grid needs $path"))
+        end
+        # Same reason as the fused products: it has no file, so no fixed specification entry.
+        cfg.joint_covariates === nothing || cfg.joint_selection !== nothing ||
+            throw(ArgumentError("$FY4B_QM_PRODUCT needs nested per-fold covariate selection"))
+    end
     # 0.0 is load-bearing twice over: it is the "do not blend" option, so a fold that cannot be
     # helped is not forced to blend anyway, and it is the reference `unblended_RMSE` that
     # `blend_selection.csv` reports the chosen weight against.
