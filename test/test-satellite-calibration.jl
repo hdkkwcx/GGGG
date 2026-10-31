@@ -96,6 +96,39 @@ end
     @test sparse[4].pool == "regime" && sparse[3].pool == "cell"
 end
 
+@testset "an adaptive map is applied only as strongly as the training gauges support" begin
+    rng = MersenneTwister(5)
+    n_station, n_time = 10, 3000
+    truth = [rand(rng) < 0.2 ? 4 * rand(rng)^2 : 0.0 for _ in 1:n_station, _ in 1:n_time]
+    train = 1:7
+    full = length(QM_STRENGTHS)
+    # Twice the amounts and nothing else: the full map undoes it exactly, so it wins.
+    scaled = 2 .* truth
+    cells = fill(3, n_time)
+    maps = fit_quantile_map(truth, scaled, train, cells; min_wet=100)
+    choice = choose_strength(truth, scaled, maps, train, cells)
+    @test choice[3].candidate == full
+    @test choice[3].rmse_chosen == choice[3].rmse_full < choice[3].rmse_none
+    # Small amounts unrelated to the gauges: restoring the gauge tail at random places only adds
+    # error, so a smaller adjustment wins.
+    unrelated = [rand(rng) < 0.2 ? 0.5 * rand(rng) : 0.0 for _ in 1:n_station, _ in 1:n_time]
+    maps = fit_quantile_map(truth, unrelated, train, cells; min_wet=100)
+    choice = choose_strength(truth, unrelated, maps, train, cells)
+    @test choice[3].candidate < full
+    @test choice[3].rmse_chosen < choice[3].rmse_full
+    # Held-out gauges cannot move the choice.
+    scrambled = copy(truth)
+    scrambled[8:10, :] .= 100.0
+    @test choose_strength(scrambled, unrelated, maps, train, cells)[3].candidate == choice[3].candidate
+    # Every candidate is monotone in the satellite value.
+    m = maps[3]
+    xs = collect(0.0:0.01:12.0)
+    for c in 0:full
+        @test issorted([SatelliteCalibration._adjusted_value(x, SatelliteCalibration._map_value(m, x),
+            m.tau, c) for x in xs])
+    end
+end
+
 @testset "a fold's anchor uses each regime's chosen shift, then the map" begin
     mktempdir() do dir
         s = synthetic_calibration(dir)
@@ -111,5 +144,22 @@ end
         @test length(cache) == 2
         @test cor(vec(anchor), vec(s.rain)) > 0.9
         @test Set(row.regime for row in map_rows) == Set(labels)
+        # Without `adaptive`, every cell gets the full map: the anchor is the plain map's.
+        shifted = fill(NaN, size(s.rain))
+        for (g, row) in enumerate(shift_rows)
+            k = findfirst(==((row.dx, row.dy)), grid.shifts)
+            cols = findall(==(g), regime_of_time)
+            shifted[:, cols] = read_shift(grid, k)[:, cols]
+        end
+        plain = apply_quantile_map(fit_quantile_map(s.rain, shifted, 1:6, cells), shifted, cells)
+        @test isequal(anchor, plain)
+        @test all(row.strength == 1.0 && row.threshold_applied for row in map_rows)
+        @test all(row.train_rmse_chosen == row.train_rmse_full for row in map_rows)
+        adapted, _, adapted_rows = calibrate_fold(
+            grid, sums, s.rain, 1:6, labels, regime_of_time, cells; cache, adaptive=true)
+        @test size(adapted) == size(anchor)
+        @test all(row.strength in QM_STRENGTHS for row in adapted_rows)
+        @test all(row.train_rmse_chosen <= min(row.train_rmse_none, row.train_rmse_full)
+                  for row in adapted_rows)
     end
 end
