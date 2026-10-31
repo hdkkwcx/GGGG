@@ -9,9 +9,12 @@
 #
 #   julia --project=. scripts/compare_benchmark_runs.jl <before_dir> <after_dir> [out_name]
 #   julia --project=. scripts/compare_benchmark_runs.jl --smoke <before_dir> <after_dir> [out_name]
+#   julia --project=. scripts/compare_benchmark_runs.jl --fy4b-file <path> <before_dir> <after_dir>
 #
 # `--smoke` rebuilds the June-2022 grid that `run_interpolation_benchmark.jl smoke` scores on,
 # rather than the full 2022-2024 one; the two runs must have been produced in the same mode.
+# `--fy4b-file` rebuilds the grid of runs made with the same flag (a series from
+# `prepare_fy4b_rebuild.jl`); both runs must share that grid.
 #
 # Writes `output/benchmark_diagnostics/<out_name>/run_comparison.csv`, defaulting `out_name` to
 # `compare_<basename(before)>_vs_<basename(after)>`.
@@ -34,15 +37,16 @@ Rebuild the common station/time grid the full benchmark runs used.
 Same study-area wiring as `run_benchmark_diagnostics.jl` and `run_mgwr_diagnostics.jl`; it stays
 in the script because it hard-codes file locations, which do not belong in `src/`.
 """
-function load_common_data(outdir::AbstractString; smoke::Bool=false)
+function load_common_data(outdir::AbstractString; smoke::Bool=false,
+                          fy4b_file::Union{Nothing,String}=nothing)
     cfg = MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
         sat_paths=Dict(
             # Same file as run_interpolation_benchmark.jl in both modes; the window clips smoke.
-            "FY4B" => joinpath(
+            "FY4B" => something(fy4b_file, joinpath(
                 STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-            ),
+            )),
             "GPM" => joinpath(
                 STUDY_DATA,
                 smoke ? "hubei_gpm_hourly_2022_2025_JunSep_aligned.csv" :
@@ -54,13 +58,18 @@ function load_common_data(outdir::AbstractString; smoke::Bool=false)
         rain_threshold=0.1,
         analysis_start=smoke ? DateTime(2022, 6, 1, 9) : DateTime(2022, 1, 1, 9),
         analysis_end=smoke ? DateTime(2022, 7, 1, 8) : DateTime(2025, 1, 1, 8),
-        expected_common_time_count=smoke ? nothing : 13471,
+        # A rebuilt FY4B grid is pinned by run_interpolation_benchmark.jl itself; here the masks
+        # read from both runs must match it station for station, which catches a mismatch.
+        expected_common_time_count=smoke || fy4b_file !== nothing ? nothing : 13471,
     )
     return load_global_common_product_data(cfg)
 end
 
 function main(args=ARGS)
     smoke = "--smoke" in args
+    fy4b_index = findfirst(==("--fy4b-file"), args)
+    fy4b_file = fy4b_index === nothing ? nothing : abspath(args[fy4b_index + 1])
+    fy4b_index === nothing || (args = deleteat!(copy(args), fy4b_index:(fy4b_index + 1)))
     positional = filter(!startswith("--"), args)
     length(positional) >= 2 || error(
         "usage: compare_benchmark_runs.jl [--smoke] <before_dir> <after_dir> [out_name]",
@@ -77,7 +86,7 @@ function main(args=ARGS)
 
     println("before: $before_dir")
     println("after:  $after_dir")
-    products, ids, product_data = load_common_data(outdir; smoke)
+    products, ids, product_data = load_common_data(outdir; smoke, fy4b_file)
 
     comparison_rows = DataFrame[]
     for scheme in ["balanced_spatial", "random"]

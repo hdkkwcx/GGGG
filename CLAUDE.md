@@ -136,8 +136,13 @@ using Main.BenchmarkDiagnostics
 ### Interpolation benchmark invariants
 
 - Opt-in flags (`--satellite-wet-blend`, `--blend-axis`, `--fused-anchor`,
-  `--fused-anchor-lagnbr`, `--stacked-blend`) add methods or products without moving any existing
-  metric row; the end-to-end test asserts this. Blended methods are scored on the shared mask but
+  `--fused-anchor-lagnbr`, `--stacked-blend`, `--fy4b-qm`) add methods or products without moving
+  any existing metric row; the end-to-end test asserts this.
+- `--fy4b-file <path>` (with `--with-fy4b`) scores a FY4B series rebuilt by
+  `scripts/prepare_fy4b_rebuild.jl` instead of the shipped one. `--fy4b-qm` then adds `FY4B_QM`:
+  that rebuild's FY4B, pixel-shifted and quantile-mapped per regime inside each fold on training
+  stations only (`SatelliteCalibration`). The rebuild's 1-, 3- and 24-hour raw files are
+  gauge-corrected and never read. Blended methods are scored on the shared mask but
   never join `MASK_METHODS`. The flags themselves are documented where they are parsed in
   `scripts/run_interpolation_benchmark.jl`.
 - By default the CLI scores uncalibrated IMERG (`GPM_uncal`, output suffix `_gpmuncal`).

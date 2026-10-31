@@ -10,6 +10,12 @@ load_pipeline("InterpolationBenchmark")
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
 
+# Common hours of a full run on a FY4B series from `prepare_fy4b_rebuild.jl` (`--fy4b-file`).
+# Every variant of that rebuild has the same strict-complete hours, so one count serves them all;
+# measured 2026-10-31 on output/fy4b_rebuild_2022_2024/ (with GPM_uncal and GSMaP, which cover
+# every hour). It grew from the shipped file's 13471 with the re-downloaded autumn/winter months.
+const REBUILT_FY4B_COMMON_HOURS = 20087
+
 """
 Seed list for repeated cross-validation: one repeat per entry.
 
@@ -28,9 +34,13 @@ function benchmark_config(
     unsupported_local_target::Symbol=:missing, satellite_wet_blend::Bool=false,
     blend_axes::Vector{Symbol}=[:constant], fused_anchor::Bool=false,
     fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
-    fy4b::Bool=true,
+    fy4b::Bool=true, fy4b_file::Union{Nothing,String}=nothing, fy4b_qm::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
+    fy4b_file === nothing || fy4b || throw(ArgumentError("--fy4b-file needs --with-fy4b"))
+    fy4b_qm && fy4b_file === nothing && throw(ArgumentError(
+        "--fy4b-qm needs --fy4b-file: it reads the offset grid written beside a rebuilt series",
+    ))
     nested_covariates && legacy_dem && throw(ArgumentError(
         "--nested-covariates only applies to the joint-covariate path, not --legacy-dem",
     ))
@@ -76,6 +86,11 @@ function benchmark_config(
             (fused_anchor ? "_fusedanchor" : "") *
             (fused_anchor_lagnbr ? "_fusedlagnbr" : "") *
             (stacked_blend ? "_stackblend" : "") *
+            # A rebuilt FY4B series is named after its variant (`fy4b_w3_h0.csv` -> `_fy4bw3h0`),
+            # and the per-fold calibrated product adds `_fy4bqm`.
+            (fy4b_file === nothing ? "" :
+                "_" * replace(splitext(basename(fy4b_file))[1], "_" => "")) *
+            (fy4b_qm ? "_fy4bqm" : "") *
             # Before `_gpmuncal`, which the report scripts detect with `endswith`.
             (fy4b ? "" : "_nofy4b") *
             (gpm_uncal ? "_gpmuncal" : "") *
@@ -136,9 +151,10 @@ function benchmark_config(
     # merges, the agreement-envelope and stack bands, and the common time grid all read
     # `sat_paths`. Smoke reads the full-year FY4B file too; `analysis_start`/`analysis_end` clip it
     # to June.
-    fy4b && (sat_paths["FY4B"] = joinpath(
+    # `fy4b_file` swaps in a series rebuilt by `prepare_fy4b_rebuild.jl`.
+    fy4b && (sat_paths["FY4B"] = something(fy4b_file, joinpath(
         STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-    ))
+    )))
     mger = MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
@@ -163,7 +179,8 @@ function benchmark_config(
         # rebuilt 2026-09-02; on the grid before it they were 8067 and 11426. Without FY4B,
         # GPM (either IMERG field) and GSMaP cover every hour of 2022-2024: 26304, measured
         # 2026-10-20.
-        expected_common_time_count=smoke ? nothing : (fy4b ? 13471 : 26304),
+        expected_common_time_count=smoke ? nothing :
+            (!fy4b ? 26304 : fy4b_file === nothing ? 13471 : REBUILT_FY4B_COMMON_HOURS),
     )
     schemes = smoke && !with_random ? [:balanced_spatial] : [:balanced_spatial, :random]
     dem = legacy_dem ? DEMTerrainExperiment.DEMExperimentConfig(
@@ -247,6 +264,7 @@ function benchmark_config(
             fused_anchor ? collect(Symbol, FUSION_VARIANTS) : Symbol[],
             fused_anchor_lagnbr ? [:ols_lagnbr] : Symbol[],
         ),
+        fy4b_qm_grid=fy4b_qm ? joinpath(dirname(fy4b_file), "fy4b_offset_grid.nc") : nothing,
         # The joint path without nested selection reads a full-data spec, which the config
         # validator refuses unless the run admits it is exploratory. --no-nested-covariates is
         # exactly that admission, so it is the only way this turns on.
@@ -304,6 +322,21 @@ function parse_blend_axis(args)
         "--blend-axis expects agreement_envelope, got $text",
     ))
     return axis
+end
+
+"""
+Parse `--fy4b-file <path>`, a series written by `prepare_fy4b_rebuild.jl`; a relative path is
+read from the repository root. Absent means the shipped study-area FY4B file.
+"""
+function parse_fy4b_file(args)
+    index = findfirst(startswith("--fy4b-file"), args)
+    index === nothing && return nothing
+    text = args[index] == "--fy4b-file" ? get(args, index + 1, "") :
+        split(args[index], "=", limit=2)[2]
+    isempty(text) && throw(ArgumentError("--fy4b-file expects a path"))
+    path = isabspath(text) ? text : joinpath(ROOT, text)
+    isfile(path) || throw(ArgumentError("--fy4b-file: no such file $path"))
+    return normpath(path)
 end
 
 """Parse `--repeats N`; absent means a single partition (the historical behaviour)."""
@@ -406,10 +439,18 @@ function main(args=ARGS)
     # restores it. `benchmark_config`'s keyword still defaults to keeping FY4B, for the verify
     # scripts.
     fy4b = "--with-fy4b" in args
+    # A FY4B series rebuilt by `prepare_fy4b_rebuild.jl` (e.g.
+    # output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv) instead of the shipped one; suffix from its
+    # variant. All the rebuild's variants share one hour grid, pinned as REBUILT_FY4B_COMMON_HOURS.
+    fy4b_file = parse_fy4b_file(args)
+    # Add FY4B_QM: the rebuild's 3x3 FY4B, pixel-shifted and quantile-mapped per regime inside
+    # every fold on training stations only (`fy4b_qm_shift_selection.csv`, `fy4b_qm_maps.csv`).
+    # Needs --fy4b-file, beside which the offset grid lives. See `SatelliteCalibration`.
+    fy4b_qm = "--fy4b-qm" in args
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
-        fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b)
+        fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -433,6 +474,8 @@ function main(args=ARGS)
         "stacked_blend=$stacked_blend, " *
         "gpm_uncal=$gpm_uncal, " *
         "fy4b=$fy4b, " *
+        (fy4b_file === nothing ? "" : "fy4b_file=$fy4b_file, ") *
+        (fy4b_qm ? "fy4b_qm=true, " : "") *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
     println("Finished: $(nrow(result.metrics)) metric rows, $(nrow(result.scans)) scan rows")
