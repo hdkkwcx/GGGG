@@ -9,11 +9,16 @@
 # Variants are named w<window>_h<cloud-top km>. `w1_h0` is the shipped method - nearest pixel, no
 # parallax - and must reproduce
 # data/processed/study_area/hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv on its hours.
-# `w3` averages a 3x3 pixel box (about 12 km); `h6`/`h10`/`h14` sample where a cloud top at
-# 6/10/14 km over the gauge appears in the image. All are fixed in advance, none tuned on gauges,
-# so the series can enter the benchmark's cross-validation without leaking. Hours stay strict:
-# all four 15-minute files, or no value. The 1-, 3- and 24-hour files in the raw tree are
-# gauge-corrected and never read.
+# `w3`/`w5` average a 3x3/5x5 pixel box (about 12/20 km). `w3_h10` samples where a 10 km cloud top
+# over the gauge appears in the image; it is kept only as a reported check, because on June 2022
+# it scored worse than no shift (r 0.343 vs 0.351) and the displacement the gauges show is not
+# parallax-shaped (2022 west, 2024 east). All are fixed in advance, none tuned on gauges, so the
+# series can enter the benchmark's cross-validation without leaking.
+#
+# fy4b_offset_grid.nc holds the 3x3 mean at every pixel shift up to +-6: the candidates from which
+# the benchmark picks a shift per fold on training gauges only. Hours stay strict: all four
+# 15-minute files, or no value. The 1-, 3- and 24-hour files in the raw tree are gauge-corrected
+# and never read.
 #
 # The raw tree (data/FY4B, a link to the external drive) is only read. Like the IMERG grid it is
 # not hashed; every file used is listed in fy4b_hourly_qc.csv.
@@ -31,10 +36,10 @@ const STATION_META = joinpath(ROOT, "data", "processed", "study_area", "station_
 const VARIANTS = [
     (name="w1_h0", window=1, height=0.0),
     (name="w3_h0", window=3, height=0.0),
-    (name="w3_h6", window=3, height=6_000.0),
+    (name="w5_h0", window=5, height=0.0),
     (name="w3_h10", window=3, height=10_000.0),
-    (name="w3_h14", window=3, height=14_000.0),
 ]
+const OFFSET_GRID = (window=3, radius=6)
 
 function main(args=ARGS)
     index = findfirst(==("--month"), args)
@@ -51,7 +56,7 @@ function main(args=ARGS)
     started = time()
     aggregate_fy4b_variants(;
         data_dir=RAW_DIR, station_meta_file=STATION_META, outdir, years, months,
-        variants=VARIANTS,
+        variants=VARIANTS, offset_grid=OFFSET_GRID,
     )
     println("Rebuild took $(round((time() - started) / 60; digits=1)) min")
     CSV.write(joinpath(outdir, "provenance.csv"), finish_provenance!(provenance, ROOT))

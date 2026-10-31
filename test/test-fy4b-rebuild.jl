@@ -1,4 +1,4 @@
-using Test, DataFrames, Dates
+using Test, DataFrames, Dates, NCDatasets
 
 include(joinpath(@__DIR__, "..", "src", "load_modules.jl"))
 load_standalone_modules("FY4BPreprocessing")
@@ -75,4 +75,35 @@ end
     # A block offset to disk pixel (10, 20), and a box running off its edge.
     @test FY4B._window_value(block, good, 11, 21, 1; x0=10, y0=20) == (5.0, 0.0)
     @test isnan(first(FY4B._window_value(block, good, 10, 20, 3; x0=10, y0=20)))  # 4 of 9 inside
+end
+
+@testset "the shifted grid round-trips through its chunked NetCDF" begin
+    mktempdir() do dir
+        path = joinpath(dir, "fy4b_offset_grid.nc")
+        offsets = (window=3, radius=1)
+        ids = ["a", "b"]
+        # More hours than one chunk, so a block boundary is crossed and the tail is flushed.
+        total = FY4B.OFFSET_GRID_BLOCK + 5
+        times = DateTime(2022, 6, 1, 9) .+ Hour.(0:(total - 1))
+        hour_grid(h) = [h + 10i + 100a + 1000b for i in 1:2, a in 1:3, b in 1:3]   # [station, dx, dy]
+        on_shifted, finish, _ = FY4B._offset_grid_writer(path, offsets, ids, times)
+        for h in 1:total
+            grid = Float64.(hour_grid(h))
+            h == 7 && (grid[2, 3, 1] = NaN)                                  # a gap survives
+            on_shifted(h, grid)
+        end
+        finish()
+        @test isfile(path) && !any(startswith("fy4b_offset_grid.nc.tmp"), readdir(dir))
+        NCDataset(path) do ds
+            @test ds["offset_x"][:] == [-1, 0, 1] && ds["offset_y"][:] == [-1, 0, 1]
+            @test ds["station_id"][:] == ids
+            @test ds["time_label"][1] == "2022-06-01T09:00:00Z"
+            grid = ds["fy4b"]
+            @test size(grid) == (3, 3, 2, total)
+            # [dx, dy, station, time] reads back the hour's [station, dx, dy] values.
+            @test grid[3, 2, 1, total] == Float32(total + 10 + 300 + 2000)
+            @test grid[1, 1, 2, FY4B.OFFSET_GRID_BLOCK] == Float32(FY4B.OFFSET_GRID_BLOCK + 20 + 100 + 1000)
+            @test isnan(grid[3, 1, 2, 7]) && !isnan(grid[3, 1, 1, 7])
+        end
+    end
 end

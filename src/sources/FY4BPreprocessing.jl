@@ -409,31 +409,41 @@ _pixel(x, y) = isnan(x) || isnan(y) ? (0, 0) : (round(Int, x) + 1, round(Int, y)
 
 """
 Every variant at every station from one FY4B segment, as
-`(values, cap_fraction, sat_lon, software)` with the matrices `[station, variant]`.
+`(values, cap_fraction, sat_lon, software, shifted)` with the matrices `[station, variant]`.
 
 `variants` holds `(name, window, height)`: the box size in pixels and the parallax cloud-top
 height in metres (0 = none). The file is opened once and a single block covering every needed
 pixel is read, so extra variants cost almost nothing. Grid coordinates are cached per
 `(sat_lon, height)`, the satellite longitude coming from the file as in `extract_precipitation`.
+
+`offsets = (; window, radius)` also returns `shifted[station, dx, dy]`: the `window` box value
+with the station's pixel moved by every `(dx, dy)` in `-radius:radius` (x east-positive, y
+south-positive, as image rows run). A later step picks a shift on training gauges only; this
+function only tabulates the candidates. Without `offsets`, `shifted` is `nothing`.
 """
-function sample_variants(nc_file, stations_df, variants, coord_cache)
+function sample_variants(nc_file, stations_df, variants, coord_cache; offsets=nothing)
     ds = Dataset(nc_file)
     try
         sat_lon = dataset_satellite_lon(ds, basename(nc_file))
         software = string(get(ds.attrib, "Version Of Software", ""))
-        centres = map(variants) do variant
-            coords = get!(coord_cache, (sat_lon, Float64(variant.height))) do
-                [latlon_to_xy(row.lat, row.lon, sat_lon; height=variant.height)
-                 for row in eachrow(stations_df)]
+        station_centres(height) = begin
+            coords = get!(coord_cache, (sat_lon, Float64(height))) do
+                [latlon_to_xy(row.lat, row.lon, sat_lon; height) for row in eachrow(stations_df)]
             end
             [_pixel(x, y) for (x, y) in coords]
         end
+        centres = [station_centres(variant.height) for variant in variants]
+        base = offsets === nothing ? nothing : station_centres(0.0)
         reach = maximum(variant.window ÷ 2 for variant in variants)
-        inside = [c for cs in centres for c in cs if c != (0, 0)]
+        offsets === nothing || (reach = max(reach, offsets.radius + offsets.window ÷ 2))
+        all_centres = base === nothing ? centres : vcat(centres, [base])
+        inside = [c for cs in all_centres for c in cs if c != (0, 0)]
         n, nv = nrow(stations_df), length(variants)
         values = fill(NaN, n, nv)
         caps = fill(NaN, n, nv)
-        isempty(inside) && return values, caps, sat_lon, software
+        side = offsets === nothing ? 0 : 2 * offsets.radius + 1
+        shifted = offsets === nothing ? nothing : fill(NaN, n, side, side)
+        isempty(inside) && return values, caps, sat_lon, software, shifted
         x1 = clamp(minimum(first, inside) - reach, 1, GRID_SIZE)
         x2 = clamp(maximum(first, inside) + reach, 1, GRID_SIZE)
         y1 = clamp(minimum(last, inside) - reach, 1, GRID_SIZE)
@@ -446,7 +456,16 @@ function sample_variants(nc_file, stations_df, variants, coord_cache)
             values[i, k], caps[i, k] =
                 _window_value(block, quality, ix, iy, variant.window; x0=x1, y0=y1)
         end
-        return values, caps, sat_lon, software
+        if offsets !== nothing
+            r = offsets.radius
+            for (b, dy) in enumerate(-r:r), (a, dx) in enumerate(-r:r), i in 1:n
+                ix, iy = base[i]
+                (ix, iy) == (0, 0) && continue
+                shifted[i, a, b] = first(_window_value(
+                    block, quality, ix + dx, iy + dy, offsets.window; x0=x1, y0=y1))
+            end
+        end
+        return values, caps, sat_lon, software, shifted
     finally
         close(ds)
     end
@@ -461,8 +480,15 @@ hour-ending Beijing labels of `aggregate_hourly`, and `sat_lon`/`software` descr
 first segment, from which the product regimes are read. The arithmetic is `aggregate_hourly`'s -
 the four rates summed in file order and divided by 4, one missing segment voiding the
 station-hour - so the `window == 1`, `height == 0` variant reproduces it bit for bit.
+
+With `offsets` (see `sample_variants`), each hour's shifted grid `[station, dx, dy]`, aggregated
+the same way, is handed to `on_shifted(hour_index, grid)` instead of being kept: at 169 shifts
+the whole archive would not fit in memory.
 """
-function aggregate_hourly_variants(file_groups, stations_df, variants; progress_every::Int=500)
+function aggregate_hourly_variants(
+    file_groups, stations_df, variants;
+    offsets=nothing, on_shifted=(_, _) -> nothing, progress_every::Int=500,
+)
     hours = sort(collect(keys(file_groups)))
     n, nv = nrow(stations_df), length(variants)
     values = [fill(NaN, length(hours), n) for _ in 1:nv]
@@ -470,6 +496,7 @@ function aggregate_hourly_variants(file_groups, stations_df, variants; progress_
     sat_lons = fill(NaN, length(hours))
     software = fill("", length(hours))
     coord_cache = Dict{Tuple{Float64, Float64}, Vector{Tuple{Float64, Float64}}}()
+    side = offsets === nothing ? 0 : 2 * offsets.radius + 1
 
     for (h, hour_start) in enumerate(hours)
         files = file_groups[hour_start]
@@ -478,11 +505,19 @@ function aggregate_hourly_variants(file_groups, stations_df, variants; progress_
         sums = zeros(n, nv)
         cap_sums = zeros(n, nv)
         gap = falses(n, nv)
+        shifted_sums = zeros(n, side, side)
+        shifted_gap = falses(n, side, side)
         for (segment, nc_file) in enumerate(files)
-            segment_values, segment_caps, sat_lon, version = try
-                sample_variants(nc_file, stations_df, variants, coord_cache)
+            segment_values, segment_caps, sat_lon, version, shifted = try
+                sample_variants(nc_file, stations_df, variants, coord_cache; offsets)
             catch error_value
                 error("Failed to extract $(nc_file): $(sprint(showerror, error_value))")
+            end
+            if shifted !== nothing
+                for index in eachindex(shifted)
+                    isnan(shifted[index]) ? (shifted_gap[index] = true) :
+                        (shifted_sums[index] += shifted[index])
+                end
             end
             if segment == 1
                 sat_lons[h] = sat_lon
@@ -502,6 +537,9 @@ function aggregate_hourly_variants(file_groups, stations_df, variants; progress_
             values[k][h, i] = sums[i, k] / 4.0
             caps[k][h, i] = cap_sums[i, k] / 4.0
         end
+        if offsets !== nothing
+            on_shifted(h, ifelse.(shifted_gap, NaN, shifted_sums ./ 4.0))
+        end
         if progress_every > 0 && (h % progress_every == 0 || h == length(hours))
             println("  Sampled $h / $(length(hours)) strict hours")
         end
@@ -515,6 +553,70 @@ function aggregate_hourly_variants(file_groups, stations_df, variants; progress_
         sat_lon=sat_lons,
         software,
     )
+end
+
+"""Hours per time chunk of the shifted grid: a 31-day month, so one shift reads in ~36 chunks."""
+const OFFSET_GRID_BLOCK = 744
+
+"""
+Writer for `fy4b_offset_grid.nc`, as `(on_shifted, finish, abort)`.
+
+The variable `fy4b[offset_x, offset_y, station, time]` (Float32, deflated) is chunked one shift
+by one month, so a later step can read any single shift's full series cheaply. Hours arrive one
+at a time from `aggregate_hourly_variants` and are written a chunk-aligned block at a time, so
+each chunk is compressed once. The file appears under its name only after `finish()`.
+"""
+function _offset_grid_writer(path, offsets, station_ids, times)
+    r = offsets.radius
+    side = 2r + 1
+    n, total = length(station_ids), length(times)
+    temporary = string(path, ".tmp-", getpid())
+    mkpath(dirname(path))
+    ds = NCDataset(temporary, "c")
+    defDim(ds, "offset_x", side)
+    defDim(ds, "offset_y", side)
+    defDim(ds, "station", n)
+    defDim(ds, "time", total)
+    defVar(ds, "offset_x", collect(-r:r), ("offset_x",);
+        attrib=["units" => "pixels", "long_name" => "sample pixel moved east (+) or west (-)"])
+    defVar(ds, "offset_y", collect(-r:r), ("offset_y",);
+        attrib=["units" => "pixels",
+            "long_name" => "sample pixel moved south (+) or north (-), as image rows run"])
+    defVar(ds, "station_id", station_ids, ("station",))
+    defVar(ds, "time_label", Dates.format.(times, dateformat"yyyy-mm-ddTHH:MM:SS") .* "Z",
+        ("time",); attrib=["long_name" => "hour-ending Beijing label, as in the wide CSVs"])
+    grid = defVar(ds, "fy4b", Float32, ("offset_x", "offset_y", "station", "time");
+        deflatelevel=4, shuffle=true, chunksizes=[1, 1, n, min(OFFSET_GRID_BLOCK, total)],
+        attrib=["units" => "mm/h", "window" => offsets.window, "radius" => r,
+            "long_name" => "hourly FY4B, window mean around the shifted station pixel",
+            # No fill value: a gap is stored and read back as NaN, as in the wide CSVs.
+            "missing_data" => "NaN"])
+    buffer = fill(NaN32, side, side, n, OFFSET_GRID_BLOCK)
+    filled = 0
+    start = 1
+    flush!() = begin
+        if filled > 0
+            grid[:, :, :, start:(start + filled - 1)] = buffer[:, :, :, 1:filled]
+            start += filled
+            filled = 0
+        end
+    end
+    on_shifted(hour_index, hour_grid) = begin
+        hour_index == start + filled || error("shifted grids must arrive in hour order")
+        buffer[:, :, :, filled + 1] = permutedims(hour_grid, (2, 3, 1))
+        filled += 1
+        filled == OFFSET_GRID_BLOCK && flush!()
+    end
+    finish() = begin
+        flush!()
+        close(ds)
+        mv(temporary, path; force=true)
+    end
+    abort() = begin
+        close(ds)
+        rm(temporary; force=true)
+    end
+    return on_shifted, finish, abort
 end
 
 """Wide `time, <station>...` table in the layout `aggregate_fy4b_hourly` writes."""
@@ -537,7 +639,9 @@ Writes to `outdir`:
 - `fy4b_<variant>_capfrac.csv`: per station-hour, the share of accepted pixels at the 20 mm/h
   cap, so a later step can treat them as censored;
 - `fy4b_hourly_qc.csv`: the per-hour completeness audit;
-- `fy4b_hour_meta.csv`: each hour's satellite longitude and software version.
+- `fy4b_hour_meta.csv`: each hour's satellite longitude and software version;
+- with `offset_grid = (; window, radius)`, `fy4b_offset_grid.nc`: the `window` box value at
+  every pixel shift up to `radius`, for a shift chosen later on training gauges only.
 """
 function aggregate_fy4b_variants(;
     data_dir::AbstractString=FY4B_DATA_DIR,
@@ -546,11 +650,14 @@ function aggregate_fy4b_variants(;
     variants,
     years=2022:2024,
     months=1:12,
+    offset_grid=nothing,
 )
     variant_names = [variant.name for variant in variants]
     allunique(variant_names) || error("Variant names must be unique: $variant_names")
     all(variant -> isodd(variant.window) && variant.window >= 1 && variant.height >= 0, variants) ||
         error("Variant windows must be odd and positive, heights non-negative")
+    offset_grid === nothing || (isodd(offset_grid.window) && offset_grid.radius >= 0) ||
+        error("The offset grid needs an odd window and a non-negative radius")
 
     stations_df = load_stations(station_meta_file)
     all(name -> name in names(stations_df), ["station_id", "lon", "lat"]) ||
@@ -574,9 +681,27 @@ function aggregate_fy4b_variants(;
     println("Strict complete hours: $complete_count of $(nrow(qc_df))")
     complete_count > 0 || error("No strict complete FY4B hours were found; QC is in $outdir")
 
-    result = aggregate_hourly_variants(complete_groups, stations_df, variants)
-    time_text = Dates.format.(result.times, dateformat"yyyy-mm-ddTHH:MM:SS") .* "Z"
     station_ids = string.(stations_df.station_id)
+    result = if offset_grid === nothing
+        aggregate_hourly_variants(complete_groups, stations_df, variants)
+    else
+        hours = sort(collect(keys(complete_groups)))
+        on_shifted, finish, abort = _offset_grid_writer(
+            joinpath(outdir, "fy4b_offset_grid.nc"), offset_grid, station_ids,
+            aligned_hour_end.(hours),
+        )
+        try
+            sampled = aggregate_hourly_variants(
+                complete_groups, stations_df, variants; offsets=offset_grid, on_shifted,
+            )
+            finish()
+            sampled
+        catch
+            abort()
+            rethrow()
+        end
+    end
+    time_text = Dates.format.(result.times, dateformat"yyyy-mm-ddTHH:MM:SS") .* "Z"
     for name in variant_names
         write_csv_atomic(joinpath(outdir, "fy4b_$(name).csv"),
             _wide_table(time_text, station_ids, result.values[name]))
