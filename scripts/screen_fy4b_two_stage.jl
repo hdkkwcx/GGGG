@@ -13,14 +13,19 @@
 # built here must equal that run's `oof_raw.csv` for FY4B_QM, cell by cell, in both schemes, which
 # shows the grid, the folds and the calibration are the benchmark's.
 #
-# Scored on the cells where the gauge and all six series are finite. That is not the benchmark's
+# Three anchors: FY4B_TS_E (P x amount), FY4B_TS_O (the occurrence rule keeping FY4B_QM's amounts)
+# and FY4B_TS_I, the amount-only ablation (P x amount on the intensity class alone, no rain nearby
+# and no adjacent hours). TS_I against FY4B_QM is what a conditional mean gains without context;
+# TS_E against TS_I is what the context adds.
+#
+# Scored on the cells where the gauge and all seven series are finite. That is not the benchmark's
 # common mask (which also needs every GWR method), so raw numbers differ slightly from its
 # metrics_pooled.csv. Writes output/fy4b_two_stage_screen/:
 # - metrics.csv: r, RMSE, bias, and POD/FAR/CSI/FBI at 0.1, 2 and 8 mm/h, overall and per
 #   regime x season;
-# - paired.csv: the change in r and in RMSE of each two-stage anchor against FY4B_QM, FY4B,
-#   GPM_uncal and GSMaP, with a day-block bootstrap interval;
-# - context_tables.csv: every fold's counts per cell and class;
+# - paired.csv: the change in r and in RMSE for each pair in `PAIRS`, with a day-block bootstrap
+#   interval;
+# - context_tables.csv: every fold's counts per cell and class, for TS_E and TS_O;
 # - provenance.csv.
 
 include(joinpath(@__DIR__, "run_interpolation_benchmark.jl"))
@@ -36,9 +41,14 @@ const OUTDIR = joinpath(ROOT, "output", "fy4b_two_stage_screen")
 const THRESHOLDS = [0.1, 2.0, 8.0]
 const BOOTSTRAP_REPS = 1000
 const BOOTSTRAP_SEED = 20261101
-const SERIES = ["FY4B", "FY4B_QM", "FY4B_TS_E", "FY4B_TS_O", "GPM_uncal", "GSMaP"]
-const CANDIDATES = ["FY4B_TS_E", "FY4B_TS_O"]
-const BASELINES = ["FY4B_QM", "FY4B", "GPM_uncal", "GSMaP"]
+const SERIES = ["FY4B", "FY4B_QM", "FY4B_TS_I", "FY4B_TS_E", "FY4B_TS_O", "GPM_uncal", "GSMaP"]
+const ANCHORS = ["FY4B_QM", "FY4B_TS_I", "FY4B_TS_E", "FY4B_TS_O"]
+"""(candidate, baseline) pairs compared in `paired.csv`."""
+const PAIRS = [
+    ("FY4B_TS_I", "FY4B_QM"), ("FY4B_TS_E", "FY4B_TS_I"), ("FY4B_TS_E", "FY4B_QM"),
+    ("FY4B_TS_O", "FY4B_QM"), ("FY4B_TS_E", "FY4B"), ("FY4B_TS_E", "GPM_uncal"),
+    ("FY4B_TS_E", "GSMaP"),
+]
 
 """
 The configuration of the run being reproduced, and a copy of its `MGERConfig` that writes to
@@ -114,17 +124,17 @@ function _r_rmse(total)
     return r, sqrt(total[7] / n)
 end
 
-"""Each candidate against each baseline: the change in r and RMSE, with a paired day-block
-bootstrap (whole days resampled for both series at once)."""
+"""Each pair in `PAIRS`: the change in r and RMSE, with a paired day-block bootstrap (whole days
+resampled for both series at once)."""
 function paired_rows(scheme, series, y, mask, times)
     days = Date.(times)
     unique_days = sort(unique(days))
     day_of = [searchsortedfirst(unique_days, day) for day in days]
     sums = Dict(name => daily_sums(series[name], y, mask, day_of, length(unique_days))
-        for name in vcat(CANDIDATES, BASELINES))
-    keep = findall(>(0), sums[first(CANDIDATES)][:, 1])
+        for name in unique(vcat(first.(PAIRS), last.(PAIRS))))
+    keep = findall(>(0), sums[first(first(PAIRS))][:, 1])
     rows = NamedTuple[]
-    for candidate in CANDIDATES, baseline in BASELINES
+    for (candidate, baseline) in PAIRS
         rng = MersenneTwister(BOOTSTRAP_SEED)
         r1, rmse1 = _r_rmse(vec(sum(sums[candidate]; dims=1)))
         r0, rmse0 = _r_rmse(vec(sum(sums[baseline]; dims=1)))
@@ -182,7 +192,7 @@ function screen_main()
         folds = benchmark_folds(scheme_symbol, ids, lonlat; k=reference.k,
             seed=first(benchmark_seeds(reference)), center_init=reference.fold_center_init,
             rotation=0)
-        held_out = Dict(name => fill(NaN, size(y)) for name in ("FY4B_QM", CANDIDATES...))
+        held_out = Dict(name => fill(NaN, size(y)) for name in ANCHORS)
         for fold in 1:reference.k
             _, _, train, val = _fold_station_indices(folds, id_map, reference.k, fold)
             # Exactly the benchmark's call, so the guard below can hold it to that run.
@@ -198,7 +208,12 @@ function screen_main()
                 calibration.regime_of_time, calibration.cells, times, qm;
                 cache=calibration.cache, nearby_cache, wet=mger.rain_threshold,
             )
-            for (name, anchor) in zip(("FY4B_QM", CANDIDATES...), (qm, expected, occurrence))
+            amount_only = first(two_stage_fold(
+                calibration.grid, calibration.sums, y, train, calibration.regimes,
+                calibration.regime_of_time, calibration.cells, times, qm;
+                cache=calibration.cache, nearby_cache, wet=mger.rain_threshold, context=false,
+            ))
+            for (name, anchor) in zip(ANCHORS, (qm, amount_only, expected, occurrence))
                 held_out[name][val, :] = anchor[val, :]
             end
             append!(table_rows, [merge((; scheme, fold, n_train_station=length(train)), row)

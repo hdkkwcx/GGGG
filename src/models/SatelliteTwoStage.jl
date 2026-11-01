@@ -132,9 +132,13 @@ end
 The context class of every station and hour, as an `Int` `[station, time]` matrix, 0 where the
 shifted value is missing. `times` must be sorted. An adjacent hour counts only when it is exactly
 1 h away, and then only when its shifted value is `>= wet`.
+
+`context = false` drops the rain nearby and in the adjacent hours, so every hour takes its
+intensity class alone (as `(intensity, none, neither)`). That is the amount-only ablation: what a
+conditional mean gains over the quantile map without any context.
 """
 function context_classes(shifted::AbstractMatrix{<:Real}, nearby::AbstractMatrix{<:Integer},
-                         times::AbstractVector{DateTime}; wet::Real=0.1)
+                         times::AbstractVector{DateTime}; wet::Real=0.1, context::Bool=true)
     size(shifted) == size(nearby) && size(shifted, 2) == length(times) ||
         throw(DimensionMismatch("shifted, nearby and times must describe the same stations x hours"))
     issorted(times) || throw(ArgumentError("times must be sorted"))
@@ -146,8 +150,13 @@ function context_classes(shifted::AbstractMatrix{<:Real}, nearby::AbstractMatrix
         for s in axes(shifted, 1)
             x = shifted[s, t]
             isnan(x) && continue
-            adjacent = (has_prev && shifted[s, t - 1] >= wet) + (has_next && shifted[s, t + 1] >= wet)
-            classes[s, t] = context_class(fy4b_intensity_class(x), nearby[s, t], adjacent)
+            if context
+                adjacent = (has_prev && shifted[s, t - 1] >= wet) +
+                    (has_next && shifted[s, t + 1] >= wet)
+                classes[s, t] = context_class(fy4b_intensity_class(x), nearby[s, t], adjacent)
+            else
+                classes[s, t] = context_class(fy4b_intensity_class(x), 1, 0)
+            end
         end
     end
     return classes
@@ -281,7 +290,7 @@ One fold's two-stage anchors for every station, as `(expected, occurrence, table
 The shift is chosen per regime on `train` (`shift_fold`, sharing `cache` with `calibrate_fold`),
 the classes are read at it, and the tables are counted on `train`. `calibrated` is the fold's
 `FY4B_QM` anchor, whose amounts the occurrence rule keeps. `nearby_cache` keeps each centre
-shift's neighbour counts.
+shift's neighbour counts. `context = false` gives the amount-only ablation (`context_classes`).
 """
 function two_stage_fold(grid::OffsetGrid, sums, y_obs::AbstractMatrix{<:Real},
                         train::AbstractVector{<:Integer}, regimes::AbstractVector{<:AbstractString},
@@ -289,10 +298,10 @@ function two_stage_fold(grid::OffsetGrid, sums, y_obs::AbstractMatrix{<:Real},
                         times::AbstractVector{DateTime}, calibrated::AbstractMatrix{<:Real};
                         cache::AbstractDict=Dict{Int,Matrix{Float64}}(),
                         nearby_cache::AbstractDict=Dict{Int,Tuple{Matrix{UInt8},Int}}(),
-                        wet::Real=0.1, min_pairs::Integer=TS_MIN_PAIRS)
+                        wet::Real=0.1, min_pairs::Integer=TS_MIN_PAIRS, context::Bool=true)
     shifted, chosen, _ = shift_fold(grid, sums, train, regimes, regime_of_time; cache)
     nearby = fold_nearby(grid, chosen, regime_of_time; wet, cache=nearby_cache)
-    classes = context_classes(shifted, nearby, times; wet)
+    classes = context_classes(shifted, nearby, times; wet, context)
     tables = fit_context_tables(y_obs, classes, cell_of_time, train; wet, min_pairs)
     return expected_anchor(tables, classes, cell_of_time),
         occurrence_anchor(tables, classes, cell_of_time, calibrated),

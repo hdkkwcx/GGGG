@@ -37,6 +37,10 @@ end
     @test classes[2, :] == [context_class(1, 1, 0), 0, context_class(1, 1, 0),
         context_class(1, 1, 0), context_class(1, 1, 0)]
     @test_throws ArgumentError context_classes(shifted, nearby, reverse(times))
+    # Without context, only the intensity class is left.
+    plain = context_classes(shifted, nearby, times; context=false)
+    @test plain[1, :] == [context_class(i, 1, 0) for i in (2, 5, 1, 4, 1)]
+    @test plain[2, 2] == 0
 end
 
 @testset "rain nearby counts the wet shifts around the chosen one" begin
@@ -187,5 +191,14 @@ end
         again = two_stage_fold(grid, sums, scrambled, train, labels, regime_of_time, cells, times,
             calibrated; cache, nearby_cache, min_pairs=20)
         @test isequal(again[1], expected) && isequal(again[2], occurrence)
+        # The amount-only ablation: one value per cell and intensity class.
+        amount_only, _, plain_rows = two_stage_fold(grid, sums, rain, train, labels,
+            regime_of_time, cells, times, calibrated; cache, nearby_cache, min_pairs=20,
+            context=false)
+        keys_of = [(cells[t], fy4b_intensity_class(shifted[s, t]))
+                   for s in 1:n_station, t in 1:n_time]
+        @test all(length(unique(amount_only[keys_of .== Ref(key)])) == 1 for key in unique(keys_of))
+        @test all(row.n_own == 0 for row in plain_rows if row.nearby != "none" || row.adjacent != "neither")
+        @test amount_only != expected
     end
 end
