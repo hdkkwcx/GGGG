@@ -247,8 +247,13 @@ function guard_blends(scheme, selection, data, band, fold_of, threshold)
         rebuilt = Dict(method => fill(NaN, size(mgwr)) for method in ("blend_mgwr", "blend_agrenv_mgwr"))
         for fold in sort(unique(fold_of))
             val = findall(==(fold), fold_of)
-            chosen(method) = findfirst(row -> row.scheme == scheme && row.product == product &&
-                row.fold == fold && row.method == method, eachrow(selection))
+            function chosen(method)
+                matches = findall(row -> row.scheme == scheme && row.product == product &&
+                    row.fold == fold && row.method == method, eachrow(selection))
+                length(matches) <= 1 || error("$scheme $product fold $fold: " *
+                    "$(length(matches)) $method weight rows, expected at most one")
+                return isempty(matches) ? nothing : only(matches)
+            end
             # A fold the benchmark skipped has no weights and its blends stay NaN, as stored.
             agreement = chosen("blend_agrenv_mgwr")
             if agreement !== nothing
