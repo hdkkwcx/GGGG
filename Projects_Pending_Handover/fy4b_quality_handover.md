@@ -19,12 +19,15 @@ step:** the user's call on the blend screen, then the paper framing (§0a) and a
   - **MGWR redoes most of the QM's work.** Within an hour the QM is one monotone map, applied to
     every station alike. MGWR is a residual model, ĝ = max(0, s + κ·r̂), and the hourly residual
     surface from neighbouring gauges already fixes the spatially coherent amount errors.
-  - **The blend leans on ADW**, because MGWR alone loses to ADW for every product.
+  - **The blend leans on ADW**, because MGWR alone loses to ADW for every single-satellite product
+    (FY4B, FY4B_QM, GPM_uncal, GSMaP). The merged anchors' MGWR does beat it: MERGED_MEAN 0.7412
+    and MERGED_OLS 0.7244, against ADW ≈ 0.746.
   - **One subtlety:** the shift, QM and strength are fitted on all of a fold's training stations,
     including the inner hold-out group that κ and λ are tuned on.
 - **Screen:** `scripts/screen_fy4b_blend_headroom.jl` → `output/fy4b_blend_headroom/` (log
   `output/fy4b_blend_headroom.log`).
-  - Run at `4d44e59` from a clean tree; it takes 0.6 min.
+  - Run at `7073072` from a clean tree; it takes 0.6 min. The first run, at `4d44e59`, printed
+    the same numbers.
   - It reads the §0a run's out-of-fold files. As a guard, it rebuilds both blends for FY4B,
     FY4B_QM and GPM_uncal in all 4,760,619 cells of both schemes, and its scores match
     `metrics_pooled.csv`.
@@ -46,7 +49,14 @@ step:** the user's call on the blend screen, then the paper framing (§0a) and a
 - **Reading:**
   - With FY4B's own information alone, FY4B_QM's blend is not shown to beat gauges alone: the
     interval spans 0.
-  - The significant −0.91% needs the GPM and GSMaP bands, which supply more than half of it.
+  - The significant −0.91% needs the three-product bands, which give −0.53% of it. That part
+    mixes three things:
+    - the other products' rain calls;
+    - 9 weights instead of 1;
+    - the extra cells blended where only another product is wet.
+
+    K4 below (FY4B-only bands with 3 weights) suggests the extra weights alone add little. So
+    most of it is the other products, but not all of it is shown to be.
   - So never write "corrected FY4B beats gauges alone" on the strength of `blend_agrenv_mgwr`.
   - The QM's own effect is clearest in the own-anchor blend: −1.2% against plain FY4B.
 
@@ -55,8 +65,11 @@ gap):
 - FY4B_QM wet and gauge dry, i.e. false rain: 51%.
 - FY4B_QM dry and gauge wet, i.e. misses: 20%.
 - Both wet: 16%. Both dry: 13%.
-- Band 0, where no product is wet: 15% net. Its gauge-dry cells alone give 26%: through the
-  residual surface, FY4B's training-gauge errors reach cells no product calls wet.
+- Band 0, where no product is wet: 15% net, and its gauge-dry cells alone give 26%.
+  - That is consistent with FY4B's training-gauge errors reaching cells no product calls wet,
+    through the residual surface. It is not shown directly.
+  - In band 0 (`attenuation.csv`), FY4B_QM's blend has bias +0.006 and RMSE 0.2717; GPM_uncal's
+    has −0.001 and 0.2649.
 - Cells where only FY4B_QM is wet (bands 1–3): 17%.
 
 **Headroom, exploratory.** λ is chosen on the other folds' out-of-fold cells, and those
@@ -71,6 +84,11 @@ spatial, against K0:
 | K4 | FY4B_QM-only bands | +0.84% (+0.61..+1.12) | −0.0064 | −0.0069 (sig) |
 
 - **No key meets the rule** (RMSE −0.3% or better, with heavy-rain detection and bias held).
+  - "|bias| does not grow materially" is coded as at most +0.005 mm/h (`BIAS_TOLERANCE`, about
+    4% of mean gauge rain). That number is my choice, not the user's. It decides nothing here,
+    because K3 already fails the RMSE bar.
+  - Every interval here is a day-block bootstrap. It holds the stations fixed, so it leaves out
+    the spatial (station and fold) sampling, as the earlier screens do.
 - **K3 is the only real gain, and it is small.**
   - Band 0's weight is 0.4–0.6 (balanced) and 0.7–0.8 (random). In the random split K3 gives
     −0.46% (−0.75..−0.16), as context only.
@@ -79,12 +97,20 @@ spatial, against K0:
   weight.
 - **K4 shows the bands need GPM and GSMaP.**
 - **K0, the protocol control,** scores 0.7356, against the benchmark's own 0.7391. That gap mixes
-  the leaky cross-fit with the tuning. It is not a tuning-bias estimate.
+  the leaky cross-fit, the tuning, and a protocol difference: K0 picks λ on all hours, unweighted,
+  where the benchmark uses 336 weighted tuning hours. It is not a tuning-bias estimate.
 - **Outcome:** stop, per the rule. Frame the paper on the improvement over ADW, about 0.1% → 0.9%:
-  - more than half of it comes from the other products' bands;
+  - more than half of it comes with the three-product bands, mostly the other products' rain
+    calls (see the attribution reading);
   - FY4B's own part is the own-anchor row, whose interval spans 0.
-- **Open for the user:** K3 as a general "blend band 0" option. It is below the 0.3% bar, applies
-  to every product, and would need a nested benchmark run before it could be cited.
+- **Open for the user:**
+  - K3 as a general "blend band 0" option. It is below the 0.3% bar, applies to every product,
+    and would need a nested benchmark run before it could be cited.
+  - Band 0 toward the anchor instead of ADW (a possible K5). In band 0 the raw anchor beats every
+    corrected field: FY4B_QM raw 0.2613 vs mgwr 0.2717, GPM_uncal raw 0.2608 vs mgwr 0.2649
+    (`attenuation.csv`). So where all three products are dry, the gauge correction adds error on
+    net. This was spotted in held-out numbers, so it needs the exploratory screen and then a
+    nested run.
 
 ## 0. Earlier (2026-11-01): two-stage counting tables, screened on raw FY4B
 
