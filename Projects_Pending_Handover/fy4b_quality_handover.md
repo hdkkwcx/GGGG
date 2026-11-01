@@ -2,10 +2,41 @@
 
 **Date:** 2026-11-01 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
-quality step; a blend screen (below) found no band key that clears the decision rule · **Next
-step:** the user's call on the blend screen, then the paper framing (§0a) and a paper step
+quality step; a blend screen (below) found no band key that clears the decision rule; at the
+user's request a nested run of two dry-band blends is going · **Next step:** score that run
+(`scripts/compare_blend_dry_band.jl`), then the paper framing (§0a) and a paper step
 
 ---
+
+## Newest (2026-11-01): nested run of the dry-band blends
+
+The user asked for a full nested run of both band-0 ideas from the screen below.
+- **Code** (`8232154`, branch `fy4b/blend-headroom`): `--blend-dry-band` adds two opt-in axes on
+  top of `--blend-axis agreement_envelope`. Both give the cells no source product calls wet (the
+  agreement blend's never-blended band 0) a weight of their own, as band 10:
+  - `blend_agrenvdry_*` leans band 10 toward adw, like every other band (the screen's K3);
+  - `blend_agrenvdryraw_*` leans it toward the product's own anchor (the K5 idea).
+- **Weights:** bands 1–9 repeat the agreement blend's weights exactly, because the bands separate
+  in `select_blend_lambdas`. Band 10's weight is chosen on the inner split, on the representative
+  tuning hours only, i.e. the evenly spaced half (`_tuning_representative`).
+  - Why: the tuning sample's wettest half would make gauge rain in the dry band look commoner than
+    it is. A side agent flagged this before the run; the stacked blend avoids it for the same
+    reason.
+  - So a null result would not come from the wet-heavy sample. The weight still rests on about
+    168 hours.
+- **Tests:** unit and end-to-end tests; the full suite passes. The end-to-end test checks that no
+  existing row moves and that bands 1–9 repeat the agreement weights. The review bump is
+  `53367fe`.
+- **Run:** started at `8232154` from a clean tree with `-t 4` and the §0a command plus
+  `--blend-dry-band`. Log: `output/full_benchmark_blenddry_qmfusion.log`. Output:
+  `output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_blenddry_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/`.
+- **When it ends:** run `julia --project=. scripts/compare_blend_dry_band.jl` (`fd59d5f`). It
+  errors unless every metric row and blend weight of the §0a run is unchanged, then writes
+  `output/blend_dry_band_comparison/paired.csv`. That file has, for all six products, both dry
+  blends against the agreement blend and against adw, with day-block intervals on RMSE, bias and
+  8 mm/h CSI/FBI, plus the decision rule.
+- **Also on the branch:** `DayBlockBootstrap` (`c66893f`), the day-block scoring now shared by the
+  screen and the comparison. The screen re-run gave byte-identical CSVs.
 
 ## Latest (2026-11-01): why the QM barely moves the blend, and a blend screen
 
