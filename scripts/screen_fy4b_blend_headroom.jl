@@ -42,9 +42,11 @@
 # at 8 mm/h.
 
 include(joinpath(@__DIR__, "run_interpolation_benchmark.jl"))
-load_standalone_modules("SatelliteCalibration", "RunProvenance", "TableIO")
+load_standalone_modules("SatelliteCalibration", "RunProvenance", "TableIO", "DayBlockBootstrap")
 
 using CSV, Printf, Random, Statistics
+using Main: DayBlockBootstrap
+using Main.DayBlockBootstrap: read_wide_values, read_wide_mask, day_groups
 using Main.SatelliteCalibration: product_regimes
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.TableIO: write_csv_atomic
@@ -90,111 +92,12 @@ function screen_config()
     return reference, MGERConfig(; merge(values, (; outdir=OUTDIR))...)
 end
 
-"""A wide OOF table (`time`, then one column per station) as a stations × hours matrix."""
-function read_wide(path, ids, times, convert)
-    table = CSV.read(path, DataFrame)
-    DateTime.(string.(table.time)) == times || error("$path: its hours differ from the grid's")
-    return permutedims(reduce(hcat, [convert(table[!, id]) for id in ids]))
-end
-read_values(path, ids, times) =
-    read_wide(path, ids, times, column -> Float64.(coalesce.(column, NaN)))
-read_mask(path, ids, times) =
-    BitMatrix(read_wide(path, ids, times, column -> coalesce.(column, false) .== true))
-
-_label(threshold) = isinteger(threshold) ? string(Int(threshold)) : string(threshold)
-
-const N_SUM = 8 + 3 * length(THRESHOLDS)
-
-"""
-Sums per group over the masked cells:
-- n, Σe, Σe², Σx, Σy, Σx², Σy² and Σxy, where e = x − y;
-- then hits, misses and false alarms per threshold.
-
-`group[i, t]` is the cell's group, and 0 skips the cell.
-"""
-function group_sums(x, y, mask, group::AbstractMatrix{<:Integer}, n_group::Int)
-    sums = zeros(n_group, N_SUM)
-    @inbounds for index in eachindex(y)
-        mask[index] || continue
-        g = group[index]
-        g == 0 && continue
-        xv, yv = x[index], y[index]
-        e = xv - yv
-        sums[g, 1] += 1
-        sums[g, 2] += e
-        sums[g, 3] += e * e
-        sums[g, 4] += xv
-        sums[g, 5] += yv
-        sums[g, 6] += xv * xv
-        sums[g, 7] += yv * yv
-        sums[g, 8] += xv * yv
-        for (j, threshold) in enumerate(THRESHOLDS)
-            observed = yv >= threshold
-            estimated = xv >= threshold
-            column = 8 + 3 * (j - 1)
-            sums[g, column + 1] += observed & estimated
-            sums[g, column + 2] += observed & !estimated
-            sums[g, column + 3] += !observed & estimated
-        end
-    end
-    return sums
-end
-
-"""The scores one row of `group_sums` gives, the event ones at every threshold."""
-function sum_stats(total)
-    n = total[1]
-    mx, my = total[4] / n, total[5] / n
-    r = (total[8] / n - mx * my) / sqrt((total[6] / n - mx^2) * (total[7] / n - my^2))
-    bias = total[2] / n
-    values = Pair{Symbol,Float64}[:n => n, :RMSE => sqrt(total[3] / n), :bias => bias,
-        :abs_bias => abs(bias), :r => r]
-    for (j, threshold) in enumerate(THRESHOLDS)
-        column = 8 + 3 * (j - 1)
-        hits, misses, false_alarms = total[column + 1], total[column + 2], total[column + 3]
-        tag = _label(threshold)
-        fbi = (hits + false_alarms) / (hits + misses)
-        append!(values, [Symbol("POD_", tag) => hits / (hits + misses),
-            Symbol("FAR_", tag) => false_alarms / (hits + false_alarms),
-            Symbol("CSI_", tag) => hits / (hits + misses + false_alarms),
-            Symbol("FBI_", tag) => fbi, Symbol("FBI_", tag, "_dev") => abs(fbi - 1)])
-    end
-    return (; values...)
-end
-
-_prefixed(stats, prefix) =
-    NamedTuple{Tuple(Symbol(prefix, name) for name in keys(stats))}(values(stats))
-
-"""
-Candidate against baseline on per-day sums over one shared mask.
-
-Returns the point change in every `CI_STATS` entry, with a paired day-block bootstrap interval:
-whole days are resampled for both series at once.
-"""
-function compare_days(candidate::Matrix{Float64}, baseline::Matrix{Float64})
-    keep = findall(>(0), candidate[:, 1])
-    keep == findall(>(0), baseline[:, 1]) || error("the two series are not on one mask")
-    c = sum_stats(vec(sum(candidate; dims=1)))
-    b = sum_stats(vec(sum(baseline; dims=1)))
-    rng = MersenneTwister(BOOTSTRAP_SEED)
-    draws = Dict(stat => Vector{Float64}(undef, BOOTSTRAP_REPS) for stat in CI_STATS)
-    for rep in 1:BOOTSTRAP_REPS
-        sampled = rand(rng, keep, length(keep))
-        cs = sum_stats(vec(sum(view(candidate, sampled, :); dims=1)))
-        bs = sum_stats(vec(sum(view(baseline, sampled, :); dims=1)))
-        for stat in CI_STATS
-            draws[stat][rep] = getproperty(cs, stat) - getproperty(bs, stat)
-        end
-    end
-    fields = Pair{Symbol,Float64}[:rel_RMSE => (c.RMSE - b.RMSE) / b.RMSE,
-        :rel_RMSE_lo => quantile(draws[:RMSE], 0.025) / b.RMSE,
-        :rel_RMSE_hi => quantile(draws[:RMSE], 0.975) / b.RMSE]
-    for stat in CI_STATS
-        append!(fields, [Symbol("delta_", stat) => getproperty(c, stat) - getproperty(b, stat),
-            Symbol("delta_", stat, "_lo") => quantile(draws[stat], 0.025),
-            Symbol("delta_", stat, "_hi") => quantile(draws[stat], 0.975)])
-    end
-    return merge(_prefixed(c, "candidate_"), _prefixed(b, "baseline_"), (; fields...))
-end
+"""`DayBlockBootstrap`'s functions at this screen's thresholds and bootstrap settings."""
+group_sums(x, y, mask, group, n_group) = DayBlockBootstrap.group_sums(x, y, mask, group,
+    n_group, THRESHOLDS)
+sum_stats(total) = DayBlockBootstrap.sum_stats(total, THRESHOLDS)
+compare_days(candidate, baseline) = DayBlockBootstrap.compare_days(candidate, baseline,
+    THRESHOLDS; ci_stats=CI_STATS, reps=BOOTSTRAP_REPS, seed=BOOTSTRAP_SEED)
 
 """Agreement band `b` (1-9) as "<products wet>w <envelope>"."""
 band_label(b) = b == 0 ? "band 0 (no product wet)" :
@@ -404,10 +307,7 @@ function screen_main()
         types=Dict(:cell => String, :regime => String))
     pooled = CSV.read(run_tables[3], DataFrame; types=Dict(:level => String))
     threshold = mger.rain_threshold
-    days = Date.(times)
-    unique_days = sort(unique(days))
-    day_group = repeat(permutedims([searchsortedfirst(unique_days, d) for d in days]), length(ids))
-    n_day = length(unique_days)
+    day_group, n_day = day_groups(times, length(ids))
     day_sums(x, mask) = group_sums(x, y, mask, day_group, n_day)
     println("Grid: $(length(ids)) stations x $(length(times)) hours ($(elapsed()) min)")
 
@@ -423,10 +323,11 @@ function screen_main()
         fold_of = [fold_by_id[id] for id in ids]
         data = Dict{Tuple{String,String},Matrix{Float64}}()
         for product in PRODUCTS, method in METHODS
-            data[(product, method)] = read_values(oof(scheme, product, "oof_$method.csv"), ids, times)
+            data[(product, method)] =
+                read_wide_values(oof(scheme, product, "oof_$method.csv"), ids, times)
         end
-        data[("GSMaP", "raw")] = read_values(oof(scheme, "GSMaP", "oof_raw.csv"), ids, times)
-        masks = Dict(product => read_mask(oof(scheme, product, "common_evaluation_mask.csv"),
+        data[("GSMaP", "raw")] = read_wide_values(oof(scheme, "GSMaP", "oof_raw.csv"), ids, times)
+        masks = Dict(product => read_wide_mask(oof(scheme, product, "common_evaluation_mask.csv"),
             ids, times) .& .!isnan.(y) for product in PRODUCTS)
         println("$scheme: OOF files read ($(elapsed()) min)")
 
