@@ -56,6 +56,11 @@ function benchmark_config(
         "--blend-axis only has an effect with --satellite-wet-blend, which produces the " *
         "blended methods it would weight",
     ))
+    !any(in(BLEND_DRY_AXES), blend_axes) || :agreement_envelope in blend_axes ||
+        throw(ArgumentError(
+            "--blend-dry-band adds variants of the agreement blend, so it needs " *
+            "--blend-axis agreement_envelope to report that blend beside them",
+        ))
     stacked_blend && legacy_dem && throw(ArgumentError(
         "--stacked-blend fits its weights on the joint-covariate path's inner split, " *
         "not --legacy-dem",
@@ -87,6 +92,7 @@ function benchmark_config(
             # baseline it is measured against.
             (satellite_wet_blend ? "_satwetblend" : "") *
             (blend_axes == [:constant] ? "" : "_blendagrenv") *
+            (any(in(BLEND_DRY_AXES), blend_axes) ? "_blenddry" : "") *
             (fused_anchor ? "_fusedanchor" : "") *
             (fused_anchor_lagnbr ? "_fusedlagnbr" : "") *
             (stacked_blend ? "_stackblend" : "") *
@@ -418,6 +424,11 @@ function main(args=ARGS)
     # count x their maximum). Reported beside the constant rule, not instead of it.
     blend_axes = "--blend-axis" in args || any(startswith("--blend-axis="), args) ?
         [:constant, parse_blend_axis(args)] : Symbol[:constant]
+    # With --blend-axis agreement_envelope: also report the agreement blend with its dry band (no
+    # source product wet) blended, toward adw (`blend_agrenvdry_*`) and toward the product's own
+    # anchor (`blend_agrenvdryraw_*`). Their bands 1-9 repeat the agreement blend's weights, so
+    # they add methods and move no existing row. Output suffix `_blenddry`. See `BLEND_AXES`.
+    "--blend-dry-band" in args && append!(blend_axes, collect(Symbol, BLEND_DRY_AXES))
     # Add MERGED_OLS and MERGED_MEAN: products whose anchor is a fusion of the three real ones,
     # fitted per fold on training stations only (`fused_anchor_selection.csv`), so a held-out gauge
     # never reaches its own anchor. Needs --nested-covariates. See `SatelliteFusion` for why both

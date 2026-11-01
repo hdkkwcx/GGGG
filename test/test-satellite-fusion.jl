@@ -194,6 +194,40 @@ end
         @test blend_band_count(:agreement_envelope) == 9
     end
 
+    @testset "the dry axes give band 0 its own last ID, and leave bands 1-9 alone" begin
+        agreement = blend_band_matrix(:agreement_envelope, y_sat, sources, threshold)
+        for axis in BLEND_DRY_AXES
+            @test blend_band_count(axis) == 10
+            band = blend_band_matrix(axis, y_sat, sources, threshold)
+            @test band == [10 1 5; 9 10 1]
+            @test band[agreement .> 0] == agreement[agreement .> 0]
+        end
+        @test _blend_method("mgwr", :agreement_envelope_dry) == "blend_agrenvdry_mgwr"
+        @test _blend_method("mgwr", :agreement_envelope_dry_raw) == "blend_agrenvdryraw_mgwr"
+    end
+
+    @testset "only the dry-raw axis leans its dry band toward the anchor" begin
+        band = blend_band_matrix(:agreement_envelope_dry_raw, y_sat, sources, threshold)
+        anchor = [0.05 0.5 3.0; 9.0 0.07 0.2]
+        # Every other axis gets the fallback itself back, so its blend cannot move.
+        for axis in (:constant, :agreement_envelope, :agreement_envelope_dry)
+            @test blend_fallback(axis, band, fallback, anchor) === fallback
+        end
+        leaned = blend_fallback(:agreement_envelope_dry_raw, band, fallback, anchor)
+        @test leaned[band .== 10] == anchor[band .== 10]
+        @test leaned[band .< 10] == fallback[band .< 10]
+        # At full weight the dry band becomes the anchor, and bands 1-9 the fallback.
+        lambdas = ones(10)
+        blended = banded_blend_prediction(band, prediction, leaned, lambdas)
+        @test blended[1, 1] == anchor[1, 1] && blended[2, 2] == anchor[2, 2]
+        @test blended[1, 2] == fallback[1, 2]
+        # Weights on bands 1-9 alone reproduce the agreement blend exactly.
+        agreement = blend_band_matrix(:agreement_envelope, y_sat, sources, threshold)
+        weights = collect(0.1:0.1:0.9)
+        @test banded_blend_prediction(band, prediction, leaned, vcat(weights, 0.0)) ==
+            banded_blend_prediction(agreement, prediction, fallback, weights)
+    end
+
     @testset "a zero weight is the identity, and band 0 is never touched" begin
         band = blend_band_matrix(:agreement_envelope, y_sat, sources, threshold)
         @test banded_blend_prediction(band, prediction, fallback, zeros(9)) == prediction

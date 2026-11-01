@@ -279,7 +279,7 @@ function _tuning_time_sample(
     if weighting === :uniform
         wet_count = div(maximum_times, 2)
         wet = partialsortperm(wetness, 1:wet_count; rev=true)
-        spaced = unique(round.(Int, range(1, total; length=maximum_times - wet_count)))
+        spaced = _tuning_spaced_hours(total, maximum_times)
         return sort(unique(vcat(wet, spaced))), nothing
     end
     wet_count = max(1, div(maximum_times, 8))
@@ -300,6 +300,32 @@ function _tuning_time_sample(
     weights = vcat(ones(Float64, length(wet)), fill(length(rest) / length(dry), length(dry)))
     order = sortperm(indices)
     return indices[order], weights[order]
+end
+
+"""The evenly spaced half of the `:uniform` tuning sample, as hour indices into the record."""
+_tuning_spaced_hours(total::Int, maximum_times::Int) =
+    unique(round.(Int, range(1, total; length=maximum_times - div(maximum_times, 2))))
+
+"""
+Which hours of a tuning sample are a draw from the whole record, rather than taken for being
+wet, as one `Bool` per sampled hour. `time_indices` and `time_weights` are what
+`_tuning_time_sample` returned for a record of `total` hours.
+
+- No subsample (every hour is in it): all of them.
+- `:uniform` (no weights): the evenly spaced half, not the wettest half.
+- `:stratified`: the systematic remainder (weight > 1), not the certainty stratum.
+
+For a weight that only dry cells see. The wettest half of the uniform sample makes gauge rain
+look commoner than it is there, so a weight chosen on the whole sample leans toward adding rain.
+"""
+function _tuning_representative(
+    time_indices::AbstractVector{<:Integer}, time_weights::Union{Nothing,Vector{Float64}},
+    total::Int, maximum_times::Int,
+)
+    length(time_indices) == total && return trues(total)
+    time_weights === nothing || return BitVector(time_weights .> 1.0)
+    spaced = Set(_tuning_spaced_hours(total, maximum_times))
+    return BitVector([index in spaced for index in time_indices])
 end
 
 _tuning_time_indices(y_obs::Matrix{Float64}, maximum_times::Int) =

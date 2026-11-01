@@ -356,6 +356,12 @@ function blend_band_matrix(
     axis::Symbol, y_sat::Matrix{Float64}, sources::Vector{Matrix{Float64}}, threshold::Float64,
 )
     axis in BLEND_AXES || throw(ArgumentError("unknown blend axis: $axis"))
+    if axis in BLEND_DRY_AXES
+        # The agreement axis's bands, with its never-blended band 0 given the last ID instead.
+        out = blend_band_matrix(:agreement_envelope, y_sat, sources, threshold)
+        out[out .== 0] .= blend_band_count(axis)
+        return out
+    end
     out = zeros(Int, size(y_sat))
     if axis === :constant
         @inbounds for index in eachindex(out)
@@ -388,6 +394,25 @@ function blend_band_matrix(
         out[index] = (agreement - 1) * n_envelope + band
     end
     return out
+end
+
+"""
+What each cell of a banded blend leans toward. Every axis leans toward `fallback`
+(`BLEND_FALLBACK_METHOD`), except that `:agreement_envelope_dry_raw` leans its dry band (the last
+ID, no source product wet) toward the target's own anchor `y_sat`. A NaN anchor there leaves the
+cell unblended, by `banded_blend_prediction`'s rule for a NaN fallback.
+
+Returns `fallback` itself for every other axis, so those blends are unchanged.
+"""
+function blend_fallback(
+    axis::Symbol, band::AbstractMatrix{Int}, fallback::AbstractMatrix{Float64},
+    y_sat::AbstractMatrix{Float64},
+)
+    axis === :agreement_envelope_dry_raw || return fallback
+    size(band) == size(fallback) == size(y_sat) || throw(DimensionMismatch(
+        "band, fallback and y_sat must have the same shape",
+    ))
+    return ifelse.(band .== blend_band_count(axis), y_sat, fallback)
 end
 
 """

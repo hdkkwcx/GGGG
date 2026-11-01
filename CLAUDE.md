@@ -135,7 +135,7 @@ using Main.BenchmarkDiagnostics
 
 ### Interpolation benchmark invariants
 
-- Opt-in flags (`--satellite-wet-blend`, `--blend-axis`, `--fused-anchor`,
+- Opt-in flags (`--satellite-wet-blend`, `--blend-axis`, `--blend-dry-band`, `--fused-anchor`,
   `--fused-anchor-lagnbr`, `--stacked-blend`, `--fy4b-qm`) add methods or products without moving
   any existing metric row; the end-to-end test asserts this.
 - `--fy4b-file <path>` (with `--with-fy4b`) scores a FY4B series rebuilt by
