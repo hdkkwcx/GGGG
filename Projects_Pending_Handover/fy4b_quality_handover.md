@@ -1,14 +1,87 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-10-31 · **State:** Parts A and B done; adaptive map and QM-fed fusion scored ·
-**Next step:** the user picks the paper framing (§0), then a paper step, or the two-stage model
-(`ROADMAP.md`)
+**Date:** 2026-11-01 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+screened on raw FY4B (§0) · **Next step:** the user decides whether `FY4B_TS_E` goes into the
+benchmark for a full run (§0), then the paper framing (§0a) and a paper step
 
 ---
 
-## 0. Latest (2026-10-31): adaptive map and QM-fed fusion scored
+## 0. Latest (2026-11-01): two-stage counting tables, screened on raw FY4B
 
-- **Commits on `fy4b/with-fy4b-benchmark`** (not merged or pushed), after §0a's:
+- **Branches:**
+  - `fy4b/with-fy4b-benchmark` was merged into master as `805bad6` and pushed.
+  - This work is on `fy4b/two-stage`, not merged or pushed: `ad9bc97` (code and screen), `1c58cca`
+    (review bump), then this note.
+- **User's decisions:** no machine learning, so counting tables; no 15-minute quarters yet; stop
+  after the screen.
+- **What it is** (`src/models/SatelliteTwoStage.jl`). Per fold, on training gauges only, each
+  station-hour gets a class from FY4B alone, at the fold's shift:
+  - intensity: 8 classes;
+  - rain in the 8 surrounding shifts: none, some or all;
+  - rain at t−1 / t+1: neither, one or both;
+  - all within regime × season.
+
+  Per class it counts P(gauge ≥ 0.1) and the mean wet amount. A class with fewer than 200 pairs
+  pools to its regime, then all cells, then its intensity class.
+  - `FY4B_TS_E` = P × amount.
+  - `FY4B_TS_O`: the classes with the highest P are called wet until they cover the training
+    gauges' wet count. A wet hour keeps `FY4B_QM`'s amount.
+- **Screen:** `scripts/screen_fy4b_two_stage.jl` → `output/fy4b_two_stage_screen/` (log
+  `output/fy4b_two_stage_screen.log`).
+  - Run at `ad9bc97` from a clean tree; it takes 2 min.
+  - It uses the §0a run's grid, folds and per-fold `FY4B_QM`. Its held-out `FY4B_QM` equals that
+    run's `oof_raw.csv` in all 4,760,619 cells of both schemes.
+  - It scores cells where all six series are finite, which is not the benchmark's mask.
+
+Held-out raw scores, balanced spatial:
+
+| series | r | RMSE | CSI 0.1 / 2 / 8 | FBI 0.1 / 2 / 8 |
+|---|---|---|---|---|
+| FY4B | 0.224 | 1.142 | 0.176 / 0.124 / 0.047 | 1.08 / 0.99 / 2.00 |
+| FY4B_QM | 0.247 | 0.949 | 0.175 / 0.123 / 0.055 | 0.99 / 0.87 / 0.65 |
+| FY4B_TS_E | 0.290 | 0.825 | 0.181 / 0.051 / 0.000 | 1.92 / 0.16 / 0.00 |
+| FY4B_TS_O | 0.244 | 0.951 | 0.173 / 0.122 / 0.054 | 0.95 / 0.88 / 0.65 |
+| GPM_uncal | 0.437 | 0.800 | 0.338 / 0.266 / 0.075 | 1.38 / 0.77 / 0.47 |
+| GSMaP | 0.382 | 1.077 | 0.323 / 0.260 / 0.075 | 1.56 / 1.05 / 1.63 |
+
+- **Paired against `FY4B_QM`** (day-block bootstrap, 95%):
+  - TS_E: r +0.043 (+0.021 to +0.066), RMSE −13.1% (sig). Random split: r +0.050, RMSE −13.0%.
+  - TS_O: r −0.003 and RMSE +0.2%; both CIs span 0.
+- **Standing:** TS_E's r is 0.147 below GPM_uncal and 0.092 below GSMaP. Its RMSE is +3.1%
+  against GPM_uncal and −23% against GSMaP (all sig).
+- **Reading:**
+  - Context does re-rank hours. TS_E's r gain (0.247 → 0.290) is the first sizeable one, and it
+    comes from summer and autumn: +0.02 to +0.05 per regime × season. Winter and spring gain
+    nothing.
+  - TS_E is a conditional mean, so it flattens the rain. It never reaches 8 mm/h (CSI_8 and
+    FBI_8 are 0), CSI at 2 mm/h falls from 0.123 to 0.051, and it spreads drizzle (FBI_0.1 is
+    1.92). ROADMAP warned of exactly this: better r and RMSE, heavy rain lost.
+  - The occurrence rule adds nothing over `FY4B_QM`, whose threshold already matches the gauges'
+    wet frequency.
+  - Context sees FY4B's misses better than its false rain. In 133E V1.0 JJA (fold 1):
+    - a dry FY4B hour with rain nearby or in both adjacent hours is wet at the gauge 10–12% of
+      the time, against 2% when isolated;
+    - even FY4B ≥ 16 mm/h with rain all around and in both hours is wet only 42% of the time.
+- **Fixed before the recorded run:** TS_O's frequency rule first ran on into the huge "dry,
+  nothing nearby" class.
+  - Where: three winter cells and one spring cell, where FY4B's wet classes cover fewer hours
+    than the gauges are wet.
+  - Effect: on training pairs, 8–115 times the gauges' wet count was called wet; held out,
+    FBI_0.1 was 4.3.
+  - Fix: the rule now stops before a class that would leave the count further from the target.
+  - Spotted from the held-out FBI in the trial run; the cause and the fix are both read from the
+    training counts in `context_tables.csv`.
+- **Open, for the user:**
+  1. Add `FY4B_TS_E` to the benchmark (`--fy4b-twostage`, a derived product like `FY4B_QM`) and
+     do the ~4 h full run. It would show whether a flatter but better-ranked anchor helps MGWR
+     and the agreement blend. TS_O is not worth a run.
+  2. Add the 15-minute quarter context: a rebuild extension, ~18 min on the T9.
+  3. Or stop: `FY4B_QM` stays the FY4B quality step, and the screen records that context tables
+     raise r but lose heavy rain.
+
+## 0a. Earlier (2026-10-31): adaptive map and QM-fed fusion scored
+
+- **Commits on `fy4b/with-fy4b-benchmark`** (merged into master as `805bad6`, 2026-11-01), after §0b's:
   - `48f61df` this note; `4896f92` `ROADMAP.md` (the two-stage occurrence/amount model);
   - `e683517` adaptive map, `cdbd860` CLI flags `--fy4b-qm-adaptive`, `--fy4b-qm-fusion`;
   - `2e9f0e4` strength chosen per month, not per season;
@@ -20,9 +93,9 @@
   - `--fy4b-qm-fusion` (`_qmfusion`): each fold's `FY4B_QM` replaces plain FY4B in
     MERGED_MEAN/MERGED_OLS and in the agreement-envelope bands.
 - **Full run:** `..._fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal`, at `b55a3a9`, clean
-  tree, the §0a flags plus both options. FY4B's and GPM_uncal's raw and mgwr rows are identical
-  to §0a's run (checked cell by cell).
-- **Analysis:** `output/fy4b_partB_analysis/qmfusion/` (`paired_qmfusion.csv` against §0a's
+  tree, the §0b flags plus both options. FY4B's and GPM_uncal's raw and mgwr rows are identical
+  to §0b's run (checked cell by cell).
+- **Analysis:** `output/fy4b_partB_analysis/qmfusion/` (`paired_qmfusion.csv` against §0b's
   run, `rank_qmfusion.csv` within this run, `monthly_qm.txt`, and their scripts).
 
 Balanced spatial, change in RMSE; "sig" means the 95% day-block CI excludes 0:
@@ -64,9 +137,9 @@ Balanced spatial, change in RMSE; "sig" means the 95% day-block CI excludes 0:
   - The strength is chosen on the same month's training gauges, as the map is. This is
     in-period calibration under spatial CV, like the hourly GWR fits, not a forecast.
 
-## 0a. Earlier (2026-10-31): Part B done, both full runs scored
+## 0b. Earlier (2026-10-31): Part B done, both full runs scored
 
-- **Branch `fy4b/with-fy4b-benchmark`**, not merged or pushed. Since master:
+- **Branch `fy4b/with-fy4b-benchmark`**, merged as `805bad6` on 2026-11-01. Since master:
   - rebuild code: `37e27d7`, `14d70d4`, `0924141` (duplicate-copy fix);
   - `FY4B_QM`: `ede88b8`; CLI flags `--fy4b-file`, `--fy4b-qm`: `3c6361d`;
   - review bumps `ef64be0`, `2ae2dbc`, `ca52142`, `d492f42`; this note.
@@ -114,9 +187,9 @@ Balanced spatial, change in RMSE (mm/h); "sig" means the 95% CI excludes 0:
 - **Reading:** the quality steps clearly raise raw FY4B. The GWR corrections absorb most of the
   same systematic error themselves, so the corrected fields barely move.
 
-## 0b. Earlier (2026-10-31): Part A done, waiting for the download
+## 0c. Earlier (2026-10-31): Part A done, waiting for the download
 
-- **Branch `fy4b/with-fy4b-benchmark`**, not merged or pushed:
+- **Branch `fy4b/with-fy4b-benchmark`**, merged as `805bad6` on 2026-11-01:
   - `37e27d7`: rebuild code;
   - `ef64be0`: review bump;
   - `14d70d4`: offset grid;
@@ -323,12 +396,12 @@ must then be plugged in for every FY4B step.
 1. ~~Read the NetCDF attributes~~ Done 2026-10-30, see §4.1. The raw data is on the T9 and linked
    as `data/FY4B`.
 2. Check coverage: count files per month and disk tag, and list the months that are still missing.
-3. ~~Download, re-extract, per-fold fixes~~ Done 2026-10-31, see §0a. (Plan text kept:) Download the missing 15-minute files (`output/fy4b_download/`). Then re-extract with the
+3. ~~Download, re-extract, per-fold fixes~~ Done 2026-10-31, see §0b. (Plan text kept:) Download the missing 15-minute files (`output/fy4b_download/`). Then re-extract with the
    strict 4-of-4 rule, censoring at 20, and parallax plus neighbourhood. The seasonal threshold and
    quantile map are fitted per fold inside the benchmark. The full plan is
    `~/.claude/plans/mutable-dazzling-bengio.md`. The reusable parts go in `src/sources/`; the run goes
    in a `scripts/prepare_fy4b_*.jl`; results go to `output/` or `data/processed/` per CLAUDE.md.
-4. ~~Rerun the with-FY4B benchmark (§3.1) on the new file~~ Done 2026-10-31, see §0a; adaptive map and QM-fed fusion in §0.
+4. ~~Rerun the with-FY4B benchmark (§3.1) on the new file~~ Done 2026-10-31, see §0b; adaptive map and QM-fed fusion in §0a.
 5. Paper:
    - Add a `[[step]]` for the with-FY4B run in `paper/sources.toml`, plus `[[table]]` blocks
      for every cited number.
