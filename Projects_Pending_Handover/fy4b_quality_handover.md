@@ -46,8 +46,12 @@ Balanced spatial, change in RMSE; "sig" means the 95% day-block CI excludes 0:
   - So the July–August loss came from the later two regimes, where FY4B's convective cells are
     displaced too much for amount mapping to help.
 - **Standing** (paired, balanced spatial):
-  - mgwr: `FY4B_QM` is 1.6% behind GPM_uncal (CI spans 0) and 6.8% ahead of GSMaP (sig).
-  - blend: 2.0% behind GPM_uncal (sig), 0.5% behind GSMaP (CI spans 0).
+  - mgwr: `FY4B_QM` RMSE +1.6% vs GPM_uncal (95% CI −0.9% to +4.5%) and −6.8% vs GSMaP
+    (−10.9% to −2.7%).
+  - blend: +2.0% vs GPM_uncal (+1.4% to +2.7%), +0.5% vs GSMaP (−0.25% to +1.3%).
+  - A CI that spans 0 can't rule out a tie, but it doesn't show one either. Cite the gap with its
+    range, never "level with" or "tied". Against GPM_uncal after MGWR, most of the range is on
+    the worse side. Against GSMaP in the blend, "within about 1%" is fair.
   - Every blend on one shared mask: MERGED_OLS 0.7189, MERGED_MEAN 0.7211, GPM_uncal 0.7257,
     GSMaP 0.7361, `FY4B_QM` 0.7400, FY4B 0.7459.
 - **Fusion:** MERGED_OLS's FY4B weight rises from 0.022 to 0.063 (GPM_uncal 0.47, GSMaP 0.15).
