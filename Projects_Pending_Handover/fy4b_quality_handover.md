@@ -2,14 +2,71 @@
 
 **Date:** 2026-11-01 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
-quality step; a blend screen (below) found no band key that clears the decision rule; a nested
-run of two dry-band blends, asked for by the user, confirms that: neither clears it (Newest) ·
-**Next step:** the user decides whether to merge `fy4b/blend-headroom`; then the paper framing
-(§0a) and a paper step
+quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
+the decision rule (merged as `f720404`). A same-cells check finds that adding FY4B_QM to the
+fusion clears it for no product's agreement blend (Newest) · **Next step:** the user decides
+whether FY4B stays out of the main comparison and whether to merge `fy4b/fusion-check`; then the
+paper framing (§0a) and a paper step
 
 ---
 
-## Newest (2026-11-01): nested run of the dry-band blends
+## Newest (2026-11-01): does FY4B help the fusion?
+
+The user asked whether FY4B should go back into the main benchmark; the paper run leaves it out
+(`_nofy4b`). This was checked from the two existing runs, with nothing refitted.
+- **Script:** `scripts/compare_fy4b_in_fusion.jl` (`80287f2`, branch `fy4b/fusion-check`). It was
+  run from a clean tree and takes under a minute. Log: `output/compare_fy4b_in_fusion.log`.
+  Output: `output/fy4b_in_fusion_comparison/` (`paired.csv`, `provenance.csv`).
+- **What it compares:** the paper run (`_nofy4b_gpmuncal`, `3ef424c`) against the qmfusion run
+  (`b55a3a9`, FY4B_QM in the merges and bands). Each field is scored against the same field in the
+  other run, on the cells both runs score: FY4B's 20,087 hours and both evaluation masks.
+  - In balanced spatial, GPM_uncal and MERGED_OLS share 2.7 M cells. That is mostly folds 3–5,
+    because of the paper run's joint-fold failures. The other products share 4.4–4.5 M.
+- **Alignment checks passed:**
+  - the same 237 stations;
+  - the gauges are equal on the shared hours;
+  - `split_common.csv` is equal for both schemes;
+  - GPM_uncal's and GSMaP's `raw` fields are identical, so both runs read the same GSMaP file.
+- **Sanity check:** GSMaP's agreement blend, scored on each run's own mask, reproduces
+  `metrics_pooled.csv` (0.734575 and 0.687429) with the same n.
+
+### Result: the fixed verdict is "confounded", and no agreement blend clears the rule anyway
+
+- **Confound:** each run tunes ADW, the MGWR bandwidth and κ, and the blend weights on hours drawn
+  from its own grid. GSMaP's `mgwr`, which FY4B never reaches, moved −0.56% (−1.08..−0.17). That
+  is over the 0.3% that the verdict, set before the run, allows a control.
+  - ADW is identical in balanced spatial.
+  - The blends' own controls (`blend_mgwr`) moved −0.16% for GPM_uncal and −0.13% for GSMaP.
+
+Agreement blends (`blend_agrenv_mgwr`), balanced spatial, with FY4B_QM against without:
+
+| Product | RMSE | ΔRMSE (95%) | ΔCSI_8 | FBI_8 | Fails on |
+|---|---|---|---|---|---|
+| GPM_uncal | 0.7215 vs 0.7233 | −0.24% (−0.45..−0.04) | −0.0038 (sig) | 0.251 → 0.225 | RMSE bar, CSI, FBI |
+| GSMaP | 0.7346 vs 0.7363 | −0.23% (−0.45..−0.04) | +0.0015 | 0.335 → 0.327 | RMSE bar |
+| MERGED_MEAN | 0.7212 vs 0.7245 | −0.46% (−0.75..−0.17) | −0.0051 (sig) | 0.314 → 0.281 | CSI, FBI |
+| MERGED_OLS | 0.7165 vs 0.7211 | −0.63% (−0.88..−0.39) | −0.0012 | 0.279 → 0.246 | FBI |
+
+- **Taken at face value**, the verdict would be "keep FY4B out": no agreement blend meets the rule.
+  MERGED_OLS fails only the FBI test. Its FBI_8 falls mostly through fewer false alarms
+  (FAR 0.654 → 0.622), while POD goes 0.097 → 0.093.
+- **Much of the change is the tuning hours, not FY4B:**
+  - GPM_uncal's and GSMaP's controls move nearly as much as their agreement blends (−0.16% vs
+    −0.24%, and −0.13% vs −0.23%). So FY4B's own part in those two blends is about 0.1%.
+  - The controls' FBI_8 shifts by about as much as the treatments' (GPM_uncal's `blend_mgwr`
+    0.252 → 0.223).
+- **Where FY4B does help:** the merged anchors before blending.
+  - MERGED_MEAN's raw merge improves by 4.2%, and its `mgwr` by 3.9%, but its POD_8 falls from
+    0.193 to 0.149.
+  - MERGED_OLS's `mgwr` improves by 0.67%, which meets the rule.
+  - Blending toward ADW then takes most of that away.
+- **Random split:** every agreement blend is within ±0.1%, and every interval spans 0.
+- **Cost not in these scores:** the FY4B grid drops 24% of the hours (26,304 → 20,087).
+- **So:** keep FY4B out of the main comparison. Separating FY4B from the tuning hours would need a
+  new run of the paper setup restricted to FY4B's hours (new code, about 4 h). Nothing passes even
+  at face value, so that run is worth it only if the paper needs a clean number.
+
+## Previous (2026-11-01): nested run of the dry-band blends
 
 The user asked for a full nested run of both band-0 ideas from the screen below.
 - **Code** (`8232154`, branch `fy4b/blend-headroom`): `--blend-dry-band` adds two opt-in axes on
