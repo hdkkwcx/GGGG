@@ -2,9 +2,10 @@
 
 **Date:** 2026-11-01 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
-quality step; a blend screen (below) found no band key that clears the decision rule; at the
-user's request a nested run of two dry-band blends is going · **Next step:** score that run
-(`scripts/compare_blend_dry_band.jl`), then the paper framing (§0a) and a paper step
+quality step; a blend screen (below) found no band key that clears the decision rule; a nested
+run of two dry-band blends, asked for by the user, confirms that: neither clears it (Newest) ·
+**Next step:** the user decides whether to merge `fy4b/blend-headroom`; then the paper framing
+(§0a) and a paper step
 
 ---
 
@@ -30,11 +31,52 @@ The user asked for a full nested run of both band-0 ideas from the screen below.
 - **Run:** started at `8232154` from a clean tree with `-t 4` and the §0a command plus
   `--blend-dry-band`. Log: `output/full_benchmark_blenddry_qmfusion.log`. Output:
   `output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_blenddry_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/`.
-- **When it ends:** run `julia --project=. scripts/compare_blend_dry_band.jl` (`fd59d5f`). It
-  errors unless every metric row and blend weight of the §0a run is unchanged, then writes
-  `output/blend_dry_band_comparison/paired.csv`. That file has, for all six products, both dry
-  blends against the agreement blend and against adw, with day-block intervals on RMSE, bias and
-  8 mm/h CSI/FBI, plus the decision rule.
+- **Scored** with `julia --project=. scripts/compare_blend_dry_band.jl` (`fd59d5f`), run at
+  `3e3a6f4` from a clean tree. Log: `output/compare_blend_dry_band.log`. Output:
+  `output/blend_dry_band_comparison/` (`paired.csv`, `dry_weights.csv`, `provenance.csv`).
+  - **Nothing else moved:** 7,344 pooled, 36,720 fold and 44,064 stratified reference rows are
+    unchanged (largest relative difference 0), and so are the 360 `blend_selection.csv` rows.
+    Bands 1–9 of both dry axes repeat the agreement weights.
+
+### Result: neither dry-band blend clears the decision rule
+
+FY4B_QM, balanced spatial, each against the agreement blend (95% day-block intervals):
+
+| Blend | RMSE | ΔRMSE | Bias (mm/h) | ΔCSI_8 | FBI_8 | Fails on |
+|---|---|---|---|---|---|---|
+| agreement (`blend_agrenv_mgwr`) | 0.7391 | | +0.0003 | | 0.233 | |
+| band 0 toward adw (`blend_agrenvdry_mgwr`) | 0.7376 | −0.20% (−0.28..−0.14) | +0.0017 | +0.0003 | 0.229 | RMSE bar, FBI |
+| band 0 toward the anchor (`blend_agrenvdryraw_mgwr`) | 0.7339 | −0.71% (−0.90..−0.53) | −0.0124 | +0.0002 (ns) | 0.225 | bias, FBI |
+
+- **Toward adw:** −0.20%, below the −0.3% bar. The screen's K3 gave −0.17%, so the cross-fitted
+  screen predicted the nested result well.
+- **Toward the anchor:** clears the RMSE bar, but Δ|bias| is +0.0121 (+0.0050..+0.0141), over the
+  0.005 tolerance. The bias goes from about 0 to −0.0124 mm/h, about 11% of mean gauge rain
+  (0.114 mm/h). Band 0 is where no product is wet, so the anchor there is near 0. Pulling toward
+  it takes out the rain the gauges do get in those cells.
+- **Each check on its own** (a side agent asked for this before dropping the idea):
+  - toward adw: passes CSI_8 and bias, fails the RMSE bar and FBI;
+  - toward the anchor: passes RMSE and CSI_8, fails bias and FBI.
+
+  Without the FBI test, both would still fail.
+- **FBI_8:** both variants fail "|FBI_8 − 1| not significantly worse". FBI_8 is already 0.23. The
+  dry band cuts 8 mm/h false alarms (FAR 0.628 → 0.621 / 0.615) at the same POD (0.087), and that
+  moves FBI further from 1. So the test counts fewer false alarms as worse here. For FY4B_QM this
+  decides nothing, because each variant also fails another part of the rule.
+- **Other products:** not FY4B_QM-specific; GSMaP gains most. Toward the anchor, plain FY4B
+  (−0.96%) and GSMaP (−1.25%) fail only the FBI test. FY4B's bias flips sign (+0.0067 → −0.0073).
+- **Edge over adw** (FY4B_QM, balanced): 0.91% with the agreement blend, 1.11% (−1.81..−0.48)
+  toward adw, and 1.61% (−2.32..−0.93) toward the anchor, at the bias cost above.
+- **Gap to GPM_uncal's blend** barely moves: 2.0% (agreement), 2.0% (toward adw), 1.7% (toward the
+  anchor). Band 0 is not where FY4B_QM loses to GPM_uncal.
+- **Band-0 weights:** FY4B_QM's balanced folds pick 0.2–0.5 toward adw and 0.6–0.7 toward the
+  anchor. Over all products: 0–0.8 (mean 0.36) and 0.4–0.8 (mean 0.64). The weights are not stuck
+  at 0, and they were picked on the representative hours, so the small gain toward adw does not
+  come from the wet-heavy sample.
+- **Random split** (not judged): both beat the agreement blend in RMSE, toward adw −0.44% and toward
+  the anchor −0.75%. The anchor variant has bias −0.0095 and FBI_8 0.632 → 0.615.
+- **So** the agreement blend stays the headline. The branch is not merged; whether to keep the
+  `--blend-dry-band` code is the user's call.
 - **Also on the branch:** `DayBlockBootstrap` (`c66893f`), the day-block scoring now shared by the
   screen and the comparison. The screen re-run gave byte-identical CSVs.
 
