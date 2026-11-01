@@ -28,7 +28,7 @@ module SatelliteCalibration
 
 using CSV, DataFrames, Dates, NCDatasets, Statistics
 
-export OffsetGrid, open_offset_grid, read_shift, shift_sums, choose_shift
+export OffsetGrid, open_offset_grid, read_shift, shift_sums, choose_shift, shift_fold
 export product_regimes, calibration_cells, strength_cells, fit_quantile_map, apply_quantile_map
 export QM_STRENGTHS, choose_strength, calibrate_fold
 
@@ -182,6 +182,34 @@ function choose_shift(grid::OffsetGrid, sums::AbstractArray{<:Real,4},
     return best_k, best_r, pooled(zero_k)
 end
 
+"""
+The fold's shifted series for every station, as `(shifted, chosen, shift_rows)`.
+
+Per regime, the shift `choose_shift` picks on `train` is read from the grid and used for that
+regime's hours; `chosen[g]` is regime `g`'s shift index, `0` for a regime with no hours here.
+`cache` keeps the shifts already read, since folds tend to agree.
+"""
+function shift_fold(grid::OffsetGrid, sums, train::AbstractVector{<:Integer},
+                    regimes::AbstractVector{<:AbstractString},
+                    regime_of_time::AbstractVector{<:Integer};
+                    cache::AbstractDict=Dict{Int,Matrix{Float64}}())
+    shifted = fill(NaN, length(grid.station_rows), length(regime_of_time))
+    chosen = zeros(Int, length(regimes))
+    shift_rows = NamedTuple[]
+    for (g, label) in enumerate(regimes)
+        cols = findall(==(g), regime_of_time)
+        isempty(cols) && continue
+        k, r, r_unshifted = choose_shift(grid, sums, train, g)
+        series = get!(() -> read_shift(grid, k), cache, k)
+        shifted[:, cols] = series[:, cols]
+        chosen[g] = k
+        dx, dy = grid.shifts[k]
+        push!(shift_rows, (; regime=label, dx, dy, r_train=r, r_train_unshifted=r_unshifted,
+            n_hours=length(cols)))
+    end
+    return shifted, chosen, shift_rows
+end
+
 function _fit_cell(y_obs, y_sat, train, cols, wet)
     x = Float64[]
     y = Float64[]
@@ -312,7 +340,7 @@ end
 """
 One fold's calibrated anchor for every station, as `(anchor, shift_rows, map_rows, strength_rows)`.
 
-Per regime, the shift is chosen on `train` (`choose_shift`) and that shift's series is used for
+Per regime, the shift is chosen on `train` (`shift_fold`) and that shift's series is used for
 the regime's hours at every station; the quantile map is then fitted on `train` and applied
 everywhere. `cache` keeps the shifts already read, since folds tend to agree.
 
@@ -328,18 +356,9 @@ function calibrate_fold(grid::OffsetGrid, sums, y_obs::AbstractMatrix{<:Real},
                         cache::AbstractDict=Dict{Int,Matrix{Float64}}(), wet::Real=0.1,
                         adaptive::Bool=false, choice_of_time::AbstractVector{<:Integer}=cell_of_time,
                         choice_labels=nothing)
-    shifted = fill(NaN, size(y_obs))
-    shift_rows = NamedTuple[]
-    for (g, label) in enumerate(regimes)
-        cols = findall(==(g), regime_of_time)
-        isempty(cols) && continue
-        k, r, r_unshifted = choose_shift(grid, sums, train, g)
-        series = get!(() -> read_shift(grid, k), cache, k)
-        shifted[:, cols] = series[:, cols]
-        dx, dy = grid.shifts[k]
-        push!(shift_rows, (; regime=label, dx, dy, r_train=r, r_train_unshifted=r_unshifted,
-            n_hours=length(cols)))
-    end
+    size(y_obs) == (length(grid.station_rows), length(regime_of_time)) ||
+        throw(DimensionMismatch("y_obs must be the grid's stations x the run's hours"))
+    shifted, _, shift_rows = shift_fold(grid, sums, train, regimes, regime_of_time; cache)
     maps = fit_quantile_map(y_obs, shifted, train, cell_of_time; wet)
     map_rows = [(; regime=regimes[(cell - 1) ÷ 4 + 1], season=SEASONS[(cell - 1) % 4 + 1],
         pool=m.pool, tau=m.tau, n_pairs=m.n_pairs, n_wet_sat=m.n_wet_sat, n_wet_obs=m.n_wet_obs,
