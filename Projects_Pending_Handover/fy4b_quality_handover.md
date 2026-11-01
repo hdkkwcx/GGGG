@@ -11,7 +11,8 @@ benchmark for a full run (§0), then the paper framing (§0a) and a paper step
 - **Branches:**
   - `fy4b/with-fy4b-benchmark` was merged into master as `805bad6` and pushed.
   - This work is on `fy4b/two-stage`, not merged or pushed: `ad9bc97` (code and screen), `1c58cca`
-    (review bump), then this note.
+    (review bump), `0262a36` (first version of this note), `978ef74` (the amount-only
+    ablation), then this revision.
 - **User's decisions:** no machine learning, so counting tables; no 15-minute quarters yet; stop
   after the screen.
 - **What it is** (`src/models/SatelliteTwoStage.jl`). Per fold, on training gauges only, each
@@ -24,14 +25,17 @@ benchmark for a full run (§0), then the paper framing (§0a) and a paper step
   Per class it counts P(gauge ≥ 0.1) and the mean wet amount. A class with fewer than 200 pairs
   pools to its regime, then all cells, then its intensity class.
   - `FY4B_TS_E` = P × amount.
+  - `FY4B_TS_I`, the amount-only ablation: P × amount on the intensity class alone, with no rain
+    nearby and no adjacent hours. A side agent asked for it: r rewards pulling FY4B's large, often
+    false values toward typical gauge amounts, and that needs no context.
   - `FY4B_TS_O`: the classes with the highest P are called wet until they cover the training
     gauges' wet count. A wet hour keeps `FY4B_QM`'s amount.
 - **Screen:** `scripts/screen_fy4b_two_stage.jl` → `output/fy4b_two_stage_screen/` (log
   `output/fy4b_two_stage_screen.log`).
-  - Run at `ad9bc97` from a clean tree; it takes 2 min.
+  - Run at `978ef74` from a clean tree; it takes 2 min.
   - It uses the §0a run's grid, folds and per-fold `FY4B_QM`. Its held-out `FY4B_QM` equals that
     run's `oof_raw.csv` in all 4,760,619 cells of both schemes.
-  - It scores cells where all six series are finite, which is not the benchmark's mask.
+  - It scores cells where all seven series are finite, which is not the benchmark's mask.
 
 Held-out raw scores, balanced spatial:
 
@@ -39,20 +43,32 @@ Held-out raw scores, balanced spatial:
 |---|---|---|---|---|
 | FY4B | 0.224 | 1.142 | 0.176 / 0.124 / 0.047 | 1.08 / 0.99 / 2.00 |
 | FY4B_QM | 0.247 | 0.949 | 0.175 / 0.123 / 0.055 | 0.99 / 0.87 / 0.65 |
+| FY4B_TS_I | 0.279 | 0.827 | 0.122 / 0.047 / 0.000 | 3.58 / 0.14 / 0.00 |
 | FY4B_TS_E | 0.290 | 0.825 | 0.181 / 0.051 / 0.000 | 1.92 / 0.16 / 0.00 |
 | FY4B_TS_O | 0.244 | 0.951 | 0.173 / 0.122 / 0.054 | 0.95 / 0.88 / 0.65 |
 | GPM_uncal | 0.437 | 0.800 | 0.338 / 0.266 / 0.075 | 1.38 / 0.77 / 0.47 |
 | GSMaP | 0.382 | 1.077 | 0.323 / 0.260 / 0.075 | 1.56 / 1.05 / 1.63 |
 
-- **Paired against `FY4B_QM`** (day-block bootstrap, 95%):
-  - TS_E: r +0.043 (+0.021 to +0.066), RMSE −13.1% (sig). Random split: r +0.050, RMSE −13.0%.
-  - TS_O: r −0.003 and RMSE +0.2%; both CIs span 0.
+- **Paired** (balanced spatial, day-block bootstrap, 95%):
+  - TS_E against `FY4B_QM`: r +0.043 (+0.021 to +0.066), RMSE −13.1% (sig). Random split:
+    r +0.050, RMSE −13.0%.
+  - It splits into two parts:
+    - TS_I against `FY4B_QM`, the amount table alone: r +0.032 (+0.011 to +0.054), RMSE −12.8%;
+    - TS_E against TS_I, what the context adds: r +0.011 (+0.005 to +0.017), RMSE −0.33%
+      (−0.0045 to −0.0012 mm/h). Random split: r +0.013, RMSE −0.41%.
+  - TS_O against `FY4B_QM`: r −0.003 and RMSE +0.2%; both CIs span 0.
 - **Standing:** TS_E's r is 0.147 below GPM_uncal and 0.092 below GSMaP. Its RMSE is +3.1%
   against GPM_uncal and −23% against GSMaP (all sig).
 - **Reading:**
-  - Context does re-rank hours. TS_E's r gain (0.247 → 0.290) is the first sizeable one, and it
-    comes from summer and autumn: +0.02 to +0.05 per regime × season. Winter and spring gain
-    nothing.
+  - **Most of the gain is not context.** Three quarters of TS_E's r gain over `FY4B_QM`
+    (+0.032 of +0.043) comes from the amount table alone: it replaces FY4B's values with the
+    training gauges' mean rain per intensity class, which pulls FY4B's large, often false values
+    down toward typical gauge amounts. The context adds +0.011 in r, significant but small, and
+    0.3% in RMSE.
+  - Where the context does show is light-rain occurrence: CSI at 0.1 mm/h 0.122 → 0.181, and
+    FBI_0.1 3.58 → 1.92 (TS_I against TS_E).
+  - TS_E's gain over `FY4B_QM` comes from summer and autumn: +0.02 to +0.05 per regime × season.
+    Winter and spring gain nothing.
   - TS_E is a conditional mean, so it flattens the rain. It never reaches 8 mm/h (CSI_8 and
     FBI_8 are 0), CSI at 2 mm/h falls from 0.123 to 0.051, and it spreads drizzle (FBI_0.1 is
     1.92). ROADMAP warned of exactly this: better r and RMSE, heavy rain lost.
@@ -73,11 +89,15 @@ Held-out raw scores, balanced spatial:
     training counts in `context_tables.csv`.
 - **Open, for the user:**
   1. Add `FY4B_TS_E` to the benchmark (`--fy4b-twostage`, a derived product like `FY4B_QM`) and
-     do the ~4 h full run. It would show whether a flatter but better-ranked anchor helps MGWR
-     and the agreement blend. TS_O is not worth a run.
-  2. Add the 15-minute quarter context: a rebuild extension, ~18 min on the T9.
-  3. Or stop: `FY4B_QM` stays the FY4B quality step, and the screen records that context tables
-     raise r but lose heavy rain.
+     do the ~4 h full run. It would show whether a flatter anchor with a higher r helps MGWR and
+     the agreement blend. TS_O is not worth a run.
+  2. Add the 15-minute quarter context: a rebuild extension, ~18 min on the T9. The rule was "only
+     if context helps". The context we already have adds +0.011 in r, so more of it is unlikely to
+     add much.
+  3. Or stop: `FY4B_QM` stays the FY4B quality step. The screen then records that a per-class
+     conditional mean raises r but loses heavy rain, and that context adds little.
+  - Do not write "context re-ranks hours" in the paper: the ablation shows that is a small part
+    of the gain.
 
 ## 0a. Earlier (2026-10-31): adaptive map and QM-fed fusion scored
 

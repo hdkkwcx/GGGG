@@ -23,6 +23,9 @@ gauges, balanced spatial folds:
   - `scripts/screen_fy4b_two_stage.jl` scores it on held-out raw FY4B.
 - **Results:**
   - P × amount raises r from 0.247 to 0.290 and cuts RMSE by 13%, but it never reaches 8 mm/h.
+  - Most of that is not context. An amount-only table (the intensity class alone) already gives
+    +0.032 of the +0.043 in r. The context adds +0.011, mainly by sorting light rain (CSI at
+    0.1 mm/h 0.122 → 0.181).
   - The occurrence rule with the QM amounts changes nothing.
 - **Not built:**
   - the 15-minute quarters, the product-quality features, hour of day and elevation;
