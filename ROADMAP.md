@@ -15,7 +15,8 @@ gauges, balanced spatial folds:
 | GSMaP | 0.379 |
 | IMERG Uncal | 0.436 |
 
-**Status (2026-11-01): built as counting tables and screened; see the handover's §0.**
+**Status (2026-11-01): built as counting tables, screened, and stopped there by the user's
+decision; `FY4B_QM` stays the FY4B quality step. See the handover's §0.**
 - **Built:**
   - `src/models/SatelliteTwoStage.jl`, without machine learning at the user's request: per fold,
     on training gauges, it counts P(wet) and the wet amount per context class. The classes are

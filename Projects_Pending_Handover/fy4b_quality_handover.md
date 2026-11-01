@@ -1,8 +1,8 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
 **Date:** 2026-11-01 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
-screened on raw FY4B (§0) · **Next step:** the user decides whether `FY4B_TS_E` goes into the
-benchmark for a full run (§0), then the paper framing (§0a) and a paper step
+screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
+quality step · **Next step:** the paper framing (§0a) and a paper step
 
 ---
 
@@ -10,9 +10,9 @@ benchmark for a full run (§0), then the paper framing (§0a) and a paper step
 
 - **Branches:**
   - `fy4b/with-fy4b-benchmark` was merged into master as `805bad6` and pushed.
-  - This work is on `fy4b/two-stage`, not merged or pushed: `ad9bc97` (code and screen), `1c58cca`
-    (review bump), `0262a36` (first version of this note), `978ef74` (the amount-only
-    ablation), then this revision.
+  - This work was on `fy4b/two-stage`: `ad9bc97` (code and screen), `1c58cca` (review bump),
+    `0262a36` (first version of this note), `978ef74` (the amount-only ablation), later
+    revisions of this note, then merged into master at the user's request.
 - **User's decisions:** no machine learning, so counting tables; no 15-minute quarters yet; stop
   after the screen.
 - **What it is** (`src/models/SatelliteTwoStage.jl`). Per fold, on training gauges only, each
@@ -87,7 +87,10 @@ Held-out raw scores, balanced spatial:
   - Fix: the rule now stops before a class that would leave the count further from the target.
   - Spotted from the held-out FBI in the trial run; the cause and the fix are both read from the
     training counts in `context_tables.csv`.
-- **Open, for the user:**
+- **Decided (2026-11-01): stop.** The user chose option 3 below after seeing the screen.
+  `FY4B_QM` stays the FY4B quality step. No `--fy4b-twostage` flag, benchmark run or quarter
+  rebuild was made; `SatelliteTwoStage` and the screen stay in the repo as the record.
+- **The options that were on the table:**
   1. Add `FY4B_TS_E` to the benchmark (`--fy4b-twostage`, a derived product like `FY4B_QM`) and
      do the ~4 h full run. It would show whether a flatter anchor with a higher r helps MGWR and
      the agreement blend. TS_O is not worth a run.
