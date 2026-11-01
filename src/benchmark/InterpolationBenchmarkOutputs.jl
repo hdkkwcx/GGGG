@@ -378,6 +378,36 @@ function _write_benchmark_outputs(
             ],
         ))
     end
+    if cfg.fy4b_qm_grid !== nothing
+        append!(scope, DataFrame(
+            key=["fy4b_qm", "fy4b_qm_leakage"],
+            value=[
+                "derived product $(FY4B_QM_PRODUCT): FY4B from $(cfg.fy4b_qm_grid), its sample " *
+                "pixel shifted per regime (satellite longitude x software version) and then " *
+                "quantile-mapped per season and regime, with a wet threshold matching the " *
+                "gauges' wet frequency. Its `raw` row is a gauge-trained predictor that uses only " *
+                "FY4B at prediction time",
+                "shift and map chosen inside every fold on that fold's training stations alone " *
+                "and applied to every station, so a held-out gauge never reaches the anchor its " *
+                "own prediction is built on; see fy4b_qm_shift_selection.csv and fy4b_qm_maps.csv",
+            ],
+        ))
+    end
+    if cfg.fy4b_qm_adaptive
+        append!(scope, DataFrame(key=["fy4b_qm_adaptive"], value=[
+            "each regime's season map applied, month by month (regime x year-month), only as " *
+            "strongly as the fold's training stations support (strength " *
+            "$(join(QM_STRENGTHS, "/")) after the wet threshold, or no adjustment), chosen by " *
+            "training squared error; see fy4b_qm_strengths.csv",
+        ]))
+    end
+    if cfg.fy4b_qm_fusion
+        append!(scope, DataFrame(key=["fy4b_qm_fusion"], value=[
+            "the fused anchors and the blend's non-constant bands take each fold's " *
+            "$(FY4B_QM_PRODUCT) anchor in place of the plain FY4B; the products with files keep " *
+            "the raw and unblended rows of a run without this option",
+        ]))
+    end
     grouped = [v for v in sort(cfg.fused_anchor_variants) if v in GROUPED_FUSION_VARIANTS]
     if !isempty(grouped)
         append!(scope, DataFrame(

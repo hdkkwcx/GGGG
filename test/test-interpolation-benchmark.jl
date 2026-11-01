@@ -9,6 +9,8 @@ const BENCHMARK_TEST_ROOT = normpath(joinpath(@__DIR__, ".."))
 using MixedGWR
 include(joinpath(BENCHMARK_TEST_ROOT, "src", "load_modules.jl"))
 load_pipeline("InterpolationBenchmark")
+# Writes the synthetic offset grid of the FY4B_QM end-to-end check.
+load_standalone_modules("FY4BPreprocessing")
 
 function _write_benchmark_wide(path, times, ids, values)
     df = DataFrame(time=times)
@@ -1818,6 +1820,119 @@ end
             mger=cfg_stack.mger, stacked_blend=true,
             dem=DEMTerrainExperiment.DEMExperimentConfig(outdir=outdir_stack),
             terrain_path=station_path,
+        ) |> config -> _validate_benchmark_config(config, n_station)
+
+        # FY4B_QM, on the same fixture: FY4B shifted and quantile-mapped per fold on training
+        # stations. A synthetic offset grid in which the gauge field appears at (+1, 0), two
+        # regimes, and eight hours - too few wet pairs for a cell's own map, so the pooled one is
+        # used, which exercises the fallback too.
+        qm_dir = joinpath(temp_dir, "fy4b_rebuild")
+        grid_path = joinpath(qm_dir, "fy4b_offset_grid.nc")
+        on_shifted, finish, _ = Main.FY4BPreprocessing._offset_grid_writer(
+            grid_path, (window=3, radius=1), ids, times)
+        for h in eachindex(times)
+            on_shifted(h, [(dx, dy) == (1, 0) ? obs[i, h] + 0.3 : 0.5 + 0.01 * mod(i + h, 7)
+                           for i in 1:n_station, dx in -1:1, dy in -1:1])
+        end
+        finish()
+        CSV.write(joinpath(qm_dir, "fy4b_hour_meta.csv"), DataFrame(
+            time=Dates.format.(times, dateformat"yyyy-mm-ddTHH:MM:SS") .* "Z",
+            sat_lon=fill(133.0, length(times)),
+            software=[h <= 4 ? "V1.0" : "V1.0.0" for h in eachindex(times)]))
+        outdir_qm = joinpath(temp_dir, "benchmark_fy4bqm")
+        cfg_qm = InterpolationBenchmarkConfig(
+            mger=MGERConfig(
+                station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=sat_paths, outdir=outdir_qm, kernels=[GAUSSIAN],
+                bw_adaptive=[8.0, 16.0], bw_fixed_km=[20.0, 100.0],
+                expected_common_time_count=length(times),
+            ),
+            k=3, seed=11, cv_schemes=[:balanced_spatial],
+            idw_powers=[2.0], neighbor_candidates=Union{Nothing,Int}[8],
+            tps_smooth_candidates=[0.01], min_tuning_coverage=0.8, bootstrap_reps=0,
+            tuning_geometry=:inner_spatial, fy4b_qm_grid=grid_path,
+        )
+        calibrated = run_interpolation_benchmark(cfg_qm)
+        @test Set(calibrated.metrics.product) == Set(["FY4B", "GPM", FY4B_QM_PRODUCT])
+        @test isfile(joinpath(outdir_qm, "balanced_spatial", "fy4b_qm", "oof_raw.csv"))
+        # The real products' numbers do not move.
+        qm_after = filter(row -> row.method in Set(BENCHMARK_METHODS) &&
+            row.product != FY4B_QM_PRODUCT, calibrated.metrics)
+        @test nrow(before) == nrow(qm_after)
+        qm_lookup = Dict(rowkey(row) => (row.n, row.RMSE) for row in eachrow(qm_after))
+        @test all(eachrow(before)) do row
+            haskey(qm_lookup, rowkey(row)) && isequal(qm_lookup[rowkey(row)], (row.n, row.RMSE))
+        end
+        # One shift per fold and regime, chosen on the training stations: the planted one.
+        shifts = CSV.read(joinpath(outdir_qm, "fy4b_qm_shift_selection.csv"), DataFrame)
+        @test nrow(shifts) == cfg_qm.k * 2
+        @test all(shifts.dx .== 1) && all(shifts.dy .== 0)
+        @test all(shifts.n_train_station .< n_station)
+        maps = CSV.read(joinpath(outdir_qm, "fy4b_qm_maps.csv"), DataFrame)
+        @test all(maps.pool .== "pooled")
+        qm_scope = CSV.read(joinpath(outdir_qm, "benchmark_scope.csv"), DataFrame)
+        @test "fy4b_qm" in qm_scope.key
+        @test !("strength" in names(maps))
+        strengths = CSV.read(joinpath(outdir_qm, "fy4b_qm_strengths.csv"), DataFrame)
+        @test all(strengths.strength .== 1.0) && all(strengths.threshold_applied)
+
+        # `fy4b_qm_fusion`: the fused anchors and the agreement bands take each fold's FY4B_QM.
+        # Against the same run without it, the merged products move, while every real product's
+        # raw and unblended numbers stay put; `fy4b_qm_adaptive` rides along and records its
+        # strengths.
+        fusion_cfg(outdir; fusion) = InterpolationBenchmarkConfig(
+            mger=MGERConfig(
+                station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=sat_paths, outdir=outdir, kernels=[GAUSSIAN],
+                bw_adaptive=[8.0, 16.0], bw_fixed_km=[20.0, 100.0],
+                expected_common_time_count=length(times),
+            ),
+            k=3, seed=11, cv_schemes=[:balanced_spatial],
+            idw_powers=[2.0], neighbor_candidates=Union{Nothing,Int}[8],
+            tps_smooth_candidates=[0.01], min_tuning_coverage=0.8, bootstrap_reps=0,
+            tuning_geometry=:inner_spatial, fy4b_qm_grid=grid_path,
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS), satellite_wet_blend=true,
+            blend_axes=[:constant, :agreement_envelope],
+            fy4b_qm_fusion=fusion, fy4b_qm_adaptive=fusion,
+        )
+        plain_fed = run_interpolation_benchmark(fusion_cfg(joinpath(temp_dir, "qm_plain"); fusion=false))
+        outdir_fed = joinpath(temp_dir, "qm_fed")
+        qm_fed = run_interpolation_benchmark(fusion_cfg(outdir_fed; fusion=true))
+        real_rows(result) = filter(row -> row.product in ("FY4B", "GPM") &&
+            row.method in Set(BENCHMARK_METHODS), result.metrics)
+        fed_lookup = Dict(rowkey(row) => (row.n, row.RMSE) for row in eachrow(real_rows(qm_fed)))
+        @test nrow(real_rows(plain_fed)) == length(fed_lookup)
+        @test all(eachrow(real_rows(plain_fed))) do row
+            haskey(fed_lookup, rowkey(row)) && isequal(fed_lookup[rowkey(row)], (row.n, row.RMSE))
+        end
+        merged_raw(result) = sort(filter(row -> startswith(row.product, "MERGED_") &&
+            row.method == "raw" && row.group == "overall", result.metrics), :product).RMSE
+        @test merged_raw(qm_fed) != merged_raw(plain_fed)
+        fed_betas = CSV.read(joinpath(outdir_fed, "fused_anchor_selection.csv"), DataFrame)
+        plain_betas = CSV.read(joinpath(temp_dir, "qm_plain", "fused_anchor_selection.csv"), DataFrame)
+        @test fed_betas.beta_fy4b != plain_betas.beta_fy4b
+        # One strength per fold, regime and month, chosen on the training stations.
+        fed_strengths = CSV.read(joinpath(outdir_fed, "fy4b_qm_strengths.csv"), DataFrame)
+        @test nrow(fed_strengths) == 3 * length(unique(zip(
+            [h <= 4 ? 1 : 2 for h in eachindex(times)], Dates.yearmonth.(times))))
+        @test all(in(QM_STRENGTHS), fed_strengths.strength)
+        @test all(fed_strengths.train_rmse_chosen .<= min.(fed_strengths.train_rmse_none,
+            fed_strengths.train_rmse_full) .+ 1e-12)
+        # Refused where it cannot feed anything, or feeds a design built once from the sources.
+        base = fusion_cfg(outdir_fed; fusion=true)
+        refuse(; kwargs...) = @test_throws ArgumentError _validate_benchmark_config(
+            InterpolationBenchmarkConfig(; mger=base.mger, fy4b_qm_grid=grid_path,
+                fy4b_qm_fusion=true, kwargs...), n_station)
+        refuse(fused_anchor_variants=[:ols_lagnbr])
+        refuse(fused_anchor_variants=[:ols], stacked_blend=true)
+        refuse()                                    # nothing to feed
+        @test_throws ArgumentError _validate_benchmark_config(
+            InterpolationBenchmarkConfig(mger=base.mger, fy4b_qm_adaptive=true), n_station)
+        # It calibrates FY4B, so a run without FY4B must refuse rather than fail mid-run.
+        @test_throws ArgumentError InterpolationBenchmarkConfig(
+            mger=MGERConfig(station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=Dict("GPM" => sat_paths["GPM"]), outdir=outdir_qm),
+            fy4b_qm_grid=grid_path,
         ) |> config -> _validate_benchmark_config(config, n_station)
 
         # The legacy DEM path has no inner split to choose a weight on, and must refuse rather

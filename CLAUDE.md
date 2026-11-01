@@ -136,10 +136,21 @@ using Main.BenchmarkDiagnostics
 ### Interpolation benchmark invariants
 
 - Opt-in flags (`--satellite-wet-blend`, `--blend-axis`, `--fused-anchor`,
-  `--fused-anchor-lagnbr`, `--stacked-blend`) add methods or products without moving any existing
-  metric row; the end-to-end test asserts this. Blended methods are scored on the shared mask but
+  `--fused-anchor-lagnbr`, `--stacked-blend`, `--fy4b-qm`) add methods or products without moving
+  any existing metric row; the end-to-end test asserts this.
+- `--fy4b-file <path>` (with `--with-fy4b`) scores a FY4B series rebuilt by
+  `scripts/prepare_fy4b_rebuild.jl` instead of the shipped one. `--fy4b-qm` then adds `FY4B_QM`:
+  that rebuild's FY4B, pixel-shifted and quantile-mapped per regime inside each fold on training
+  stations only (`SatelliteCalibration`). The rebuild's 1-, 3- and 24-hour raw files are
+  gauge-corrected and never read. Blended methods are scored on the shared mask but
   never join `MASK_METHODS`. The flags themselves are documented where they are parsed in
   `scripts/run_interpolation_benchmark.jl`.
+- Two options of `FY4B_QM` change rows by design and so get their own suffix, as `--fy4b-file`
+  does. `--fy4b-qm-adaptive` (`_fy4bqmadapt`) applies the season-by-regime map, month by month,
+  only as strongly as the fold's training gauges support, and changes only `FY4B_QM`'s rows. `--fy4b-qm-fusion`
+  (`_qmfusion`) feeds each fold's `FY4B_QM` to the fused anchors and the agreement bands instead
+  of the plain FY4B, so `MERGED_*` and every blend row move; the real products' raw and
+  unblended rows do not.
 - By default the CLI scores uncalibrated IMERG (`GPM_uncal`, output suffix `_gpmuncal`).
   `--gpm-cal` scores calibrated `GPM` instead. `benchmark_config`'s `gpm_uncal` keyword still
   defaults to `false`, so the verify scripts reproduce the calibrated baselines.
