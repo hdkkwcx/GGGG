@@ -15,6 +15,23 @@ gauges, balanced spatial folds:
 | GSMaP | 0.379 |
 | IMERG Uncal | 0.436 |
 
+**Status (2026-11-01): built as counting tables, screened, and stopped there by the user's
+decision; `FY4B_QM` stays the FY4B quality step. See the handover's §0.**
+- **Built:**
+  - `src/models/SatelliteTwoStage.jl`, without machine learning at the user's request: per fold,
+    on training gauges, it counts P(wet) and the wet amount per context class. The classes are
+    intensity, rain nearby, and rain at t±1.
+  - `scripts/screen_fy4b_two_stage.jl` scores it on held-out raw FY4B.
+- **Results:**
+  - P × amount raises r from 0.247 to 0.290 and cuts RMSE by 13%, but it never reaches 8 mm/h.
+  - Most of that is not context. An amount-only table (the intensity class alone) already gives
+    +0.032 of the +0.043 in r. The context adds +0.011, mainly by sorting light rain (CSI at
+    0.1 mm/h 0.122 → 0.181).
+  - The occurrence rule with the QM amounts changes nothing.
+- **Not built:**
+  - the 15-minute quarters, the product-quality features, hour of day and elevation;
+  - a benchmark run, to score MGWR and the blend downstream.
+
 **Why the current fixes stop short.**
 - The pixel shift fixes where FY4B puts rain, and the quantile map fixes how much.
 - A quantile map is monotone within each season-by-regime cell, so it barely changes which hours
@@ -44,7 +61,9 @@ only, inside the benchmark (`src/models/SatelliteCalibration.jl` is the pattern)
 **Check first.** `hurdle_gwr` (`src/benchmark/InterpolationBenchmarkHurdle.jl`) is an existing
 two-part model. It is kept but deliberately absent from the benchmark, and no reason is recorded
 (`BENCHMARK_RUNS` in `InterpolationBenchmarkConfig.jl`). It corrects with GWR rather than rebuilding
-FY4B, but its occurrence and amount pieces may be reusable.
+FY4B, but its occurrence and amount pieces may be reusable. (Checked 2026-11-01: its occurrence
+part is a wet frequency per satellite-intensity class and month, with no context to re-rank by,
+so nothing of it was reused.)
 
 **How to judge it.**
 - r, as the target metric;
