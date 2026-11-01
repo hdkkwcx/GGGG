@@ -206,10 +206,20 @@ function _run_fold_blend!(
                 BLEND_LAMBDAS, threshold; time_weights=auto_inner.time_weights,
             )
         else
+            inner_band = blend_band_train[axis][:, auto_inner.time_indices]
+            if axis in BLEND_DRY_AXES
+                # The dry band's weight is chosen on the representative tuning hours only; ID 0
+                # leaves a cell unscored. Bands 1-9 keep every tuning hour, as the agreement axis
+                # does, so their weights still match it.
+                representative = _tuning_representative(auto_inner.time_indices,
+                    auto_inner.time_weights, size(y_obs_train, 2), cfg.tuning_max_times)
+                inner_band[(inner_band .== blend_band_count(axis)) .&
+                    .!permutedims(representative)] .= 0
+            end
             select_blend_lambdas(
-                inner_obs, inner_sat, blend_band_train[axis][:, auto_inner.time_indices],
-                inner_prediction, fallback_inner, BLEND_LAMBDAS, blend_band_count(axis);
-                time_weights=auto_inner.time_weights,
+                inner_obs, inner_sat, inner_band, inner_prediction,
+                blend_fallback(axis, inner_band, fallback_inner, inner_sat), BLEND_LAMBDAS,
+                blend_band_count(axis); time_weights=auto_inner.time_weights,
             )
         end
         if choice === nothing
@@ -226,7 +236,9 @@ function _run_fold_blend!(
         else
             banded_blend_prediction(
                 blend_band_val[axis], fold_predictions[source],
-                fold_predictions[BLEND_FALLBACK_METHOD], choice.lambdas,
+                blend_fallback(axis, blend_band_val[axis],
+                    fold_predictions[BLEND_FALLBACK_METHOD], y_sat_val),
+                choice.lambdas,
             )
         end
         fold_predictions[output_method] = blended

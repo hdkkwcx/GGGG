@@ -343,7 +343,12 @@ function _write_benchmark_outputs(
                 "many source products call the cell wet) x (their maximum, on " *
                 "$(BLEND_ENVELOPE_EDGES)), which widens the intervention set: a cell this " *
                 "product calls dry but another calls wet is blended, where the constant axis " *
-                "would not have touched it",
+                "would not have touched it" *
+                (any(in(BLEND_DRY_AXES), cfg.blend_axes) ? ". `agreement_envelope_dry` adds a " *
+                    "weight for the dry band (no source product wet), blended toward " *
+                    "$(BLEND_FALLBACK_METHOD) and chosen on the evenly spaced tuning hours " *
+                    "only; `agreement_envelope_dry_raw` blends that band toward the product's " *
+                    "own anchor instead" : ""),
             ],
         ))
     end

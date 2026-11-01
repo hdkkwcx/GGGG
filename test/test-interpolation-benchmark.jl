@@ -1278,6 +1278,15 @@ end
         "blend_residual_gwr", "blend_mixed_gwr", "blend_mgwr",
         "blend_agrenv_residual_gwr", "blend_agrenv_mixed_gwr", "blend_agrenv_mgwr",
     ]
+    # The dry axes add their own methods after the agreement blend's.
+    dry = benchmark_methods((; satellite_wet_blend=true,
+        blend_axes=vcat([:constant, :agreement_envelope], collect(Symbol, BLEND_DRY_AXES))))
+    @test dry[(length(banded) + 1):end] == [
+        "blend_agrenvdry_residual_gwr", "blend_agrenvdry_mixed_gwr", "blend_agrenvdry_mgwr",
+        "blend_agrenvdryraw_residual_gwr", "blend_agrenvdryraw_mixed_gwr",
+        "blend_agrenvdryraw_mgwr",
+    ]
+    @test !any(in(MASK_METHODS), dry[(length(banded) + 1):end])
     # Scored on the shared mask, never allowed to define it: letting a new method into
     # `MASK_METHODS` would silently re-score all the others.
     for method in banded[(length(BENCHMARK_METHODS) + 1):end]
@@ -1880,7 +1889,8 @@ end
         # Against the same run without it, the merged products move, while every real product's
         # raw and unblended numbers stay put; `fy4b_qm_adaptive` rides along and records its
         # strengths.
-        fusion_cfg(outdir; fusion) = InterpolationBenchmarkConfig(
+        fusion_cfg(outdir; fusion, blend_axes=[:constant, :agreement_envelope]) =
+            InterpolationBenchmarkConfig(
             mger=MGERConfig(
                 station_meta_path=station_path, obs_hourly_wide_path=obs_path,
                 sat_paths=sat_paths, outdir=outdir, kernels=[GAUSSIAN],
@@ -1892,8 +1902,7 @@ end
             tps_smooth_candidates=[0.01], min_tuning_coverage=0.8, bootstrap_reps=0,
             tuning_geometry=:inner_spatial, fy4b_qm_grid=grid_path,
             fused_anchor_variants=collect(Symbol, FUSION_VARIANTS), satellite_wet_blend=true,
-            blend_axes=[:constant, :agreement_envelope],
-            fy4b_qm_fusion=fusion, fy4b_qm_adaptive=fusion,
+            blend_axes=blend_axes, fy4b_qm_fusion=fusion, fy4b_qm_adaptive=fusion,
         )
         plain_fed = run_interpolation_benchmark(fusion_cfg(joinpath(temp_dir, "qm_plain"); fusion=false))
         outdir_fed = joinpath(temp_dir, "qm_fed")
@@ -1911,6 +1920,34 @@ end
         fed_betas = CSV.read(joinpath(outdir_fed, "fused_anchor_selection.csv"), DataFrame)
         plain_betas = CSV.read(joinpath(temp_dir, "qm_plain", "fused_anchor_selection.csv"), DataFrame)
         @test fed_betas.beta_fy4b != plain_betas.beta_fy4b
+
+        # `--blend-dry-band`: the dry axes add methods and move no other row. Their bands 1-9
+        # repeat the agreement blend's weights; only the dry band's weight is new.
+        outdir_dry = joinpath(temp_dir, "qm_dry")
+        qm_dry = run_interpolation_benchmark(fusion_cfg(outdir_dry; fusion=true,
+            blend_axes=vcat([:constant, :agreement_envelope], collect(Symbol, BLEND_DRY_AXES))))
+        dry_methods = [_blend_method(m, axis) for axis in BLEND_DRY_AXES
+            for m in BLEND_SOURCE_METHODS]
+        @test Set(qm_dry.metrics.method) == union(Set(qm_fed.metrics.method), Set(dry_methods))
+        kept_rows(result) = filter(row -> !(row.method in dry_methods), result.metrics)
+        dry_lookup = Dict(rowkey(row) => (row.n, row.RMSE) for row in eachrow(kept_rows(qm_dry)))
+        @test nrow(kept_rows(qm_fed)) == length(dry_lookup)
+        @test all(eachrow(kept_rows(qm_fed))) do row
+            haskey(dry_lookup, rowkey(row)) && isequal(dry_lookup[rowkey(row)], (row.n, row.RMSE))
+        end
+        dry_selection = CSV.read(joinpath(outdir_dry, "blend_selection.csv"), DataFrame;
+            types=Dict(:lambdas => String))
+        axis_weights(axis) = Dict((row.product, row.fold, row.source) =>
+            parse.(Float64, split(row.lambdas, "|"))
+            for row in eachrow(dry_selection) if row.axis == String(axis))
+        agreement_weights = axis_weights(:agreement_envelope)
+        @test !isempty(agreement_weights)
+        for axis in BLEND_DRY_AXES
+            weights = axis_weights(axis)
+            @test keys(weights) == keys(agreement_weights)
+            @test all(length(weights[key]) == 10 && weights[key][1:9] == agreement_weights[key]
+                for key in keys(agreement_weights))
+        end
         # One strength per fold, regime and month, chosen on the training stations.
         fed_strengths = CSV.read(joinpath(outdir_fed, "fy4b_qm_strengths.csv"), DataFrame)
         @test nrow(fed_strengths) == 3 * length(unique(zip(
@@ -1992,6 +2029,21 @@ end
         short, short_weights = _tuning_time_sample(y_obs[:, 1:100], 336, :stratified)
         @test short == collect(1:100)
         @test short_weights === nothing
+    end
+
+    @testset "representative hours leave out the hours taken for being wet" begin
+        indices, weights = _tuning_time_sample(y_obs, 336, :uniform)
+        representative = _tuning_representative(indices, weights, n_time, 336)
+        spaced = Set(unique(round.(Int, range(1, n_time; length=168))))
+        @test representative == [index in spaced for index in indices]
+        @test count(representative) == length(spaced)
+        # What is left out is the wettest half, here every one of them a wet hour.
+        @test all(is_wet[indices[.!representative]])
+        stratified, stratified_weights = _tuning_time_sample(y_obs, 336, :stratified)
+        @test _tuning_representative(stratified, stratified_weights, n_time, 336) ==
+            (stratified_weights .> 1.0)
+        # No subsample: every hour is a draw from the record.
+        @test _tuning_representative(collect(1:n_time), nothing, n_time, 0) == trues(n_time)
     end
 
     @testset "weighted metric estimates the full-sample metric" begin

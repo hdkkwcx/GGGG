@@ -72,18 +72,44 @@ const BLEND_LAMBDAS = collect(0.0:0.1:1.0)
 # Note what this widens: a cell the target product calls dry but another calls wet is in band 1
 # and is therefore blended, where the constant axis would never have touched it. That is a
 # different intervention set, not just a different weight on the same one.
-const BLEND_AXES = (:constant, :agreement_envelope)
+#
+# `:agreement_envelope_dry` and `:agreement_envelope_dry_raw` are `:agreement_envelope` plus the
+# dry band: the cells no source product calls wet, which the agreement axis never blends, get a
+# weight of their own as the last band. Bands 1-9 are the agreement axis's cells, scored against
+# the same fallback, and the bands separate (see `select_blend_lambdas`), so their weights come
+# out identical to the agreement axis's and only the dry band's weight is new.
+# - `_dry` blends the dry band toward `BLEND_FALLBACK_METHOD`, like every other band.
+# - `_dry_raw` blends it toward the target product's own anchor instead. Where all three products
+#   are dry, the residual correction carries the training gauges' residuals into cells no product
+#   calls wet, and in the 2026-11-01 screen the anchor beat every corrected field there.
+# The tuning sample is wet-heavy: half of it is the wettest hours. In the dry band that makes gauge
+# rain look commoner than it is, and the stacked blend fits on the full record for the same reason.
+# So the dry band's weight is chosen on the sample's representative hours only (the evenly spaced
+# half, `_tuning_representative`). Bands 1-9 keep the whole sample, as the agreement axis does.
+const BLEND_AXES = (:constant, :agreement_envelope, :agreement_envelope_dry,
+    :agreement_envelope_dry_raw)
+
+"""The axes that blend the dry band too (`--blend-dry-band`)."""
+const BLEND_DRY_AXES = (:agreement_envelope_dry, :agreement_envelope_dry_raw)
 
 """Band edges of the three-product envelope (mm/h)."""
 const BLEND_ENVELOPE_EDGES = [0.1, 2.5, 8.0]
 
-"""How many bands an axis carries. `:constant` is one band covering every satellite-wet cell."""
+"""
+How many bands an axis carries. `:constant` is one band covering every satellite-wet cell; the
+dry axes add the dry band as the last one.
+"""
 blend_band_count(axis::Symbol) = axis === :constant ? 1 :
     axis === :agreement_envelope ? 3 * length(BLEND_ENVELOPE_EDGES) :
+    axis in BLEND_DRY_AXES ? 3 * length(BLEND_ENVELOPE_EDGES) + 1 :
     throw(ArgumentError("unknown blend axis: $axis"))
 
 """Short tag an axis contributes to a method name; the constant axis keeps the plain name."""
-blend_axis_tag(axis::Symbol) = axis === :constant ? "" : "agrenv_"
+blend_axis_tag(axis::Symbol) = axis === :constant ? "" :
+    axis === :agreement_envelope ? "agrenv_" :
+    axis === :agreement_envelope_dry ? "agrenvdry_" :
+    axis === :agreement_envelope_dry_raw ? "agrenvdryraw_" :
+    throw(ArgumentError("unknown blend axis: $axis"))
 
 """Method name a blended counterpart of `method` reports under."""
 _blend_method(method::AbstractString, axis::Symbol=:constant) =
