@@ -27,7 +27,9 @@
 # - scores.csv: per scheme, season set and regime, every field's scores (RMSE, bias, r, and POD,
 #   FAR, CSI and FBI at 0.1, 2 and 8 mm/h; FAR_0.1 is the false-rain share).
 # - gaps.csv: within each of those strata, the `PAIRS` with a paired day-block interval
-#   (`DayBlockBootstrap.compare_days`) on RMSE, r, FAR_0.1 and CSI_0.1.
+#   (`DayBlockBootstrap.compare_days`) on RMSE, r, FAR_0.1 and CSI_0.1. MAM and DJF get one only
+#   pooled over the regimes (`with_interval`): within one regime they hold so few rain days that
+#   some resamples have none, and a score with no events has no value.
 # - differences.csv: on `PRIMARY`, how each pair's gap changes from R2 to R3 (position) and from
 #   R1 to R2 (software). The gaps are the RMSE ratio − 1, r difference and FAR_0.1 difference;
 #   days are resampled independently within each regime.
@@ -78,6 +80,9 @@ const REGIME_SETS = vcat([("all", REGIME_NAMES)], [(r, [r]) for r in REGIME_NAME
 const DIFFERENCES = [("position", "R2", "R3"), ("software", "R1", "R2")]
 
 field_label((product, method)) = "$product:$method"
+
+"""Whether a stratum gets gaps with intervals; see the header."""
+with_interval(seasons, regime) = regime == "all" || seasons in ("all", PRIMARY, "JJA", "SON")
 
 """
 The qmfusion run's configuration, and a copy of its `MGERConfig` that writes to `OUTDIR`: loading
@@ -190,6 +195,7 @@ function compare_main()
                 push!(score_rows, merge((; scheme, seasons=season_set, regime=regime_set,
                     field=field_label(field), hours=count(columns)), stats))
             end
+            with_interval(season_set, regime_set) || continue
             for (candidate, baseline) in PAIRS
                 row = compare_days(sums[field_label(candidate)], sums[field_label(baseline)],
                     THRESHOLDS; ci_stats=CI_STATS, reps=BOOTSTRAP_REPS, seed=BOOTSTRAP_SEED)

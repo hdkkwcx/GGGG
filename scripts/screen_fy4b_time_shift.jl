@@ -20,7 +20,9 @@
 #   training stations. A stratum with fewer than `MIN_HOURS` hours keeps k = 0.
 # - heldout.csv: the held-out stations at their fold's picked k against k = 0, pooled over the
 #   folds, with a paired day-block interval (`DayBlockBootstrap`) on RMSE, r, CSI_0.1 and CSI_2,
-#   for every stratum with at least `MIN_HOURS` hours.
+#   for every stratum with at least `MIN_HOURS` hours. MAM and DJF get one only pooled over the
+#   regimes (`with_interval`): within one regime they hold so few rain days that some resamples
+#   have none, and a score with no events has no value.
 # - provenance.csv.
 #
 # Rule, fixed before the run: a per-fold shift is worth building into FY4B_QM only if the pooled
@@ -105,6 +107,9 @@ function strata()
 end
 
 _stat(stats, name) = getproperty(stats, Symbol(name))
+
+"""Whether a stratum gets a bootstrap interval; see the header."""
+with_interval(season, regime) = regime == "all" || season in ("all", "JJA", "SON")
 
 function lag_scores(y, sat, times, column_group, n_group, hours_in)
     groups = repeat(permutedims(column_group), size(y, 1))
@@ -216,7 +221,7 @@ function heldout_test(y, fy4b, times, column_group, n_group, hours_in, station_f
     groups = repeat(permutedims(column_group), size(y, 1))
     rows = NamedTuple[]
     for (season, regime, members) in strata()
-        sum(hours_in[members]) >= MIN_HOURS || continue
+        sum(hours_in[members]) >= MIN_HOURS && with_interval(season, regime) || continue
         in_stratum = mask .& in.(groups, Ref(Set(members)))
         any(in_stratum) || continue
         sums(x) = group_sums(x, y, in_stratum, day_group, n_day, THRESHOLDS)
