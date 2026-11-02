@@ -60,6 +60,15 @@ The user asked for the FY4B paragraph, on the framing decided below ("raising FY
   - `check_paper_provenance.py`: every entry traces to committed code.
   - `make_paper.jl` dry run: all steps REUSE or OK, none CHANGED.
   - `typst compile`: clean, with no red "?".
+- **Two FY4B series in the paper (side-agent note, fixed in the text):**
+  - **Scope's numbers:** they come from the first processed file. It has 13,471 hours and one pixel
+    per gauge, and its r is the median over gauges.
+  - **§3.4's "plain FY4B":** the rebuild, with 20,087 hours and a 3×3 mean. Its r is pooled over
+    all gauge-hours.
+  - **The fix:** each passage now names its series and its r. §2.5 says the rebuilt series is
+    §3.4's plain FY4B and that its scores are not the Scope's. No numbers changed.
+  - **If the tutor wants one series throughout:** rerun the RQ2 `--with-fy4b` evaluation on the
+    rebuilt w3 file. That needs a file option in `run_satellite_temporal_evaluation.jl`.
 
 ## Previous (2026-11-02): the CLT cloud-type filter, a one-month pilot — stop
 

@@ -186,8 +186,9 @@ each as a research content, with the questions it must answer:
   are best, and does fusion fix the moderate and heavy rain that floods depend on?
 
 *Scope.* RQ1–RQ3 compare two products, GPM IMERG and GSMaP. FY4B, the rain estimate of China's
-geostationary FengYun-4B, is treated on its own. Uncorrected, on the hours it covers, it scores worst
-even when no product is gauge-calibrated (hourly r #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
+geostationary FengYun-4B, is treated on its own. In the first hourly series built for this study (the
+single pixel at each gauge, on the hours of an incomplete first download), it scores worst even when
+no product is gauge-calibrated (median hourly r at the gauges #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
 wet-hour detection #val(fp, "POD", product: "FY4B") vs #stat("scope_fy4b_pod", "others")). So neither the merged product nor the agreement blend in
 RQ3 uses it, and §3.4 asks instead how far its quality can be raised.
 
@@ -245,7 +246,10 @@ the nearest training gauge.
 FY4B's rain estimate comes from the AGRI imager of FengYun-4B. It is rebuilt here from the
 satellite-only 15-minute full-disk files (4 km); the hourly and longer files are corrected with
 China's rain gauges and are not used. An hour is kept only when all four of its 15-minute files exist,
-and its value at a gauge is the mean over the 3 × 3 pixels around it. Two corrections are then fitted
+and its value at a gauge is the mean over the 3 × 3 pixels around it. This rebuilt series, before the
+corrections below, is the plain FY4B of §3.4. It has more complete hours than the first series behind
+the Scope paragraph and averages nine pixels instead of one, so its scores are not those of the Scope
+paragraph. Two corrections are then fitted
 inside each cross-validation fold, on the training gauges only, so a held-out gauge never shapes the
 anchor it is scored against. First, a pixel shift. FY4B falls into three regimes: two versions of its
 processing at 133°E, switched in May 2023, and the satellite at 105°E from March 2024. For each
@@ -391,9 +395,11 @@ left before it is finished.
 
 == FY4B — how far can its quality be raised?
 
-Corrected FY4B (§2.5) gains at every stage. Against plain FY4B on the same cells, its RMSE changes by
+Corrected FY4B (§2.5) gains at every stage. Against plain FY4B (the rebuilt series before the shift
+and the map) on the same cells, its RMSE changes by
 #dq("FY4B", "raw") raw, #dq("FY4B", "mgwr") after MGWR and #dq("FY4B", B) after MGWR and the
-agreement blend (95% day-block intervals, balanced spatial CV), and raw r rises from
+agreement blend (95% day-block intervals, balanced spatial CV), and raw r over all gauge-hours rises
+from
 #val(fq, "r0", scheme: "balanced_spatial", baseline: "FY4B", method: "raw") to
 #val(fq, "r", scheme: "balanced_spatial", baseline: "FY4B", method: "raw"). It does not reach GPM:
 against GPM's agreement blend its RMSE differs by #dq(G, B), and after MGWR alone by
