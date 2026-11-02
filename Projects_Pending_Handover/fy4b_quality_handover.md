@@ -47,6 +47,9 @@ Previous, last bullet).
   - §2.5 says the rebuilt series is "the FY4B of the Scope paragraph and the plain FY4B of §3.4".
     The warning that its scores differ from the Scope's is gone.
   - The header comment and the `scope_fy4b_r` loader comment name the new run.
+  - Then, at the user's request, §3.4 adds the MGWR stage against GSMaP: FY4B_QM is better,
+    −6.8% (−11.2..−2.9), though its r stays lower (0.47 vs 0.49). After the blend it is +0.5%
+    (the interval spans 0). The next sentence now says "the gain over plain FY4B after MGWR".
   - The Scope's r is still the median over gauges, and §3.4's raw r is still pooled over all
     gauge-hours. Each passage names its own.
 - **Checks:**

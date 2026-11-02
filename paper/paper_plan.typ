@@ -400,8 +400,11 @@ from
 #val(fq, "r0", scheme: "balanced_spatial", baseline: "FY4B", method: "raw") to
 #val(fq, "r", scheme: "balanced_spatial", baseline: "FY4B", method: "raw"). It does not reach GPM:
 against GPM's agreement blend its RMSE differs by #dq(G, B), and after MGWR alone by
-#dq(G, "mgwr"), an interval that spans zero but lies mostly on the worse side. Against GSMaP's blend
-the difference is #dq("GSMaP", B). The gain after MGWR shows only where held-out gauges are far from
+#dq(G, "mgwr"), an interval that spans zero but lies mostly on the worse side. Against GSMaP it does
+better after MGWR alone, #dq("GSMaP", "mgwr"), though its r stays lower
+(#val(fq, "r", scheme: "balanced_spatial", baseline: "GSMaP", method: "mgwr") vs
+#val(fq, "r0", scheme: "balanced_spatial", baseline: "GSMaP", method: "mgwr")); after the blend the
+difference is #dq("GSMaP", B), an interval that spans zero. The gain over plain FY4B after MGWR shows only where held-out gauges are far from
 training ones: in the random split, where a held-out gauge usually has a training gauge nearby, it is
 #dq("FY4B", "mgwr", scheme: "random"). What
 remains is false rain, and FY4B's own cloud-type product cannot pick it out. In a one-month pilot (July
