@@ -4,10 +4,12 @@
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
-agreement blend (merged as `24e392e`). Two cheap screens (Newest): a whole-hour time shift does
-not help, and 105°E is not shown to be better; the May 2023 software update is consistent with a
-gain · **Next step:** the user decides whether to merge `fy4b/timing-position`, and whether to
-try the cloud filter against false rain (needs a download); then the paper framing (§0a)
+agreement blend (merged as `24e392e`). Two cheap screens (Newest, merged as `1dc0262`): a
+whole-hour time shift does not help, and 105°E is not shown to be better. The 2022 → 2023 gain
+first read as the May 2023 software update is not shown: 2023 was a wet year, and between the two
+dry years 2022 and 2024 the gain's interval reaches 0 · **Next step:** the user decides whether to
+merge `fy4b/drought-check`, and whether to try the cloud filter (`CLT`) against false rain,
+starting with a one-month download; then the paper framing (§0a)
 
 ---
 
@@ -15,7 +17,10 @@ try the cloud filter against false rain (needs a download); then the paper frami
 
 The user asked for ways to improve FY4B. These are the two that need no new data. Both are
 exploratory screens on branch `fy4b/timing-position`, run from a clean tree at `cec3aab`, a minute
-or two each. Each rule was fixed before its run.
+or two each. Each rule was fixed before its run. After two side-agent notes (the viewing angle,
+and the 2022 drought), the position script was rerun from a clean tree at `3537881` with a
+dry-year pair and the gauges' rain per year (branch `fy4b/drought-check`). Every earlier row is
+unchanged.
 
 ### 1. A whole-hour time shift: no
 
@@ -51,27 +56,80 @@ or two each. Each rule was fixed before its run.
 | `blend_mgwr` | +1.5% → +1.8% | +0.3 pts (−1.5..+2.0) | −0.018 → −0.028 | −0.010 (−0.034..+0.014) |
 
   **The reading fails.** Plain FY4B's RMSE gap does shrink a lot, +45.8% → +15.2% (−30.6 pts,
-  −62.1..−0.8), but its r gap does not. So the move changed FY4B's amounts, and the QM already
-  corrects those.
-- **Unexpected, and not the question set before the run:** the software update (R1 → R2, May 2023,
-  both 133°E) narrows FY4B_QM's own-blend gap to GPM_uncal in balanced spatial:
+  −62.1..−0.8), but its r gap does not. That is consistent with FY4B's amounts changing in 2024
+  (the move, or that year's weather), which the QM already corrects.
+- **Don't credit the viewing angle.** Over our gauges (109.6–111.5°E, 31.3–33.2°N) the viewing
+  zenith only drops from 44–46° (133°E) to 37–39° (105°E). The shift of a 10 km cloud top goes
+  from 10.0 to 7.8 km. 105°E is not "straight on".
+- **Unexpected, and not the question set before the run:** from R1 to R2 (the May 2023 software
+  update, both 133°E), FY4B_QM's own-blend gap to GPM_uncal narrows in balanced spatial:
   - RMSE gap +3.6% → +1.5%, change −2.1 pts (−4.1..−0.2);
   - r gap −0.049 → −0.018, change +0.030 (+0.008..+0.055);
   - `mgwr`'s r gap also changes by +0.058 (+0.004..+0.107).
 
-  In the random split the same changes are not significant. Each regime is one year (2022 against
-  2023), so this is "consistent with the V1.0.0 update helping", not shown.
-- **Also:** in 2023 (R2), FY4B_QM's own blend beats ADW, −1.24% (−2.30..−0.21). In 2022 and 2024
-  it does not.
+  In the random split the same changes are not significant.
+- **But R1 → R2 also swaps a dry year for a wet one.** Gauge rain, Jun–Nov, all gauge hours
+  (`rain_years.csv`):
+
+| Year | Wet hours (≥0.1 mm/h) | Hours ≥2 mm/h per 1000 | Mean, mm/h |
+|---|---|---|---|
+| 2014–2021 | 5.96–11.08% | 11.3–35.8 | 0.091–0.211 |
+| 2022 (R1) | 6.08% | 15.6 | 0.112 |
+| 2023 (R2) | 10.10% | 33.8 | 0.206 |
+| 2024 (R3) | 6.45% | 17.6 | 0.119 |
+
+  - 2022 was dry, and 2023 was the second-wettest Jun–Nov since 2014 by mean rain (after 2021).
+    The scored
+    cells show the same (`weather.csv`).
+  - FAR_0.1 follows the weather for both products: FY4B_QM raw 0.72 / 0.61 / 0.73 and GPM_uncal
+    raw 0.61 / 0.50 / 0.61 in R1 / R2 / R3.
+  - So GPM_uncal as the yardstick takes out only part of each year's weather.
+- **Dry-year check (rule fixed before the rerun).** R1 → R3 (2022 → 2024, both dry) holds the
+  weather roughly fixed. It changes the software and the position. FY4B_QM `blend_mgwr` against
+  GPM_uncal `blend_mgwr`, balanced:
+  - RMSE gap +3.6% → +1.8%, change −1.8 pts (−4.0..+0.1);
+  - r gap −0.049 → −0.028, change +0.021 (−0.005..+0.049).
+
+  **The rule fails, so the update is not shown.**
+  - The point estimates are nearly as large as from R1 to R2. So the data don't show that the
+    gain was the weather either. With one year per regime, the two can't be told apart.
+  - In the random split the change is +0.1 pts (−0.5..+0.7).
+  - FY4B_QM `raw`'s RMSE gap does shrink between the dry years, −21.1 pts (−41.1..−2.5), but its
+    r gap does not, +0.031 (−0.046..+0.125). So again this is amounts.
+- **Also:** in 2023 (R2, the wet year), FY4B_QM's own blend beats ADW, −1.24% (−2.30..−0.21). In
+  2022 and 2024 it does not.
+- **For the paper:**
+  - Don't credit the software update or the viewing angle.
+  - At most, say that FY4B_QM's blend was closer to GPM_uncal in 2023 and 2024 than in 2022.
+  - Say also that with one year per regime, and 2023 unusually wet, this can't be attributed to
+    the update.
 
 ### What this leaves
 
 - Timing is not a lever. The remaining target is false rain: FAR_0.1 is 0.61–0.73 for FY4B_QM raw
   against 0.50–0.61 for GPM_uncal raw (JJA+SON, by regime).
-- The idea aimed at it is a cloud filter using FY4B's own cloud-type / cloud-top products. That
-  needs a download, and its availability for 2022–2024 must be checked first.
-- For the paper, the software-update result could support "FY4B's quality is rising", worded as
-  "consistent with".
+- **The idea aimed at it is a cloud filter using FY4B's own Cloud Type product, `CLT`.** The
+  details are from NSMC's FY-4B AGRI L2 CLT product sheet V1.0.1, 2023-07.
+  - Full disk, 4 km, every 15 min, NetCDF.
+  - Same nominal grid and scans as our QPE files, so it lines up pixel for pixel, quarter by
+    quarter.
+  - File name: `FY4B-_AGRI--_N_DISK_1330E_L2-_CLT-_MULT_NOM_<start>_<end>_4000M_V0001.NC`, with
+    `1050E` from March 2024.
+  - Classes: 0 clear, 2 water, 3 supercooled water, 4 mixed, 5 ice, 6 cirrus, 7 overlap,
+    9 uncertain (126 space, 127 fill).
+  - Its `DQF` bits 1–2 carry the cloud-mask result (cloud / possible cloud / possible clear /
+    clear), so `CLM` is not needed separately.
+  - **Hypothesis, untested:** IR-based rain estimates often give false rain under thin cold ice
+    cloud (cirrus, decaying anvils). That would fit the evening tail. Whether FY4B's QPE algorithm
+    (version 2016-10-10 in the file) already uses cloud type is undocumented.
+  - **Not checked:** whether NSMC's archive has CLT back to June 2022, and the file size. QPE
+    files are about 0.9 MB each.
+  - **Suggested first step:** the user downloads one month, e.g. July 2023. A small screen then
+    checks whether FY4B's false-rain hours at the gauge pixels fall in some classes (cirrus,
+    overlap) more often than its hits do. Only then is the full 2022–2024 download worth it. Any
+    filter rule would be fitted per fold on training gauges.
+- For the paper, the software-update result no longer supports "FY4B's quality is rising" (see
+  the dry-year check above).
 
 ## Previous (2026-11-01): does FY4B help the fusion?
 
