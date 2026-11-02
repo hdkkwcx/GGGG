@@ -1,0 +1,13 @@
+{
+ "source": "output/fy4b_clt_screen/class_table.csv",
+ "source_sha256": "0b95c2ffe0c9b7ca9f4b4dbdfb6ca7969db36de7fd81e87c226a8c62a040c210",
+ "rows": [
+  {
+   "name": "ice",
+   "false_alarms": "+83",
+   "hits": "+88",
+   "far": "0.75",
+   "far_gpm": "0.57"
+  }
+ ]
+}

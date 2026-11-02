@@ -1,0 +1,13 @@
+{
+ "source": "output/fy4b_clt_screen/paired.csv",
+ "source_sha256": "11bc3cb5def62342707cd479f588d8bf29eda086882b41199026ddad5ad14396",
+ "rows": [
+  {
+   "candidate": "FY4B_QM_CLT",
+   "baseline": "FY4B_QM_AMT",
+   "csi": "+0.006",
+   "csi_lo": "+0.001",
+   "csi_hi": "+0.009"
+  }
+ ]
+}
