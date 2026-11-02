@@ -30,14 +30,29 @@
 #   (`DayBlockBootstrap.compare_days`) on RMSE, r, FAR_0.1 and CSI_0.1. MAM and DJF get one only
 #   pooled over the regimes (`with_interval`): within one regime they hold so few rain days that
 #   some resamples have none, and a score with no events has no value.
-# - differences.csv: on `PRIMARY`, how each pair's gap changes from R2 to R3 (position) and from
-#   R1 to R2 (software). The gaps are the RMSE ratio − 1, r difference and FAR_0.1 difference;
-#   days are resampled independently within each regime.
+# - differences.csv: on `PRIMARY`, how each pair's gap changes from R2 to R3 (position), from R1
+#   to R2 (software) and from R1 to R3 (the two dry years, below). The gaps are the RMSE ratio − 1,
+#   r difference and FAR_0.1 difference; days are resampled independently within each regime.
+# - weather.csv: per scheme, season set and regime, the gauges' wet share at each threshold and
+#   their mean rain on the scored cells, i.e. the weather each comparison spans.
+# - rain_years.csv: Jun-Nov of every year in the gauge file (2014-2024), the same measures over
+#   all gauge hours, to place each regime's year against the others.
 # - provenance.csv.
 #
 # Reading, fixed before the run: "FY4B_QM is better from 105°E" holds only if, on balanced_spatial,
 # its gap to GPM_uncal in RMSE and in r shrinks from R2 to R3 with an interval excluding 0, for
 # both `raw` and `blend_mgwr`. Each regime is one year, so even then it is "consistent with".
+#
+# Wet and dry years. The first run found, unplanned, that R1 -> R2 narrows FY4B_QM's `blend_mgwr`
+# gap to GPM_uncal's. But Jun-Nov 2022 (R1) was dry at these gauges and 2023 (R2) one of the
+# wettest years since 2014, and FY4B's main weakness, false rain, weighs more in a dry year. So
+# R1 -> R2 changes the weather as well as the software. 2022 and 2024 (R3) were about as dry as
+# each other, so R1 -> R3 holds the weather roughly fixed; it changes the software and the position.
+# Reading, fixed before the rerun: "consistent with the V1.0.0 update helping" survives only if, on
+# balanced_spatial, R1 -> R3 narrows the `blend_mgwr` gap to GPM_uncal's in RMSE (interval below 0)
+# and in r (interval above 0). Otherwise the R1 -> R2 narrowing is consistent with 2023 being a wet
+# year, and the update is not shown. R1 -> R3 also moves the satellite; on its own (R2 -> R3) that
+# did not change the `blend_mgwr` gap.
 #
 # Checks; the script errors if one fails: the run exists, every grid hour has a regime, the
 # out-of-fold tables' hours equal the grid's, and FY4B_QM's `raw` scored on its own mask reproduces
@@ -77,7 +92,9 @@ const PAIRS = [((QM, "raw"), (GPM, "raw")), ((QM, "mgwr"), (GPM, "mgwr")),
 const PRIMARY = "JJA+SON"
 const SEASON_SETS = vcat([("all", SEASONS), (PRIMARY, ["JJA", "SON"])], [(s, [s]) for s in SEASONS])
 const REGIME_SETS = vcat([("all", REGIME_NAMES)], [(r, [r]) for r in REGIME_NAMES])
-const DIFFERENCES = [("position", "R2", "R3"), ("software", "R1", "R2")]
+const DIFFERENCES = [("position", "R2", "R3"), ("software", "R1", "R2"), ("dry years", "R1", "R3")]
+"""Months of the gauge record that `rain_years` compares across years: June to November."""
+const RAIN_MONTHS = 6:11
 
 field_label((product, method)) = "$product:$method"
 
@@ -112,6 +129,25 @@ function gap(candidate, baseline)
 end
 
 const GAP_NAMES = ["rmse_ratio", "r_gap", "far_gap"]
+
+"""The gauges' wet share at each threshold and their mean rain, over the finite values `v`."""
+rain_measures(v) = (; n=length(v), (Symbol("wet_", t) => mean(v .>= t) for t in THRESHOLDS)...,
+    mean_mm_h=mean(v))
+
+"""Jun-Nov (`RAIN_MONTHS`) of every year in the hourly gauge file, over all gauge hours."""
+function rain_years(path)
+    table = CSV.read(path, DataFrame)
+    times = [DateTime(replace(string(t), "Z" => "")) for t in table[!, 1]]
+    values = Float64.(coalesce.(Matrix(table[!, 2:end]), NaN))
+    rows = NamedTuple[]
+    for y in sort(unique(year.(times)))
+        hours = findall(t -> year(t) == y && month(t) in RAIN_MONTHS, times)
+        isempty(hours) && continue
+        push!(rows, merge((; year=y, hours=length(hours)),
+            rain_measures(filter(!isnan, vec(values[hours, :])))))
+    end
+    return rows
+end
 
 """
 How the candidate's gap to the baseline changes from regime `a` to regime `b`, each given as
@@ -165,6 +201,7 @@ function compare_main()
     pooled = CSV.read(pooled_path, DataFrame)
 
     score_rows, gap_rows, difference_rows = NamedTuple[], NamedTuple[], NamedTuple[]
+    weather_rows = NamedTuple[]
     for scheme in schemes
         series = Dict(field_label(field) =>
             read_wide_values(path(scheme, field[1], "oof_$(field[2]).csv"), ids, times)
@@ -187,6 +224,8 @@ function compare_main()
             columns = in.(season, Ref(seasons)) .& in.(regime, Ref(regimes))
             cells = mask .& permutedims(columns)
             any(cells) || continue
+            push!(weather_rows, merge((; scheme, seasons=season_set, regime=regime_set,
+                hours=count(columns)), rain_measures(y[cells])))
             sums = Dict(field_label(field) =>
                 group_sums(series[field_label(field)], y, cells, day_group, n_day, THRESHOLDS)
                 for field in FIELDS)
@@ -216,7 +255,25 @@ function compare_main()
     write_csv_atomic(joinpath(OUTDIR, "scores.csv"), DataFrame(score_rows))
     write_csv_atomic(joinpath(OUTDIR, "gaps.csv"), DataFrame(gap_rows))
     write_csv_atomic(joinpath(OUTDIR, "differences.csv"), DataFrame(difference_rows))
+    write_csv_atomic(joinpath(OUTDIR, "weather.csv"), DataFrame(weather_rows))
+    year_rows = rain_years(mger.obs_hourly_wide_path)
+    write_csv_atomic(joinpath(OUTDIR, "rain_years.csv"), DataFrame(year_rows))
     CSV.write(joinpath(OUTDIR, "provenance.csv"), finish_provenance!(provenance, ROOT))
+
+    wet = Symbol("wet_", THRESHOLDS[1])
+    heavy = Symbol("wet_", THRESHOLDS[2])
+    println("\nGauge rain, Jun-Nov of each year (all gauge hours):")
+    for row in year_rows
+        @printf("  %d  wet %.2f%%  >=%g mm/h %.2f per 1000  mean %.4f mm/h\n", row.year,
+            100 * getproperty(row, wet), THRESHOLDS[2], 1000 * getproperty(row, heavy), row.mean_mm_h)
+    end
+    println("\nGauge rain on the scored cells, $PRIMARY by regime:")
+    for row in weather_rows
+        row.seasons == PRIMARY && row.regime in REGIME_NAMES || continue
+        @printf("  %-16s %-4s n %8d  wet %.2f%%  >=%g mm/h %.2f per 1000  mean %.4f mm/h\n",
+            row.scheme, row.regime, row.n, 100 * getproperty(row, wet), THRESHOLDS[2],
+            1000 * getproperty(row, heavy), row.mean_mm_h)
+    end
 
     println("\nScores on $PRIMARY by regime (RMSE, r, FAR_0.1):")
     for row in score_rows
@@ -250,6 +307,15 @@ function compare_main()
     println("\nReading (fixed before the run): ", better ?
         "FY4B_QM's gap to GPM_uncal shrinks from R2 to R3 in both raw and blend_mgwr" :
         "not shown that FY4B_QM is better from 105°E")
+    dry = only(row for row in difference_rows if row.scheme == "balanced_spatial" &&
+        row.comparison == "dry years" && row.candidate == "$QM:blend_mgwr" &&
+        row.baseline == "$GPM:blend_mgwr")
+    survives = dry.change_rmse_ratio_hi < 0 && dry.change_r_gap_lo > 0
+    println("Reading for the software update (fixed before the rerun): ", survives ?
+        "the blend_mgwr gap also narrows between the two dry years (R1 -> R3), so the R1 -> R2 " *
+        "narrowing stays consistent with the V1.0.0 update helping; R1 -> R3 also moves the satellite" :
+        "not shown between the two dry years (R1 -> R3), so the R1 -> R2 narrowing is consistent " *
+        "with 2023 being a wet year, and the update is not shown")
     println("Wrote $(relpath(OUTDIR, ROOT))")
 end
 
