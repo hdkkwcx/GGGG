@@ -8,8 +8,8 @@
 # different output.
 # RQ1/RQ2 entries point at the IMERG Uncal runs (`_gpmuncal`; RQ2 also `_nofy4b`), the paper's
 # primary product, with the heavy-core diagnostics (output/heavy_core_diagnostics_gpmuncal/) and,
-# for the Scope paragraph's FY4B numbers, the Uncal RQ2 run with FY4B
-# (output/satellite_temporal_evaluation_gpmuncal/).
+# for the Scope paragraph's FY4B numbers, the Uncal RQ2 run with the rebuilt FY4B series of §2.5
+# (output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/).
 
 [[item]]
 label = "Fig. 1 (study area)"
@@ -367,14 +367,15 @@ season = "all"
 [table.values]
 n = ["n_stations", "0f"]
 
-# Scope: FY4B against GPM and GSMaP on the hours it covers (IMERG Uncal run with FY4B).
+# Scope: FY4B against GPM and GSMaP on the hours it covers (IMERG Uncal run with the rebuilt FY4B
+# series, fy4b_w3_h0).
 
 [[table]]
 name = "scope_fy4b_r"
 label = "Scope text: FY4B, median station hourly r"
 step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_gpmuncal/station_correlation_summary.csv"
-provenance = ["output/satellite_temporal_evaluation_gpmuncal/provenance.csv"]
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/station_correlation_summary.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
 keys = ["product"]
 [table.where]
 sample = "all_products"
@@ -392,8 +393,8 @@ where = { product = ["GPM_uncal", "GSMaP"] }
 name = "scope_fy4b_areal"
 label = "Scope text: FY4B, areal-mean hourly r"
 step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_gpmuncal/regional_series_metrics.csv"
-provenance = ["output/satellite_temporal_evaluation_gpmuncal/provenance.csv"]
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/regional_series_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
 keys = ["product"]
 [table.where]
 sample = "all_products"
@@ -412,8 +413,8 @@ where = { product = ["GPM_uncal", "GSMaP"] }
 name = "scope_fy4b_pod"
 label = "Scope text: FY4B, wet-hour detection"
 step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_gpmuncal/intensity_class_metrics.csv"
-provenance = ["output/satellite_temporal_evaluation_gpmuncal/provenance.csv"]
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/intensity_class_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
 keys = ["product"]
 [table.where]
 sample = "all_products"
@@ -634,18 +635,20 @@ needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
 [[step]]
 id = "rq2"
 kind = "analysis"
-reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
+reviewed = "8c5709b36493e13de582c703c0a825a33a092918"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl"]
 marker = "output/satellite_temporal_evaluation_nofy4b_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
+note = "reviewed 8c5709b: --fy4b-file is opt-in; that run's gpm_gsmap_full rows equal this run's"
 
+# The Scope's FY4B scores, on the rebuilt series that §2.5 and §3.4 use.
 [[step]]
 id = "rq2_fy4b"
 kind = "analysis"
-reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
-command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--with-fy4b"]
-marker = "output/satellite_temporal_evaluation_gpmuncal/provenance.csv"
-needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
+command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--with-fy4b",
+           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv"]
+marker = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"
+needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform", "fy4b_rebuild"]
 
 # The benchmark run predates the `command` row, so its command was rebuilt from the run folder
 # name. Checked on 2026-10-21: parsed by run_interpolation_benchmark.jl's own `main` (stopped

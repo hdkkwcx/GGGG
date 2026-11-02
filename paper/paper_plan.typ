@@ -11,9 +11,9 @@
 // ..._fusedanchor_nofy4b_gpmuncal. It reproduces the earlier runs at ec320ab and on uncommitted code
 // (ef3616d) byte for byte.
 // RQ1/RQ2 and Figs. 2-4 come from clean IMERG Uncal runs at commit 3bce549, plotted at 072eef6:
-// output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal,
-// satellite_temporal_evaluation_nofy4b_gpmuncal and, for the Scope paragraph's FY4B numbers,
-// satellite_temporal_evaluation_gpmuncal.
+// output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal and
+// satellite_temporal_evaluation_nofy4b_gpmuncal. The Scope paragraph's FY4B numbers come from the
+// RQ2 run with the rebuilt FY4B series of §2.5 at 8c5709b (satellite_temporal_evaluation_fy4bw3h0_gpmuncal).
 // §2.5 and §3.4 (FY4B) come from a clean benchmark run with FY4B at commit b55a3a9
 // (..._fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal, on the rebuild at d492f42), scored
 // by scripts/compare_fy4b_quality.jl at 9edc185 (output/fy4b_quality), and from the July 2023
@@ -73,7 +73,7 @@
 #let v2 = load("rq2_events")       // RQ2: rain-event detection and timing
 #let a2 = load("rq2_areal")        // RQ2: areal-mean series
 #let n0 = load("study_gauges")     // Study area: gauges RQ2 scores, in all and by landform region
-#let fr = load("scope_fy4b_r")     // Scope: FY4B on its own hours, IMERG Uncal run with FY4B
+#let fr = load("scope_fy4b_r")     // Scope: FY4B on its own hours, IMERG Uncal run with the rebuilt FY4B
 #let fa = load("scope_fy4b_areal")
 #let fp = load("scope_fy4b_pod")
 #let fq = load("fy4b_quality")     // §3.4: corrected FY4B against plain FY4B, GPM and GSMaP, FY4B run
@@ -186,9 +186,8 @@ each as a research content, with the questions it must answer:
   are best, and does fusion fix the moderate and heavy rain that floods depend on?
 
 *Scope.* RQ1–RQ3 compare two products, GPM IMERG and GSMaP. FY4B, the rain estimate of China's
-geostationary FengYun-4B, is treated on its own. In the first hourly series built for this study (the
-single pixel at each gauge, on the hours of an incomplete first download), it scores worst even when
-no product is gauge-calibrated (median hourly r at the gauges #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
+geostationary FengYun-4B, is treated on its own. In the hourly series rebuilt for this study (§2.5),
+on the hours it covers, it scores worst even when no product is gauge-calibrated (median hourly r at the gauges #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
 wet-hour detection #val(fp, "POD", product: "FY4B") vs #stat("scope_fy4b_pod", "others")). So neither the merged product nor the agreement blend in
 RQ3 uses it, and §3.4 asks instead how far its quality can be raised.
 
@@ -247,10 +246,8 @@ FY4B's rain estimate comes from the AGRI imager of FengYun-4B. It is rebuilt her
 satellite-only 15-minute full-disk files (4 km); the hourly and longer files are corrected with
 China's rain gauges and are not used. An hour is kept only when all four of its 15-minute files exist,
 and its value at a gauge is the mean over the 3 × 3 pixels around it. This rebuilt series, before the
-corrections below, is the plain FY4B of §3.4. It has more complete hours than the first series behind
-the Scope paragraph and averages nine pixels instead of one, so its scores are not those of the Scope
-paragraph. Two corrections are then fitted
-inside each cross-validation fold, on the training gauges only, so a held-out gauge never shapes the
+corrections below, is the FY4B of the Scope paragraph and the plain FY4B of §3.4. Two corrections
+are then fitted inside each cross-validation fold, on the training gauges only, so a held-out gauge never shapes the
 anchor it is scored against. First, a pixel shift. FY4B falls into three regimes: two versions of its
 processing at 133°E, switched in May 2023, and the satellite at 105°E from March 2024. For each
 regime the training gauges choose the shift under which FY4B correlates best with them. Second, a

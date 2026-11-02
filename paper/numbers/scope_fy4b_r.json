@@ -1,6 +1,6 @@
 {
- "source": "output/satellite_temporal_evaluation_gpmuncal/station_correlation_summary.csv",
- "source_sha256": "c83b083cc1f31f7b32eee2350d14cea453407dad7ff944bcc4b72ad08cca28a7",
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/station_correlation_summary.csv",
+ "source_sha256": "cd5ccc5857a861a4f1f84137a8ed07e87bbb38c695ef4f9c13488e23424c647a",
  "rows": [
   {
    "product": "FY4B",
@@ -8,14 +8,14 @@
   },
   {
    "product": "GPM_uncal",
-   "r": "0.44"
+   "r": "0.45"
   },
   {
    "product": "GSMaP",
-   "r": "0.37"
+   "r": "0.39"
   }
  ],
  "stats": {
-  "others": "0.37–0.44"
+  "others": "0.39–0.45"
  }
 }

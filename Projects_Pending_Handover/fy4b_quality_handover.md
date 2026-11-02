@@ -7,13 +7,54 @@ the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it 
 agreement blend (merged as `24e392e`). A whole-hour time shift does not help, 105°E is not shown
 to be better, and the 2023 software-update gain is not shown (merged as `1dc0262` and
 `3796bdb`). The cloud filter from FY4B's Cloud Type product (`CLT`) fails its pilot on July 2023
-(merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Newest, merged as
-`0982a32`) · **Next step:** none pending. If the tutor wants one FY4B series throughout, rerun
-the RQ2 `--with-fy4b` evaluation on the rebuilt w3 file (Newest, last bullet)
+(merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Previous, merged as
+`0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4 (Newest, branch
+`fy4b/rq2-rebuilt-series`) · **Next step:** none pending once that branch is merged
 
 ---
 
-## Newest (2026-11-02): FY4B written into the paper
+## Newest (2026-11-02): one FY4B series throughout the paper
+
+The user asked to rerun RQ2 on the rebuilt series and update the paper (the follow-up offered in
+Previous, last bullet).
+- **Script** (`8c5709b`): `run_satellite_temporal_evaluation.jl` gains `--fy4b-file <path>`
+  (with `--with-fy4b`), parsed as the benchmark's option. The run writes to
+  `..._fy4bw3h0_gpmuncal`. Without the flag, the files, the folder and the outputs are unchanged.
+  CLAUDE.md's RQ2 line names the flag.
+- **Run** (clean, at `8c5709b`, about 40 s):
+  `julia --project=. scripts/run_satellite_temporal_evaluation.jl --with-fy4b --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv`
+  writes `output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/` (log in `output/logs/rq2_fy4b_w3.log`).
+  - The `all_products` sample: 19,818 hours and 298,653 gauge-wet cells, against 13,243 and
+    214,803 on the first series.
+  - Scope numbers (FY4B vs GPM_uncal, GSMaP), with the first series in brackets:
+    - median hourly r at the gauges: 0.226 vs 0.450, 0.386 (0.229 vs 0.438, 0.374);
+    - areal-mean hourly r: 0.405 vs 0.834, 0.667 (0.433 vs 0.833, 0.657);
+    - wet-hour POD: 0.311 vs 0.602, 0.624 (0.344 vs 0.639, 0.656).
+  - FY4B still scores worst on all three, so "scores worst" stays.
+- **Checked:**
+  - The `gpm_gsmap_full` rows of every output table equal the old `--with-fy4b` run's.
+  - They also equal the `_nofy4b` run's, except the bootstrap intervals in
+    `event_timing_summary.csv`. Those differ in the old `--with-fy4b` run too: the FY4B sample
+    draws first, so the random stream shifts.
+- **`paper/sources.toml`:**
+  - `scope_fy4b_*` tables point at the new folder;
+  - `rq2_fy4b`'s command gains the `--fy4b-file` argument, it needs `fy4b_rebuild`, and its
+    `reviewed` is dropped (a fresh run);
+  - `rq2`'s `reviewed` moves to `8c5709b`, with a note (the flag is opt-in, and the rows are
+    identical).
+- **Paper text:**
+  - The Scope now says "In the hourly series rebuilt for this study (§2.5), on the hours it covers".
+  - §2.5 says the rebuilt series is "the FY4B of the Scope paragraph and the plain FY4B of §3.4".
+    The warning that its scores differ from the Scope's is gone.
+  - The header comment and the `scope_fy4b_r` loader comment name the new run.
+  - The Scope's r is still the median over gauges, and §3.4's raw r is still pooled over all
+    gauge-hours. Each passage names its own.
+- **Checks:**
+  - `check_paper_provenance.py`: every entry traces.
+  - `make_paper.jl`: 15 REUSE, 11 OK, 2 ABSENT, none CHANGED.
+  - `typst compile`: clean, with no red "?".
+
+## Previous (2026-11-02): FY4B written into the paper
 
 The user asked for the FY4B paragraph, on the framing decided below ("raising FY4B's quality").
 - **Paper text** (`paper/paper_plan.typ`):
@@ -69,9 +110,10 @@ The user asked for the FY4B paragraph, on the framing decided below ("raising FY
   - **The fix:** each passage now names its series and its r. §2.5 says the rebuilt series is
     §3.4's plain FY4B and that its scores are not the Scope's. No numbers changed.
   - **If the tutor wants one series throughout:** rerun the RQ2 `--with-fy4b` evaluation on the
-    rebuilt w3 file. That needs a file option in `run_satellite_temporal_evaluation.jl`.
+    rebuilt w3 file. That needs a file option in `run_satellite_temporal_evaluation.jl`. Done:
+    see Newest.
 
-## Previous (2026-11-02): the CLT cloud-type filter, a one-month pilot — stop
+## Earlier (2026-11-02): the CLT cloud-type filter, a one-month pilot — stop
 
 The user downloaded July 2023 of `CLT` (2,921 quarter files, 5.8 GB, on the T9 at
 `/Volumes/T9/CLT`, linked as `data/FY4B_CLT`) and asked me to pick the open decisions.
