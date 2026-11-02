@@ -1,10 +1,10 @@
 {
- "source": "output/satellite_temporal_evaluation_gpmuncal/regional_series_metrics.csv",
- "source_sha256": "9099180612c0a975a44481dbe21ea2f35fbba4b97c8f60387dfabc1e7df38a78",
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/regional_series_metrics.csv",
+ "source_sha256": "c76665f863ab6b5caa6fd705696a142bd5fa943e48482dc5505237702f0c2d8e",
  "rows": [
   {
    "product": "FY4B",
-   "r": "0.43"
+   "r": "0.41"
   },
   {
    "product": "GPM_uncal",
@@ -12,10 +12,10 @@
   },
   {
    "product": "GSMaP",
-   "r": "0.66"
+   "r": "0.67"
   }
  ],
  "stats": {
-  "others": "0.66–0.83"
+  "others": "0.67–0.83"
  }
 }

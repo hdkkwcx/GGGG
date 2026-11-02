@@ -1,21 +1,21 @@
 {
- "source": "output/satellite_temporal_evaluation_gpmuncal/intensity_class_metrics.csv",
- "source_sha256": "a6d544b0f12148313f16b8919b49efd7fd25f0725bce2ce312678520aba6a526",
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/intensity_class_metrics.csv",
+ "source_sha256": "ca1a15955e7c65c3c90464fa5aa042c3be79fc315b3b0eeaf73714d7e0cb6ffc",
  "rows": [
   {
    "product": "FY4B",
-   "POD": "0.34"
+   "POD": "0.31"
   },
   {
    "product": "GPM_uncal",
-   "POD": "0.64"
+   "POD": "0.60"
   },
   {
    "product": "GSMaP",
-   "POD": "0.66"
+   "POD": "0.62"
   }
  ],
  "stats": {
-  "others": "0.64–0.66"
+  "others": "0.60–0.62"
  }
 }
