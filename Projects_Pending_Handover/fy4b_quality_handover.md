@@ -3,14 +3,77 @@
 **Date:** 2026-11-01 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
-the decision rule (merged as `f720404`). A same-cells check finds that adding FY4B_QM to the
-fusion clears it for no product's agreement blend (Newest) · **Next step:** the user decides
-whether FY4B stays out of the main comparison and whether to merge `fy4b/fusion-check`; then the
-paper framing (§0a) and a paper step
+the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
+agreement blend (merged as `24e392e`). Two cheap screens (Newest): a whole-hour time shift does
+not help, and 105°E is not shown to be better; the May 2023 software update is consistent with a
+gain · **Next step:** the user decides whether to merge `fy4b/timing-position`, and whether to
+try the cloud filter against false rain (needs a download); then the paper framing (§0a)
 
 ---
 
-## Newest (2026-11-01): does FY4B help the fusion?
+## Newest (2026-11-01): two cheap screens, a time shift and the satellite position
+
+The user asked for ways to improve FY4B. These are the two that need no new data. Both are
+exploratory screens on branch `fy4b/timing-position`, run from a clean tree at `cec3aab`, a minute
+or two each. Each rule was fixed before its run.
+
+### 1. A whole-hour time shift: no
+
+- **Script:** `scripts/screen_fy4b_time_shift.jl`. Log: `output/screen_fy4b_time_shift.log`.
+  Output: `output/fy4b_time_shift_screen/`. It scores the gauge at hour t against the rebuilt FY4B
+  (w3, before shift and QM) at t+k, k = −3..+3, per season × regime.
+- **Summer and autumn:** the best k is 0 in every regime. The summer composite peak is still late
+  on the rebuilt file (diurnal phase +1.4 h, as RQ2 found on the old file). But hour by hour,
+  FY4B matches best at the same hour. So the late peak is not shifted rain. It is consistent with
+  FY4B keeping rain going into the evening, i.e. false rain, though that is not shown directly.
+- **Spring and winter:** FY4B's previous hour matches slightly better (FY4B early). MAM k −1 gives
+  Δr +0.006, and DJF k −1..−3 gives up to +0.02 within a regime.
+- **Held-out test:** k is picked per fold on training stations and scored on held-out stations.
+  - Pooled Δr is −0.0000 (−0.0013..+0.0013): **the rule fails**.
+  - CSI_0.1 rises by +0.003, significant but tiny.
+  - DJF alone: Δr +0.011 (−0.013..+0.047), not significant.
+- **Control:** GPM_uncal's best k is 0 everywhere except a trace in DJF. So the method and the hour
+  labels check out.
+
+### 2. 105°E against 133°E: not shown
+
+- **Script:** `scripts/compare_fy4b_by_position.jl`. Log: `output/compare_fy4b_by_position.log`.
+  Output: `output/fy4b_by_position/`.
+  - It reads the qmfusion run's out-of-fold files.
+  - It compares regimes on JJA+SON only, so each regime contributes one year.
+  - GPM_uncal's same field is the yardstick for each year's weather.
+  - Check: FY4B_QM raw on its own mask reproduces `metrics_pooled.csv` (0.950043 balanced).
+- **Position (R2 → R3, same software V1.0.0), balanced, FY4B_QM's gap to GPM_uncal:**
+
+| Field | RMSE gap R2 → R3 | change (95%) | r gap R2 → R3 | change (95%) |
+|---|---|---|---|---|
+| `raw` | +15.8% → +8.3% | −7.5 pts (−17.3..+1.5) | −0.162 → −0.180 | −0.017 (−0.095..+0.065) |
+| `blend_mgwr` | +1.5% → +1.8% | +0.3 pts (−1.5..+2.0) | −0.018 → −0.028 | −0.010 (−0.034..+0.014) |
+
+  **The reading fails.** Plain FY4B's RMSE gap does shrink a lot, +45.8% → +15.2% (−30.6 pts,
+  −62.1..−0.8), but its r gap does not. So the move changed FY4B's amounts, and the QM already
+  corrects those.
+- **Unexpected, and not the question set before the run:** the software update (R1 → R2, May 2023,
+  both 133°E) narrows FY4B_QM's own-blend gap to GPM_uncal in balanced spatial:
+  - RMSE gap +3.6% → +1.5%, change −2.1 pts (−4.1..−0.2);
+  - r gap −0.049 → −0.018, change +0.030 (+0.008..+0.055);
+  - `mgwr`'s r gap also changes by +0.058 (+0.004..+0.107).
+
+  In the random split the same changes are not significant. Each regime is one year (2022 against
+  2023), so this is "consistent with the V1.0.0 update helping", not shown.
+- **Also:** in 2023 (R2), FY4B_QM's own blend beats ADW, −1.24% (−2.30..−0.21). In 2022 and 2024
+  it does not.
+
+### What this leaves
+
+- Timing is not a lever. The remaining target is false rain: FAR_0.1 is 0.61–0.73 for FY4B_QM raw
+  against 0.50–0.61 for GPM_uncal raw (JJA+SON, by regime).
+- The idea aimed at it is a cloud filter using FY4B's own cloud-type / cloud-top products. That
+  needs a download, and its availability for 2022–2024 must be checked first.
+- For the paper, the software-update result could support "FY4B's quality is rising", worded as
+  "consistent with".
+
+## Previous (2026-11-01): does FY4B help the fusion?
 
 The user asked whether FY4B should go back into the main benchmark; the paper run leaves it out
 (`_nofy4b`). This was checked from the two existing runs, with nothing refitted.
@@ -66,7 +129,7 @@ Agreement blends (`blend_agrenv_mgwr`), balanced spatial, with FY4B_QM against w
   new run of the paper setup restricted to FY4B's hours (new code, about 4 h). Nothing passes even
   at face value, so that run is worth it only if the paper needs a clean number.
 
-## Previous (2026-11-01): nested run of the dry-band blends
+## Earlier (2026-11-01): nested run of the dry-band blends
 
 The user asked for a full nested run of both band-0 ideas from the screen below.
 - **Code** (`8232154`, branch `fy4b/blend-headroom`): `--blend-dry-band` adds two opt-in axes on
