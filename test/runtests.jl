@@ -35,6 +35,7 @@ try
   include("test-no-rain-evaluation.jl")
   include("test-grid-support-diagnostics.jl")
   include("test-fy4b-rebuild.jl")
+  include("test-fy4b-cloud-type.jl")
   include("test-satellite-calibration.jl")
   include("test-satellite-two-stage.jl")
   include("test-run-provenance.jl")
