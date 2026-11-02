@@ -1,19 +1,119 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-01 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-02 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
-agreement blend (merged as `24e392e`). Two cheap screens (Newest, merged as `1dc0262`): a
-whole-hour time shift does not help, and 105°E is not shown to be better. The 2022 → 2023 gain
-first read as the May 2023 software update is not shown: 2023 was a wet year, and between the two
-dry years 2022 and 2024 the gain's interval reaches 0 · **Next step:** the user decides whether to
-merge `fy4b/drought-check`, and whether to try the cloud filter (`CLT`) against false rain,
-starting with a one-month download; then the paper framing (§0a)
+agreement blend (merged as `24e392e`). A whole-hour time shift does not help, 105°E is not shown
+to be better, and the 2023 software-update gain is not shown (merged as `1dc0262` and
+`3796bdb`). The cloud filter from FY4B's Cloud Type product (`CLT`) fails its pilot on July 2023
+(Newest, branch `fy4b/clt-screen`) · **Next step:** the user decides whether to merge
+`fy4b/clt-screen`; then the paper framing (§0a), on the decisions below
 
 ---
 
-## Newest (2026-11-01): two cheap screens, a time shift and the satellite position
+## Newest (2026-11-02): the CLT cloud-type filter, a one-month pilot — stop
+
+The user downloaded July 2023 of `CLT` (2,921 quarter files, 5.8 GB, on the T9 at
+`/Volumes/T9/CLT`, linked as `data/FY4B_CLT`) and asked me to pick the open decisions.
+
+**Decisions taken (2026-11-02, picked by me at the user's request):**
+- **Cloud filter:** try it on the July 2023 month (this section). The answer is no.
+- **Main comparison:** FY4B stays out (`_nofy4b`). Even at face value, adding it cleared the rule
+  for no blend, and its grid costs 24% of the hours.
+- **Decision rule:** unchanged; past verdicts stand. Changing the FBI_8 part after seeing results
+  would fit the rule to the data. New screens fix their own rule before the run, as this one did.
+- **Paper framing:** "raising FY4B's quality".
+  - What was done: FY4B rebuilt from the raw 15-minute QPE, then a per-fold pixel shift and an
+    adaptive quantile map (FY4B_QM).
+  - What it gained: raw RMSE −17%, MGWR −5.4%, blend −0.8% against plain FY4B, all significant
+    (§0a).
+  - What it still lacks: its blend trails IMERG Uncal's by about 2%, and it stays out of the main
+    fusion.
+  - No credit to the 2023 software update or the 105°E position.
+  - Its false rain sits under ice cloud, where the cloud type cannot separate it (below).
+
+**Code** (`73a0906`, branch `fy4b/clt-screen`):
+- `src/sources/FY4BCloudType.jl` reads CLT at the gauges, reusing `FY4BPreprocessing`'s file-name
+  parsing, projection and hour labels.
+  - Hours are strict: all four quarters or no value, labelled by the Beijing hour end.
+  - Per station, shift and hour, it counts the classes over the 3×3 box × 4 quarters (36
+    pixel-quarters). The dominant class needs at least 18 valid; a tie goes to the smaller code.
+  - CLT files are kept out of `data/FY4B`, because `find_nc_files` keys on start time only and
+    would take them for duplicates of the QPE quarters.
+- Test: `test/test-fy4b-cloud-type.jl` (in `runtests.jl`). The full suite passes.
+- **Checked on the real files:**
+  - CLT and QPE share the grid and axis order (`y, x` dims, read as `[x, y]`).
+  - Where QPE is ≥ 1 mm/h, CLT calls 0.0% of pixels clear, against 27% with the axes swapped.
+    So FY4B's QPE already applies the cloud mask: it never rains on a clear pixel.
+  - The module's counts equal a direct full-array read at two stations and two shifts.
+- **Screen:** `scripts/screen_fy4b_clt.jl`, run at `73a0906` from a clean tree, 2 min. Log:
+  `output/screen_fy4b_clt.log`. Output: `output/fy4b_clt_screen/`.
+  - It reuses the two-stage screen's setup: the §0a run's grid, folds and per-fold FY4B_QM.
+    Held-out FY4B_QM equals that run's `oof_raw.csv` in all 4,760,619 cells of both schemes.
+  - CLT: 694 of 744 July hours complete (the daily 14:15 UTC gap and a few others). 688 of them
+    are on the FY4B grid, all regime R2 (133°E V1.0.0). That gives 162,150 scored cells over
+    32 Beijing days.
+  - The class is read at each fold's own FY4B_QM shift, (0,−1) or (1,−1).
+- **Arms**, fitted on the fold's training gauges and scored on held-out gauges:
+  - A: FY4B_QM.
+  - B: FY4B_QM set to 0 in greedily chosen classes, adding classes while training CSI_0.1 rises.
+  - C: an amount-matched control that zeroes as many of the lightest training wet hours.
+- **Rule, fixed before the run:** go only if B beats C by ΔCSI_0.1 ≥ +0.01 with its interval
+  above 0, and B does not lose POD_8.
+
+### Result: the rule fails
+
+- **The filter is always the same:** every fold, in both schemes, picks one class, *overlap*
+  (thin ice over lower water cloud). It removes about 5.5% of the training wet hours, and the
+  matched cut is 0.139 mm/h.
+- Balanced spatial, held out:
+
+| Pair | ΔCSI_0.1 (95%) | ΔPOD_8 | ΔRMSE |
+|---|---|---|---|
+| B (CLT) vs A (FY4B_QM) | +0.0062 (+0.0020..+0.0104) | 0 | −0.00% |
+| B (CLT) vs C (amount) | **+0.0056 (+0.0011..+0.0090)** | 0 | −0.02% (sig) |
+| C (amount) vs A | +0.0007 (−0.0034..+0.0046) | 0 | +0.02% |
+
+  - B beats the amount control significantly, but by half the bar, so **stop**. FY4B_QM stays
+    the quality step.
+  - Random split (not judged): B vs C gives +0.0049 (+0.0008..+0.0084).
+  - POD_8 cannot move: overlap hours never reach 8 mm/h.
+- **Why so little: FY4B's false rain is under ice cloud, the same class as its real rain.**
+  FY4B_QM held out, balanced, per dominant class:
+
+| Class | Share of cells | FY4B_QM wet | FAR_0.1 | GPM_uncal FAR_0.1 | Share of FAs | Share of hits |
+|---|---|---|---|---|---|---|
+| clear | 31% | 1 | — | 0.99 | 0.0% | 0.0% |
+| water | 27% | 137 | 0.89 | 0.89 | 1.1% | 0.4% |
+| supercooled | 15% | 163 | 0.61 | 0.71 | 0.9% | 1.7% |
+| mixed | 11% | 1,269 | 0.74 | 0.74 | 8.2% | 8.9% |
+| ice | 10% | 12,742 | 0.75 | **0.57** | **82.7%** | **88.3%** |
+| cirrus | 0.2% | 23 | 1.00 | 1.00 | 0.2% | 0.0% |
+| overlap | 5.6% | 829 | 0.97 | 0.89 | 7.0% | 0.7% |
+
+  - FY4B_QM calls rain in 80% of ice-dominated hours (12,742 of 15,938); GPM_uncal does in 44%
+    (6,935). That excess is FY4B's false rain. It shares a class with 88% of the hits, so no class
+    filter can remove it without the hits.
+  - Within ice hours the amount already sorts it. FAR is 0.86 at 0.1–0.5 mm/h, 0.80 at 0.5–2,
+    0.71 at 2–8 and 0.41 at ≥ 8 (`class_by_amount.csv`), and the QM works on the amount.
+  - Overlap is the one easy class (FAR 0.97), but it holds only 7% of the false alarms.
+  - Cirrus barely occurs as the dominant class (0.2% of cells), so the "cirrus false rain"
+    hypothesis has nothing to act on at this scale.
+  - FY4B misses warm and supercooled rain: it is wet in 163 supercooled hours against GPM_uncal's
+    3,310. That is misses, not false rain.
+- **Time of day** (`diurnal.csv`, Beijing hour end): false alarms peak 18–22 h (680–830 a
+  slot, FAR 0.67–0.71, mostly ice), with the hits. FAR is highest at midday (11–13 h,
+  0.91–0.98), on few wet hours. The evening tail is ice-topped rain hours, not a separate class.
+- **This month is not typical:** in July 2023, FY4B_QM's FBI_0.1 is 1.72 on these cells,
+  against 0.99 over the full grid. The map matches the wet frequency per season and regime, not
+  per month, and July 2023 was wet.
+- **For the paper:** at most one sentence. A one-month pilot found FY4B's false rain under ice
+  cloud, like its hits, so a cloud-type filter gains little over the amount.
+- **Not done, by the rule:** the full CLT download (about 180 GB), a benchmark flag, and a nested
+  run.
+
+## Previous (2026-11-01): two cheap screens, a time shift and the satellite position
 
 The user asked for ways to improve FY4B. These are the two that need no new data. Both are
 exploratory screens on branch `fy4b/timing-position`, run from a clean tree at `cec3aab`, a minute
@@ -131,7 +231,7 @@ unchanged.
 - For the paper, the software-update result no longer supports "FY4B's quality is rising" (see
   the dry-year check above).
 
-## Previous (2026-11-01): does FY4B help the fusion?
+## Earlier (2026-11-01): does FY4B help the fusion?
 
 The user asked whether FY4B should go back into the main benchmark; the paper run leaves it out
 (`_nofy4b`). This was checked from the two existing runs, with nothing refitted.
