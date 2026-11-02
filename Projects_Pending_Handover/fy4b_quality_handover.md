@@ -7,8 +7,9 @@ the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it 
 agreement blend (merged as `24e392e`). A whole-hour time shift does not help, 105°E is not shown
 to be better, and the 2023 software-update gain is not shown (merged as `1dc0262` and
 `3796bdb`). The cloud filter from FY4B's Cloud Type product (`CLT`) fails its pilot on July 2023
-(merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Newest, branch
-`paper/fy4b-quality`) · **Next step:** the user decides whether to merge `paper/fy4b-quality`
+(merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Newest, merged as
+`0982a32`) · **Next step:** none pending. If the tutor wants one FY4B series throughout, rerun
+the RQ2 `--with-fy4b` evaluation on the rebuilt w3 file (Newest, last bullet)
 
 ---
 
@@ -91,7 +92,7 @@ The user downloaded July 2023 of `CLT` (2,921 quarter files, 5.8 GB, on the T9 a
   - No credit to the 2023 software update or the 105°E position.
   - Its false rain sits under ice cloud, where the cloud type cannot separate it (below).
 
-**Code** (`73a0906`, branch `fy4b/clt-screen`):
+**Code** (`73a0906`, branch `fy4b/clt-screen`, merged as `1a61f2a`):
 - `src/sources/FY4BCloudType.jl` reads CLT at the gauges, reusing `FY4BPreprocessing`'s file-name
   parsing, projection and hour labels.
   - Hours are strict: all four quarters or no value, labelled by the Beijing hour end.
