@@ -9,10 +9,14 @@
 # Scores 2022-2024 (08-08 BJT days) on `gpm_gsmap_full`, the full record for GPM and GSMaP.
 # `--with-fy4b` adds the `all_products` sample, the cells where the gauge and all three products are
 # finite (FY4B's coverage); by default FY4B is not read at all, as in `run_interpolation_benchmark.jl`.
+# `--fy4b-file <path>` (with `--with-fy4b`) scores a FY4B series rebuilt by
+# `scripts/prepare_fy4b_rebuild.jl` instead of the shipped one, as the benchmark's option does:
+#   julia --project=. scripts/run_satellite_temporal_evaluation.jl --with-fy4b \
+#     --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv
 # GPM is uncalibrated IMERG V07 (`GPM_uncal`) by default, the paper's primary GPM product;
 # `--gpm-cal` scores gauge-calibrated IMERG Final (`GPM`) instead. Writes CSVs to
-# output/satellite_temporal_evaluation[_nofy4b][_gpmuncal]/; the figures are drawn from those by
-# `"$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py <that directory>`.
+# output/satellite_temporal_evaluation[_fy4b<variant>][_nofy4b][_gpmuncal]/; the figures are drawn
+# from those by `"$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py <that directory>`.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -34,16 +38,38 @@ const WITH_FY4B = "--with-fy4b" in ARGS
 const GPM_CAL = "--gpm-cal" in ARGS
 # The run's IMERG product, as named in every output table.
 const GPM = GPM_CAL ? "GPM" : "GPM_uncal"
-# `_nofy4b` before `_gpmuncal`, the benchmark's order.
-const OUTDIR = joinpath(ROOT, "output",
-    "satellite_temporal_evaluation" * (WITH_FY4B ? "" : "_nofy4b") * (GPM_CAL ? "" : "_gpmuncal"))
+
+"""
+Parse `--fy4b-file <path>`, a series written by `prepare_fy4b_rebuild.jl`, as
+`run_interpolation_benchmark.jl` does; a relative path is read from the repository root. Absent
+means the shipped study-area FY4B file.
+"""
+function parse_fy4b_file(args)
+    index = findfirst(startswith("--fy4b-file"), args)
+    index === nothing && return nothing
+    WITH_FY4B || throw(ArgumentError("--fy4b-file needs --with-fy4b"))
+    text = args[index] == "--fy4b-file" ? get(args, index + 1, "") :
+        split(args[index], "=", limit=2)[2]
+    isempty(text) && throw(ArgumentError("--fy4b-file expects a path"))
+    path = isabspath(text) ? text : joinpath(ROOT, text)
+    isfile(path) || throw(ArgumentError("--fy4b-file: no such file $path"))
+    return normpath(path)
+end
+const FY4B_FILE = parse_fy4b_file(ARGS)
+# The benchmark's order: a rebuilt series named after its variant (`fy4b_w3_h0.csv` ->
+# `_fy4bw3h0`), then `_nofy4b`, then `_gpmuncal`.
+const OUTDIR = joinpath(ROOT, "output", "satellite_temporal_evaluation" *
+    (FY4B_FILE === nothing ? "" : "_" * replace(splitext(basename(FY4B_FILE))[1], "_" => "")) *
+    (WITH_FY4B ? "" : "_nofy4b") * (GPM_CAL ? "" : "_gpmuncal"))
 # The first and last hour-ending labels of the 08-08 BJT days 2022-01-01 .. 2024-12-31.
 const ANALYSIS_START = DateTime(2022, 1, 1, 9)
 const ANALYSIS_END = DateTime(2025, 1, 1, 8)
 const PRODUCT_FILES = [
-    (WITH_FY4B ? ["FY4B" => "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv"] : Pair{String,String}[])...,
-    GPM => GPM_CAL ? "hubei_gpm_hourly_2022_2024_full_aligned.csv" : "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv",
-    "GSMaP" => "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
+    (WITH_FY4B ? ["FY4B" => something(FY4B_FILE,
+        joinpath(STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv"))] : Pair{String,String}[])...,
+    GPM => joinpath(STUDY_DATA,
+        GPM_CAL ? "hubei_gpm_hourly_2022_2024_full_aligned.csv" : "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv"),
+    "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
 ]
 const SAMPLES = [
     (WITH_FY4B ? ["all_products" => ["FY4B", GPM, "GSMaP"]] : Pair{String,Vector{String}}[])...,
@@ -66,7 +92,7 @@ function load_inputs()
     obs_times, Y_obs = subset_time_window(obs_times, Y_obs, ANALYSIS_START, ANALYSIS_END)
     products = Dict{String,Matrix{Float64}}()
     for (product, file) in PRODUCT_FILES
-        times, ids, Y = read_hourly_wide(joinpath(STUDY_DATA, file))
+        times, ids, Y = read_hourly_wide(file)
         times, Y = subset_time_window(times, Y, ANALYSIS_START, ANALYSIS_END)
         products[product] = align_to_reference(obs_times, obs_ids, times, ids, Y)
     end
@@ -134,7 +160,7 @@ function main()
     # Before any work, so it records the code that runs: see `RunProvenance`. The inputs are every
     # file `load_inputs` reads.
     provenance = start_provenance(ROOT, OUTDIR; inputs=[joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
-        (joinpath(STUDY_DATA, file) for (_, file) in PRODUCT_FILES)..., LANDFORM_FILE])
+        last.(PRODUCT_FILES)..., LANDFORM_FILE])
     println("Reading hourly tables and landform regions ...")
     obs_times, obs_ids, Y_obs, products, landform = load_inputs()
     ctx = evaluation_context(obs_times, landform.relief_region; regions=RELIEF_REGIONS)

@@ -194,4 +194,5 @@ using Main.BenchmarkDiagnostics
   `run_heavy_core_diagnostics.jl`) follow the benchmark's defaults: IMERG Uncal (`GPM_uncal`, suffix
   `_gpmuncal`; `--gpm-cal` for IMERG Final), and RQ2 leaves FY4B out (suffix `_nofy4b`;
   `--with-fy4b` restores its `all_products` sample). `--gpm-cal --with-fy4b` reproduces RQ2's
-  original run.
+  original run. As in the benchmark, `--fy4b-file <path>` (with `--with-fy4b`) scores a rebuilt FY4B
+  series instead of the shipped one (suffix `_fy4bw3h0` for `fy4b_w3_h0.csv`).
