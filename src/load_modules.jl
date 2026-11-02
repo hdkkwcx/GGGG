@@ -38,6 +38,7 @@ function standalone_module_dependencies(name::AbstractString)
     name in ("HeavyRainEvents", "HeavyCoreDiagnostics") && return ["TraditionalInterpolation"]
     name == "LandformClassification" && return ["TerrainFeatures"]
     name == "SatelliteTwoStage" && return ["SatelliteCalibration"]
+    name == "FY4BCloudType" && return ["FY4BPreprocessing"]
     name == "SatelliteTemporalEvaluation" && return ["HeavyRainEvents"]
     name == "NoRainEvaluation" && return ["TraditionalInterpolation", "SatelliteTemporalEvaluation"]
     name == "GridSupportDiagnostics" &&
