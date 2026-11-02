@@ -7,12 +7,61 @@ the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it 
 agreement blend (merged as `24e392e`). A whole-hour time shift does not help, 105°E is not shown
 to be better, and the 2023 software-update gain is not shown (merged as `1dc0262` and
 `3796bdb`). The cloud filter from FY4B's Cloud Type product (`CLT`) fails its pilot on July 2023
-(Newest, branch `fy4b/clt-screen`) · **Next step:** the user decides whether to merge
-`fy4b/clt-screen`; then the paper framing (§0a), on the decisions below
+(merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Newest, branch
+`paper/fy4b-quality`) · **Next step:** the user decides whether to merge `paper/fy4b-quality`
 
 ---
 
-## Newest (2026-11-02): the CLT cloud-type filter, a one-month pilot — stop
+## Newest (2026-11-02): FY4B written into the paper
+
+The user asked for the FY4B paragraph, on the framing decided below ("raising FY4B's quality").
+- **Paper text** (`paper/paper_plan.typ`):
+  - Scope (Introduction) rewritten: RQ1–RQ3 compare GPM and GSMaP. FY4B is treated on its own;
+    the uncorrected scores stay, and §3.4 asks how far its quality can be raised.
+  - New §2.5 "Raising FY4B's quality" (method, no numbers): the rebuild, the per-fold shift per
+    regime, and the adaptive quantile map.
+  - New §3.4 "FY4B — how far can its quality be raised?", one paragraph:
+    - gains against plain FY4B at every stage;
+    - the remaining gap to GPM, and against GSMaP an interval spanning 0;
+    - the random-split caveat;
+    - the ice-cloud pilot;
+    - "stays out of the merge and the agreement blend".
+  - The Discussion's quantile-mapping sentence now says it is applied only to FY4B (§2.5), and
+    not assessed on the peaks.
+  - "What remains" gains the line "FY4B (§3.4): complete".
+- **Numbers:** `scripts/compare_fy4b_quality.jl` (`9edc185`, run clean, 20 s), written to
+  `output/fy4b_quality/paired.csv`.
+  - It scores FY4B_QM against FY4B, GPM_uncal and GSMaP (raw, mgwr, agreement blend) in the FY4B
+    benchmark run, with a paired day-block bootstrap (1000 reps, seed 20261101).
+  - Its point estimates equal the scratch `rank_qmfusion.csv` (−16.86 / −5.36 / −0.80%, and
+    +1.59 / +1.98% against GPM_uncal).
+  - Balanced spatial:
+    - against plain FY4B: raw −16.9% (−24.8..−10.0), mgwr −5.4% (−8.2..−2.7), blend −0.8%
+      (−1.2..−0.4); raw r 0.22 → 0.25;
+    - against GPM_uncal: blend +2.0% (+1.3..+2.6), mgwr +1.6% (−1.0..+4.5);
+    - against GSMaP: blend +0.5% (−0.3..+1.3).
+  - Random split, against plain FY4B: mgwr −0.1% (−0.6..+0.4).
+- **`paper/sources.toml`:**
+  - New steps:
+    - `raw_fy4b` and `raw_fy4b_clt` (data);
+    - `fy4b_rebuild`;
+    - `fy4b_benchmark` (the qmfusion run's exact command);
+    - `fy4b_quality`;
+    - `fy4b_clt`.
+  - New tables: `fy4b_quality`, `fy4b_clt` and `fy4b_clt_filter`.
+  - `reviewed` bumped to `9edc185` after reading each diff:
+    - `fy4b_benchmark`: `--blend-dry-band` is opt-in, `_tuning_spaced_hours` is an exact
+      extraction, and `shift_fold` is a pure extraction;
+    - `fy4b_rebuild`: none of its modules changed;
+    - the seven existing steps: only new modules since `59e17d6`.
+- **Corrected fact:** the processing switch at 133°E was on 2023-05-16 (last V1.0 hour 10:00 UTC
+  label; `fy4b_hour_meta.csv`), not in June 2023 as §4.1 says. 105°E starts 2024-03-05.
+- **Checked:**
+  - `check_paper_provenance.py`: every entry traces to committed code.
+  - `make_paper.jl` dry run: all steps REUSE or OK, none CHANGED.
+  - `typst compile`: clean, with no red "?".
+
+## Previous (2026-11-02): the CLT cloud-type filter, a one-month pilot — stop
 
 The user downloaded July 2023 of `CLT` (2,921 quarter files, 5.8 GB, on the T9 at
 `/Volumes/T9/CLT`, linked as `data/FY4B_CLT`) and asked me to pick the open decisions.
@@ -113,7 +162,7 @@ The user downloaded July 2023 of `CLT` (2,921 quarter files, 5.8 GB, on the T9 a
 - **Not done, by the rule:** the full CLT download (about 180 GB), a benchmark flag, and a nested
   run.
 
-## Previous (2026-11-01): two cheap screens, a time shift and the satellite position
+## Earlier (2026-11-01): two cheap screens, a time shift and the satellite position
 
 The user asked for ways to improve FY4B. These are the two that need no new data. Both are
 exploratory screens on branch `fy4b/timing-position`, run from a clean tree at `cec3aab`, a minute
