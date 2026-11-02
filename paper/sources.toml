@@ -428,6 +428,58 @@ column = "POD_rain"
 fmt = "2f"
 where = { product = ["GPM_uncal", "GSMaP"] }
 
+# FY4B: how far its quality rises. Corrected FY4B (FY4B_QM) against plain FY4B, GPM_uncal and
+# GSMaP in the FY4B benchmark run (§3.4), and the cloud-type pilot on July 2023.
+
+[[table]]
+name = "fy4b_quality"
+label = "§3.4 text: corrected FY4B against plain FY4B, GPM_uncal and GSMaP"
+step = "fy4b_quality"
+source = "output/fy4b_quality/paired.csv"
+provenance = [
+    "output/fy4b_quality/provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv",
+]
+keys = ["scheme", "product", "baseline", "method"]
+[table.values]
+change = ["rel_RMSE", "pct1"]
+lo = ["rel_RMSE_lo", "pct1"]
+hi = ["rel_RMSE_hi", "pct1"]
+r = ["candidate_r", "2f"]
+r0 = ["baseline_r", "2f"]
+
+[[table]]
+name = "fy4b_clt"
+label = "§3.4 text: FY4B_QM's false alarms and hits under ice cloud (July 2023 pilot)"
+step = "fy4b_clt"
+source = "output/fy4b_clt_screen/class_table.csv"
+provenance = ["output/fy4b_clt_screen/provenance.csv"]
+keys = ["name"]
+[table.where]
+scheme = "balanced_spatial"
+name = "ice"
+[table.values]
+false_alarms = ["share_of_false_alarms", "pct0"]
+hits = ["share_of_hits", "pct0"]
+far = ["qm_FAR", "2f"]
+far_gpm = ["gpm_FAR", "2f"]
+
+[[table]]
+name = "fy4b_clt_filter"
+label = "§3.4 text: the cloud-type filter against an amount-matched control (July 2023 pilot)"
+step = "fy4b_clt"
+source = "output/fy4b_clt_screen/paired.csv"
+provenance = ["output/fy4b_clt_screen/provenance.csv"]
+keys = ["candidate", "baseline"]
+[table.where]
+scheme = "balanced_spatial"
+candidate = "FY4B_QM_CLT"
+baseline = "FY4B_QM_AMT"
+[table.values]
+csi = ["delta_CSI_0.1", "+3f"]
+csi_lo = ["delta_CSI_0.1_lo", "+3f"]
+csi_hi = ["delta_CSI_0.1_hi", "+3f"]
+
 # How each output above is made: the dependency graph `scripts/make_paper.jl` walks. Every entry
 # names its `step`. A step's `command` runs from the repository root ("julia" is the running Julia,
 # "python" the interpreter make_paper.jl resolves). An analysis or figure step is reused while its
@@ -453,6 +505,26 @@ kind = "data"
 command = ["julia", "--project=.", "scripts/prepare_fy4b_full_year.jl"]
 outputs = ["data/processed/hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv"]
 note = "reads the FY4B files in data/FY4B/"
+
+[[step]]
+id = "raw_fy4b"
+kind = "data"
+command = []
+outputs = ["data/FY4B"]
+note = """no tracked script downloads them (NSMC's FengYun data service). FY-4B AGRI L2 QPE, \
+full disk, 4 km, one file per 15-min scan (`..._L2-_QPE-_MULT_NOM_<start>_<end>_4000M_V0001.NC`), \
+2022-2024, on the external drive at /Volumes/T9/FY4B and linked as data/FY4B. The 1-, 3- and 24-h \
+QPE files are corrected with China's rain gauges and are never read."""
+
+[[step]]
+id = "raw_fy4b_clt"
+kind = "data"
+command = []
+outputs = ["data/FY4B_CLT"]
+note = """no tracked script downloads them (NSMC's FengYun data service). FY-4B AGRI L2 CLT (cloud \
+type), full disk, 4 km, every 15 min, July 2023 only, on the external drive at /Volumes/T9/CLT and \
+linked as data/FY4B_CLT. Kept out of data/FY4B, where the QPE reader would take each file for a \
+duplicate of its QPE quarter."""
 
 [[step]]
 id = "prep_study_area"
@@ -546,7 +618,7 @@ note = "restores the published copy; scripts/clip_dem.R made it from a nationwid
 [[step]]
 id = "rq1_events"
 kind = "analysis"
-reviewed = "59e17d6bd8727a4e2f1e11cf46026ca6e7ff7eb0"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "--project=.", "scripts/run_heavy_rain_event_evaluation.jl", "--gpm-gsmap"]
 marker = "output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal"]
@@ -554,7 +626,7 @@ needs = ["prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "rq1_cores"
 kind = "analysis"
-reviewed = "59e17d6bd8727a4e2f1e11cf46026ca6e7ff7eb0"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl"]
 marker = "output/heavy_core_diagnostics_gpmuncal/provenance.csv"
 needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
@@ -562,7 +634,7 @@ needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
 [[step]]
 id = "rq2"
 kind = "analysis"
-reviewed = "59e17d6bd8727a4e2f1e11cf46026ca6e7ff7eb0"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl"]
 marker = "output/satellite_temporal_evaluation_nofy4b_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
@@ -570,7 +642,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
 [[step]]
 id = "rq2_fy4b"
 kind = "analysis"
-reviewed = "59e17d6bd8727a4e2f1e11cf46026ca6e7ff7eb0"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--with-fy4b"]
 marker = "output/satellite_temporal_evaluation_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
@@ -583,7 +655,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
 [[step]]
 id = "benchmark"
 kind = "analysis"
-reviewed = "59e17d6bd8727a4e2f1e11cf46026ca6e7ff7eb0"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
            "--fused-anchor"]
@@ -593,7 +665,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep
 [[step]]
 id = "claims"
 kind = "analysis"
-reviewed = "59e17d6bd8727a4e2f1e11cf46026ca6e7ff7eb0"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal"]
 marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/claim_provenance.csv"
@@ -602,11 +674,47 @@ needs = ["benchmark", "prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "fusion"
 kind = "analysis"
-reviewed = "59e17d6bd8727a4e2f1e11cf46026ca6e7ff7eb0"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal"]
 marker = "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv"
 needs = ["claims"]
+
+# FY4B (§3.4): the rebuild from the raw 15-min files, the benchmark with FY4B and its corrected
+# FY4B_QM, the comparison the paper cites, and the cloud-type pilot.
+[[step]]
+id = "fy4b_rebuild"
+kind = "analysis"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
+command = ["julia", "--project=.", "scripts/prepare_fy4b_rebuild.jl"]
+marker = "output/fy4b_rebuild_2022_2024/provenance.csv"
+needs = ["raw_fy4b", "prep_study_area"]
+
+[[step]]
+id = "fy4b_benchmark"
+kind = "analysis"
+reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
+command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
+           "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
+           "--fused-anchor", "--with-fy4b", "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv",
+           "--fy4b-qm", "--fy4b-qm-adaptive", "--fy4b-qm-fusion"]
+marker = "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv"
+needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep_ndvi", "fy4b_rebuild"]
+note = "about 2 h with 4 threads; reads the rebuild's fy4b_offset_grid.nc beside the FY4B file"
+
+[[step]]
+id = "fy4b_quality"
+kind = "analysis"
+command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl"]
+marker = "output/fy4b_quality/provenance.csv"
+needs = ["fy4b_benchmark"]
+
+[[step]]
+id = "fy4b_clt"
+kind = "analysis"
+command = ["julia", "--project=.", "scripts/screen_fy4b_clt.jl"]
+marker = "output/fy4b_clt_screen/provenance.csv"
+needs = ["fy4b_benchmark", "fy4b_rebuild", "raw_fy4b", "raw_fy4b_clt"]
 
 [[step]]
 id = "fig_study_area"

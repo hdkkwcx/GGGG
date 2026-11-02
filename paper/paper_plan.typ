@@ -14,6 +14,10 @@
 // output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal,
 // satellite_temporal_evaluation_nofy4b_gpmuncal and, for the Scope paragraph's FY4B numbers,
 // satellite_temporal_evaluation_gpmuncal.
+// §2.5 and §3.4 (FY4B) come from a clean benchmark run with FY4B at commit b55a3a9
+// (..._fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal, on the rebuild at d492f42), scored
+// by scripts/compare_fy4b_quality.jl at 9edc185 (output/fy4b_quality), and from the July 2023
+// cloud-type pilot at 73a0906 (output/fy4b_clt_screen).
 // scripts/make_paper.jl rebuilds every figure and number here in dependency order; the [[step]]
 // graph in paper/sources.toml records each step's command and what it needs.
 // paper/references.bib is the BibTeX export of the Zotero library's items tagged GGGG (local API,
@@ -72,6 +76,9 @@
 #let fr = load("scope_fy4b_r")     // Scope: FY4B on its own hours, IMERG Uncal run with FY4B
 #let fa = load("scope_fy4b_areal")
 #let fp = load("scope_fy4b_pod")
+#let fq = load("fy4b_quality")     // §3.4: corrected FY4B against plain FY4B, GPM and GSMaP, FY4B run
+#let fc = load("fy4b_clt")         // §3.4: July 2023 cloud-type pilot, hours dominated by ice cloud
+#let fcf = load("fy4b_clt_filter") // §3.4: the cloud-type filter against an amount-matched control
 #let G = "GPM_uncal"              // the primary GPM product
 #let B = "blend_agrenv_mgwr"      // MGWR + agreement blend, the headline fusion method
 #let find(rows, ..conditions) = {
@@ -106,6 +113,13 @@
   if raw [#val(rows, "vs_raw", product: product, method: method)%] else [—],
   [#val(rows, "vs_adw", product: product, method: method)%],
 )
+
+/// Corrected FY4B's change in RMSE against `baseline`, same method, with its 95% day-block
+/// interval, signed: "−16.9% (−24.8 to −10.0%)".
+#let dq(baseline, method, scheme: "balanced_spatial") = {
+  let row = (scheme: scheme, product: "FY4B_QM", baseline: baseline, method: method)
+  [#val(fq, "change", ..row)% (#val(fq, "lo", ..row) to #val(fq, "hi", ..row)%)]
+}
 
 /// Mean bias (mm h⁻¹) of one anchor and method on hours of ≥ 20 mm h⁻¹ at the held-out gauges.
 #let bias20(product, method) = val(su, "bias", product: product, method: method,
@@ -171,10 +185,12 @@ each as a research content, with the questions it must answer:
 - *RQ3 — Fusion.* What does gauge–satellite fusion gain, which fusion method and which anchor product
   are best, and does fusion fix the moderate and heavy rain that floods depend on?
 
-*Scope.* Two products, GPM IMERG and GSMaP. FY4B is left out: on its own hours it scores worst even
-when no product is gauge-calibrated (hourly r #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
-wet-hour detection #val(fp, "POD", product: "FY4B") vs #stat("scope_fy4b_pod", "others")), so neither the merged product nor the agreement blend in
-RQ3 uses it.
+*Scope.* RQ1–RQ3 compare two products, GPM IMERG and GSMaP. FY4B, the rain estimate of China's
+geostationary FengYun-4B, is treated on its own. In the first hourly series built for this study (the
+single pixel at each gauge, on the hours of an incomplete first download), it scores worst even when
+no product is gauge-calibrated (median hourly r at the gauges #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
+wet-hour detection #val(fp, "POD", product: "FY4B") vs #stat("scope_fy4b_pod", "others")). So neither the merged product nor the agreement blend in
+RQ3 uses it, and §3.4 asks instead how far its quality can be raised.
 
 = Data and Methods
 
@@ -224,6 +240,25 @@ Anchors are GPM (IMERG Uncal), GSMaP and an OLS merge of the two.
 Every method is scored at gauges held out of the fit, by balanced spatial 5-fold cross-validation over all
 26,304 hours of 2022–2024, using RMSE, correlation and CSI, overall and by intensity and distance to
 the nearest training gauge.
+
+== Raising FY4B's quality
+
+FY4B's rain estimate comes from the AGRI imager of FengYun-4B. It is rebuilt here from the
+satellite-only 15-minute full-disk files (4 km); the hourly and longer files are corrected with
+China's rain gauges and are not used. An hour is kept only when all four of its 15-minute files exist,
+and its value at a gauge is the mean over the 3 × 3 pixels around it. This rebuilt series, before the
+corrections below, is the plain FY4B of §3.4. It has more complete hours than the first series behind
+the Scope paragraph and averages nine pixels instead of one, so its scores are not those of the Scope
+paragraph. Two corrections are then fitted
+inside each cross-validation fold, on the training gauges only, so a held-out gauge never shapes the
+anchor it is scored against. First, a pixel shift. FY4B falls into three regimes: two versions of its
+processing at 133°E, switched in May 2023, and the satellite at 105°E from March 2024. For each
+regime the training gauges choose the shift under which FY4B correlates best with them. Second, a
+quantile map per season and regime, with a wet threshold that matches the gauges' wet-hour frequency.
+It is applied month by month, only as strongly as the training gauges support: not at all, the
+threshold alone, or the threshold with a quarter to all of the map. The corrected product, FY4B_QM,
+then enters the benchmark as an anchor like GPM and GSMaP, in a run that adds FY4B and is restricted to
+its hours. In that run the agreement bands count all three products.
 
 = Results: research content
 
@@ -358,6 +393,29 @@ left before it is finished.
 
 *To finish.* Nothing: the question is answered.
 
+== FY4B — how far can its quality be raised?
+
+Corrected FY4B (§2.5) gains at every stage. Against plain FY4B (the rebuilt series before the shift
+and the map) on the same cells, its RMSE changes by
+#dq("FY4B", "raw") raw, #dq("FY4B", "mgwr") after MGWR and #dq("FY4B", B) after MGWR and the
+agreement blend (95% day-block intervals, balanced spatial CV), and raw r over all gauge-hours rises
+from
+#val(fq, "r0", scheme: "balanced_spatial", baseline: "FY4B", method: "raw") to
+#val(fq, "r", scheme: "balanced_spatial", baseline: "FY4B", method: "raw"). It does not reach GPM:
+against GPM's agreement blend its RMSE differs by #dq(G, B), and after MGWR alone by
+#dq(G, "mgwr"), an interval that spans zero but lies mostly on the worse side. Against GSMaP's blend
+the difference is #dq("GSMaP", B). The gain after MGWR shows only where held-out gauges are far from
+training ones: in the random split, where a held-out gauge usually has a training gauge nearby, it is
+#dq("FY4B", "mgwr", scheme: "random"). What
+remains is false rain, and FY4B's own cloud-type product cannot pick it out. In a one-month pilot (July
+2023), hours dominated by ice cloud held #pct(fc, "false_alarms", name: "ice") of corrected FY4B's
+false alarms but also #pct(fc, "hits", name: "ice") of its hits; their false-alarm ratio was
+#val(fc, "far", name: "ice"), against #val(fc, "far_gpm", name: "ice") for GPM. Zeroing FY4B where the
+training gauges' chosen cloud class dominated raised CSI at 0.1 mm h⁻¹ by only
+#val(fcf, "csi", candidate: "FY4B_QM_CLT") (#val(fcf, "csi_lo", candidate: "FY4B_QM_CLT") to
+#val(fcf, "csi_hi", candidate: "FY4B_QM_CLT")) over removing as many of its lightest rain hours.
+Corrected FY4B therefore stays out of the merge and the agreement blend.
+
 = Discussion
 
 == Uncertainties
@@ -377,7 +435,8 @@ left before it is finished.
   totals would measure the lost volume with neither effect. Matching the satellite's intensity
   distribution to the gauges before merging targets this loss: PDF matching, as
   #cite(<xie_conceptual_2011>, form: "prose") do over China, or the quantile mapping that
-  #cite(<belay_merging_2022>, form: "prose") recommend. It is not tested here.
+  #cite(<belay_merging_2022>, form: "prose") recommend. Here it is applied only to FY4B (§2.5), and
+  not assessed on the peaks.
 - *Generality.* One region and three years; the transfer to other climates and denser or sparser
   networks is untested.
 
@@ -429,6 +488,7 @@ reports report against these three research contents.
 - RQ1 (space): complete.
 - RQ2 (time): complete.
 - RQ3 (fusion): complete.
+- FY4B (§3.4): complete; corrected FY4B stays out of the fusion.
 - Literature (§4.2): the citations come from the 18 papers with a PDF in Zotero and the IMERG V07 ATBD.
   Claude checked each cited sentence against the paper's full text; the author has still to read
   them. The other 14 GGGG items without a PDF are unread, among them the MGWR paper of Fotheringham et
