@@ -12,7 +12,8 @@ those strings and never a number typed by hand, so a rerun reaches the text by r
 
 Formats: `Nf` (N fixed decimals, e.g. `3f`, `0f`), `+Nf` (the same with a sign, for a value the text
 prints signed, such as a bias or a value already in percent), `pct1` / `pct0` (a fraction as a signed
-percentage with one or no decimal, no `%`). A signed format drops the sign when the value rounds to
+percentage with one or no decimal, no `%`), `,0f` (a whole number with thousands separators, e.g.
+`26,304`). A signed format drops the sign when the value rounds to
 zero. Standard library only.
 """
 
@@ -54,6 +55,8 @@ def format_value(raw: str, fmt: str) -> str:
     if fmt.endswith("f") and fmt.lstrip("+")[:-1].isdigit():
         decimals = int(fmt.lstrip("+")[:-1])
         return _signed(value, decimals) if fmt.startswith("+") else f"{value:.{decimals}f}"
+    if fmt == ",0f":
+        return f"{value:,.0f}"
     raise ValueError(f"unknown format {fmt!r}")
 
 

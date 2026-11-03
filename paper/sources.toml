@@ -8,7 +8,8 @@
 # different output.
 # RQ1/RQ2 entries point at the IMERG Uncal runs (`_gpmuncal`; RQ2 also `_nofy4b`), the paper's
 # primary product, with the heavy-core diagnostics (output/heavy_core_diagnostics_gpmuncal/) and,
-# for the Scope paragraph's FY4B numbers, the Uncal RQ2 run with the rebuilt FY4B series of §2.5
+# for the Scope paragraph's FY4B numbers, the record lengths of §2.1/§2.5 and §4.1's check on
+# FY4B's hours, the Uncal RQ2 run with the rebuilt FY4B series of §2.5
 # (output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/).
 
 [[item]]
@@ -428,6 +429,41 @@ stat = "range"
 column = "POD_rain"
 fmt = "2f"
 where = { product = ["GPM_uncal", "GSMaP"] }
+
+# Record lengths (§2.1, §2.5): the hours and days on which FY4B has a value, against GPM's and
+# GSMaP's whole 2022-2024 record, from the same run's two samples. Its gpm_gsmap_full row is the
+# same as the _nofy4b RQ2 run's.
+
+[[table]]
+name = "data_hours"
+label = "§2.1/§2.5 text: hours and days with a value, FY4B's record and the whole record"
+step = "rq2_fy4b"
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/sample_coverage.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
+keys = ["sample"]
+[table.where]
+season = "all"
+region = "all"
+[table.values]
+hours = ["n_hours", ",0f"]
+days = ["n_days", ",0f"]
+
+# §4.1: GPM and GSMaP on FY4B's hours against the whole record, to show those hours are not
+# unusually easy or hard for a satellite product.
+
+[[table]]
+name = "fy4b_sample_r"
+label = "§4.1 text: GPM and GSMaP median station hourly r on FY4B's hours and on the whole record"
+step = "rq2_fy4b"
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/station_correlation_summary.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
+keys = ["sample", "product"]
+[table.where]
+season = "all"
+region = "all"
+product = ["GPM_uncal", "GSMaP"]
+[table.values]
+r = ["median_r_all_hours", "2f"]
 
 # FY4B: how far its quality rises. Corrected FY4B (FY4B_QM) against plain FY4B, GPM_uncal and
 # GSMaP in the FY4B benchmark run (§3.4), and the cloud-type pilot on July 2023.
