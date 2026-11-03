@@ -1,0 +1,26 @@
+{
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/station_correlation_summary.csv",
+ "source_sha256": "cd5ccc5857a861a4f1f84137a8ed07e87bbb38c695ef4f9c13488e23424c647a",
+ "rows": [
+  {
+   "sample": "all_products",
+   "product": "GPM_uncal",
+   "r": "0.45"
+  },
+  {
+   "sample": "all_products",
+   "product": "GSMaP",
+   "r": "0.39"
+  },
+  {
+   "sample": "gpm_gsmap_full",
+   "product": "GPM_uncal",
+   "r": "0.45"
+  },
+  {
+   "sample": "gpm_gsmap_full",
+   "product": "GSMaP",
+   "r": "0.39"
+  }
+ ]
+}

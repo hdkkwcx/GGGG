@@ -12,8 +12,9 @@
 // (ef3616d) byte for byte.
 // RQ1/RQ2 and Figs. 2-4 come from clean IMERG Uncal runs at commit 3bce549, plotted at 072eef6:
 // output/heavy_rain_events_gpm_gsmap_gpmuncal, heavy_core_diagnostics_gpmuncal and
-// satellite_temporal_evaluation_nofy4b_gpmuncal. The Scope paragraph's FY4B numbers come from the
-// RQ2 run with the rebuilt FY4B series of §2.5 at 8c5709b (satellite_temporal_evaluation_fy4bw3h0_gpmuncal).
+// satellite_temporal_evaluation_nofy4b_gpmuncal. The Scope paragraph's FY4B numbers, the record
+// lengths of §2.1/§2.5 and §4.1's check on FY4B's hours come from the RQ2 run with the rebuilt FY4B
+// series of §2.5 at 8c5709b (satellite_temporal_evaluation_fy4bw3h0_gpmuncal).
 // §2.5 and §3.4 (FY4B) come from a clean benchmark run with FY4B at commit b55a3a9
 // (..._fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal, on the rebuild at d492f42), scored
 // by scripts/compare_fy4b_quality.jl at 9edc185 (output/fy4b_quality), and from the July 2023
@@ -76,6 +77,8 @@
 #let fr = load("scope_fy4b_r")     // Scope: FY4B on its own hours, IMERG Uncal run with the rebuilt FY4B
 #let fa = load("scope_fy4b_areal")
 #let fp = load("scope_fy4b_pod")
+#let dh = load("data_hours")       // §2.1/§2.5: hours and days with a value, FY4B's record and the whole record
+#let fs = load("fy4b_sample_r")    // §4.1: GPM and GSMaP median station r on FY4B's hours and on the whole record
 #let fq = load("fy4b_quality")     // §3.4: corrected FY4B against plain FY4B, GPM and GSMaP, FY4B run
 #let fc = load("fy4b_clt")         // §3.4: July 2023 cloud-type pilot, hours dominated by ice cloud
 #let fcf = load("fy4b_clt_filter") // §3.4: the cloud-type filter against an amount-matched control
@@ -186,8 +189,9 @@ each as a research content, with the questions it must answer:
   are best, and does fusion fix the moderate and heavy rain that floods depend on?
 
 *Scope.* RQ1–RQ3 compare two products, GPM IMERG and GSMaP. FY4B, the rain estimate of China's
-geostationary FengYun-4B, is treated on its own. In the hourly series rebuilt for this study (§2.5),
-on the hours it covers, it scores worst even when no product is gauge-calibrated (median hourly r at the gauges #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
+geostationary FengYun-4B, is treated on its own. Its record starts only in June 2022 and has gaps
+(§2.5). In the hourly series rebuilt for this study, with GPM and GSMaP scored on the same hours, it
+scores worst even when no product is gauge-calibrated (median hourly r at the gauges #val(fr, "r", product: "FY4B") vs #stat("scope_fy4b_r", "others"), areal-mean r #val(fa, "r", product: "FY4B") vs #stat("scope_fy4b_areal", "others"),
 wet-hour detection #val(fp, "POD", product: "FY4B") vs #stat("scope_fy4b_pod", "others")). So neither the merged product nor the agreement blend in
 RQ3 uses it, and §3.4 asks instead how far its quality can be raised.
 
@@ -205,7 +209,10 @@ to gauges. IMERG Uncal is the multi-satellite estimate before IMERG's monthly ca
 gauge analysis. Its microwave estimates are calibrated to GPM's radar–radiometer product, and V07
 applies a climatological ratio to the satellite–gauge GPCP analysis only over high-latitude oceans
 @huffman_nasa_2023; in V05 that ratio also covered all land @huffman_integrated_2020. GSMaP_MVK has no
-gauge correction @kubota_global_2020. Days run 08–08 Beijing time.
+gauge correction @kubota_global_2020. Days run 08–08 Beijing time. GPM and GSMaP have a value at
+every hour of 2022–2024 (#val(dh, "hours", sample: "gpm_gsmap_full") hours on #val(dh, "days", sample: "gpm_gsmap_full") days), and RQ1–RQ3 use that whole
+record. FY4B's record is shorter and has gaps (§2.5), so it is compared with them only on its own
+hours.
 
 #figure(
   image("figures/fig01_study_area.png", width: 80%),
@@ -245,7 +252,13 @@ the nearest training gauge.
 FY4B's rain estimate comes from the AGRI imager of FengYun-4B. It is rebuilt here from the
 satellite-only 15-minute full-disk files (4 km); the hourly and longer files are corrected with
 China's rain gauges and are not used. An hour is kept only when all four of its 15-minute files exist,
-and its value at a gauge is the mean over the 3 × 3 pixels around it. This rebuilt series, before the
+and its value at a gauge is the mean over the 3 × 3 pixels around it. Its files start on 1 June
+2022, and none exist for February 2024, between the satellite's last hours at 133°E and its first at
+105°E. The 14:15 UTC file is never produced, so the hour 22–23 BJT is always missing, and the strict
+rule drops other scattered hours. FY4B thus has a value at the gauges on
+#val(dh, "hours", sample: "all_products") hours on #val(dh, "days", sample: "all_products") days of
+June 2022 – December 2024. Wherever it is compared with GPM and GSMaP, in the Scope paragraph and in
+§3.4, all of them are scored on the same gauge-hours within that record. This rebuilt series, before the
 corrections below, is the FY4B of the Scope paragraph and the plain FY4B of §3.4. Two corrections
 are then fitted inside each cross-validation fold, on the training gauges only, so a held-out gauge never shapes the
 anchor it is scored against. First, a pixel shift. FY4B falls into three regimes: two versions of its
@@ -255,7 +268,8 @@ quantile map per season and regime, with a wet threshold that matches the gauges
 It is applied month by month, only as strongly as the training gauges support: not at all, the
 threshold alone, or the threshold with a quarter to all of the map. The corrected product, FY4B_QM,
 then enters the benchmark as an anchor like GPM and GSMaP, in a run that adds FY4B and is restricted to
-its hours. In that run the agreement bands count all three products.
+its hours. In that run the agreement bands count all three products. Its GPM and GSMaP scores
+therefore differ from those in Table 3, which cover the whole record with bands of two products.
 
 = Results: research content
 
@@ -392,7 +406,8 @@ left before it is finished.
 
 == FY4B — how far can its quality be raised?
 
-Corrected FY4B (§2.5) gains at every stage. Against plain FY4B (the rebuilt series before the shift
+Corrected FY4B (§2.5) gains at every stage. Every comparison here is paired, on the gauge-hours both
+fields score within FY4B's record (§2.5). Against plain FY4B (the rebuilt series before the shift
 and the map) on the same cells, its RMSE changes by
 #dq("FY4B", "raw") raw, #dq("FY4B", "mgwr") after MGWR and #dq("FY4B", B) after MGWR and the
 agreement blend (95% day-block intervals, balanced spatial CV), and raw r over all gauge-hours rises
@@ -428,6 +443,13 @@ Corrected FY4B therefore stays out of the merge and the agreement blend.
 - *Gauge resolution.* The 0.5 mm quantisation limits what can be said about the lightest class.
 - *Small samples.* Only #val(n0, "n", region: "relief_ge1000") gauges lie at relief ≥ 1000 m, too few to interpret; heavy hours and the six
   events are few, so their intervals are wide.
+- *FY4B's shorter record.* FY4B has no hours in January–May 2022 or February 2024, nor at 22–23 BJT
+  (§2.5). So it is compared only on its own hours, and its scores cannot be set against those of
+  RQ2 or Table 3. Those hours are not unusually easy or hard for a satellite: on them the median hourly r
+  at the gauges is #val(fs, "r", sample: "all_products", product: G) for GPM and
+  #val(fs, "r", sample: "all_products", product: "GSMaP") for GSMaP, against
+  #val(fs, "r", sample: "gpm_gsmap_full", product: G) and
+  #val(fs, "r", sample: "gpm_gsmap_full", product: "GSMaP") over the whole record.
 - *Residual heavy-rain deficit.* Fusion lowers the RMSE of heavy hours but does not restore their
   peaks (§3.3). Gauge-only ADW is as low as raw GPM there, so neither input carries the peak to a
   held-out gauge. Part of this is built into the scores and the methods: sorting hours by the gauge's
