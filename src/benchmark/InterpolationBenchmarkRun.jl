@@ -94,7 +94,12 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     # source products only: `load_joint_benchmark_inputs` reads a fixed specification keyed by
     # product, which a product with no file cannot appear in, and which the config validation has
     # already ruled out alongside a fused anchor.
-    _, fused_specifications = _build_fused_products!(cfg, source_products, product_data, lonlat)
+    # `fy4b_out_of_fusion` narrows only what the fusion reads. `benchmark_products` and the joint
+    # inputs below keep the full list: FY4B is still scored, and a product's position in that list
+    # sets its selection seed (`_run_benchmark_fold!`), so the list has to stay as it is for this
+    # run to differ from one with FY4B in the fusion in the fusion alone.
+    fusion_products = cfg.fy4b_out_of_fusion ? filter(!=("FY4B"), source_products) : source_products
+    _, fused_specifications = _build_fused_products!(cfg, fusion_products, product_data, lonlat)
     fy4b_calibration = _prepare_fy4b_calibration!(cfg, ids, product_data)
     products = benchmark_products(cfg, source_products)
     terrain = _dem_enabled(cfg) ? load_aligned_terrain(something(cfg.terrain_path), ids) : nothing
@@ -111,7 +116,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     blend_bands = Dict{Symbol,Matrix{Int}}()
     band_sources = Matrix{Float64}[]
     if cfg.satellite_wet_blend
-        band_sources = [Matrix{Float64}(product_data[name].Y_sat) for name in source_products]
+        band_sources = [Matrix{Float64}(product_data[name].Y_sat) for name in fusion_products]
         for axis in cfg.blend_axes
             axis === :constant && continue
             blend_bands[axis] = blend_band_matrix(
@@ -121,7 +126,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     end
     # The stack's agreement bands come from the same source products, so they too are built once.
     stack_agreement = if cfg.stacked_blend
-        stack_sources = [Matrix{Float64}(product_data[name].Y_sat) for name in source_products]
+        stack_sources = [Matrix{Float64}(product_data[name].Y_sat) for name in fusion_products]
         blend_band_matrix(
             :agreement_envelope, first(stack_sources), stack_sources, cfg.mger.rain_threshold,
         )

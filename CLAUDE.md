@@ -151,6 +151,12 @@ using Main.BenchmarkDiagnostics
   (`_qmfusion`) feeds each fold's `FY4B_QM` to the fused anchors and the agreement bands instead
   of the plain FY4B, so `MERGED_*` and every blend row move; the real products' raw and
   unblended rows do not.
+- A product's position in the run's product list sets its covariate-selection seed (`run_seed` in
+  `InterpolationBenchmarkFold.jl`), so adding or removing a product moves the other products'
+  selection. Runs are only directly comparable on the same product list. `--fy4b-out-of-fusion`
+  (`_fy4bnofusion`, with `--with-fy4b`) keeps FY4B in the list and on the common hours but out of
+  the fused anchors and the agreement bands, so it differs from `--fy4b-qm-fusion` in the fusion
+  alone; `scripts/compare_fy4b_fusion_same_hours.jl` compares the two.
 - By default the CLI scores uncalibrated IMERG (`GPM_uncal`, output suffix `_gpmuncal`).
   `--gpm-cal` scores calibrated `GPM` instead. `benchmark_config`'s `gpm_uncal` keyword still
   defaults to `false`, so the verify scripts reproduce the calibrated baselines.

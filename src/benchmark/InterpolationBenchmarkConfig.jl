@@ -247,6 +247,11 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # and the blend's non-constant bands. Changes those products' rows and every blend row by
     # design; the products' own raw and unblended rows stay put. Output directory suffix `_qmfusion`.
     fy4b_qm_fusion::Bool = false
+    # Score FY4B but leave it out of the fused anchors and the blend's non-constant bands. The
+    # product list, so the hours and the selection seeds, stay those of a run with FY4B in the
+    # fusion, which makes the two runs differ in the fusion alone. Output directory suffix
+    # `_fy4bnofusion`.
+    fy4b_out_of_fusion::Bool = false
     # Acknowledges that this run's numbers are not admissible as a result.
     #
     # `joint_covariates.spec_path` names a variable set and local/global role map screened over
@@ -497,6 +502,16 @@ function _validate_benchmark_config(cfg::InterpolationBenchmarkConfig, n_station
             !(cfg.satellite_wet_blend && any(!=(:constant), cfg.blend_axes)) &&
             throw(ArgumentError("fy4b_qm_fusion needs a fused anchor or a non-constant blend " *
                 "axis to feed"))
+    end
+    if cfg.fy4b_out_of_fusion
+        haskey(cfg.mger.sat_paths, "FY4B") || throw(ArgumentError(
+            "fy4b_out_of_fusion leaves FY4B out of the fusion, but this run does not load FY4B"))
+        cfg.fy4b_qm_fusion && throw(ArgumentError(
+            "fy4b_out_of_fusion and fy4b_qm_fusion contradict each other"))
+        isempty(cfg.fused_anchor_variants) &&
+            !(cfg.satellite_wet_blend && any(!=(:constant), cfg.blend_axes)) &&
+            throw(ArgumentError("fy4b_out_of_fusion needs a fused anchor or a non-constant " *
+                "blend axis to leave FY4B out of"))
     end
     # 0.0 is load-bearing twice over: it is the "do not blend" option, so a fold that cannot be
     # helped is not forced to blend anyway, and it is the reference `unblended_RMSE` that

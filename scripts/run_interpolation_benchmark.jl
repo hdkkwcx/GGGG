@@ -35,10 +35,16 @@ function benchmark_config(
     blend_axes::Vector{Symbol}=[:constant], fused_anchor::Bool=false,
     fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
     fy4b::Bool=true, fy4b_file::Union{Nothing,String}=nothing, fy4b_qm::Bool=false,
-    fy4b_qm_adaptive::Bool=false, fy4b_qm_fusion::Bool=false,
+    fy4b_qm_adaptive::Bool=false, fy4b_qm_fusion::Bool=false, fy4b_out_of_fusion::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
     fy4b_file === nothing || fy4b || throw(ArgumentError("--fy4b-file needs --with-fy4b"))
+    fy4b_out_of_fusion && !fy4b && throw(ArgumentError(
+        "--fy4b-out-of-fusion needs --with-fy4b: it scores FY4B outside the fusion",
+    ))
+    fy4b_out_of_fusion && fy4b_qm_fusion && throw(ArgumentError(
+        "--fy4b-out-of-fusion and --fy4b-qm-fusion contradict each other",
+    ))
     fy4b_qm && fy4b_file === nothing && throw(ArgumentError(
         "--fy4b-qm needs --fy4b-file: it reads the offset grid written beside a rebuilt series",
     ))
@@ -103,6 +109,7 @@ function benchmark_config(
             (fy4b_qm ? "_fy4bqm" : "") *
             (fy4b_qm_adaptive ? "_fy4bqmadapt" : "") *
             (fy4b_qm_fusion ? "_qmfusion" : "") *
+            (fy4b_out_of_fusion ? "_fy4bnofusion" : "") *
             # Before `_gpmuncal`, which the report scripts detect with `endswith`.
             (fy4b ? "" : "_nofy4b") *
             (gpm_uncal ? "_gpmuncal" : "") *
@@ -279,6 +286,7 @@ function benchmark_config(
         fy4b_qm_grid=fy4b_qm ? joinpath(dirname(fy4b_file), "fy4b_offset_grid.nc") : nothing,
         fy4b_qm_adaptive=fy4b_qm_adaptive,
         fy4b_qm_fusion=fy4b_qm_fusion,
+        fy4b_out_of_fusion=fy4b_out_of_fusion,
         # The joint path without nested selection reads a full-data spec, which the config
         # validator refuses unless the run admits it is exploratory. --no-nested-covariates is
         # exactly that admission, so it is the only way this turns on.
@@ -475,11 +483,17 @@ function main(args=ARGS)
     # those products' rows and every blend row by design; not with --fused-anchor-lagnbr or
     # --stacked-blend, whose designs are built once from the plain sources.
     fy4b_qm_fusion = "--fy4b-qm-fusion" in args
+    # With --with-fy4b: score FY4B but leave it out of the fused anchors (MERGED_*) and the
+    # agreement-envelope bands. The product list, so the hours and the selection seeds, stay those
+    # of a run with FY4B in the fusion, so comparing the two isolates the fusion
+    # (`scripts/compare_fy4b_fusion_same_hours.jl`). Changes MERGED_*'s rows and the agreement
+    # blends by design; no real product's raw or unblended row moves.
+    fy4b_out_of_fusion = "--fy4b-out-of-fusion" in args
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
         fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm,
-        fy4b_qm_adaptive, fy4b_qm_fusion)
+        fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -507,6 +521,7 @@ function main(args=ARGS)
         (fy4b_qm ? "fy4b_qm=true, " : "") *
         (fy4b_qm_adaptive ? "fy4b_qm_adaptive=true, " : "") *
         (fy4b_qm_fusion ? "fy4b_qm_fusion=true, " : "") *
+        (fy4b_out_of_fusion ? "fy4b_out_of_fusion=true, " : "") *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
     println("Finished: $(nrow(result.metrics)) metric rows, $(nrow(result.scans)) scan rows")
