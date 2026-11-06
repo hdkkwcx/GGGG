@@ -14,3 +14,6 @@ output/
 .claude/worktrees/
 .DS_Store
 __pycache__/
+
+# Editor settings
+.vscode/
