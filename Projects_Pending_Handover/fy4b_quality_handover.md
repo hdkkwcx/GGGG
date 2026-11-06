@@ -1,6 +1,6 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-02 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-06 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
@@ -8,12 +8,94 @@ agreement blend (merged as `24e392e`). A whole-hour time shift does not help, 10
 to be better, and the 2023 software-update gain is not shown (merged as `1dc0262` and
 `3796bdb`). The cloud filter from FY4B's Cloud Type product (`CLT`) fails its pilot on July 2023
 (merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Previous, merged as
-`0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4 (Newest, branch
-`fy4b/rq2-rebuilt-series`) · **Next step:** none pending once that branch is merged
+`0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4. A same-hours,
+same-seeds test of FY4B in the fusion gives "keep FY4B out" (Newest, branch
+`fy4b/same-hours-fusion`) · **Next step:** the user decides whether to merge that branch and
+whether the paper cites the result
 
 ---
 
-## Newest (2026-11-02): one FY4B series throughout the paper
+## Newest (2026-11-06): FY4B in the fusion, on the same hours and seeds
+
+The user asked for FY4B in the comparison on the hours common to all three satellites. The first
+check (below, 2026-11-01) was confounded, so this replaces it as the answer on the fusion. No paper
+number moves.
+- **Why the first check was confounded:** not by tuning hours alone. `run_seed` uses a product's
+  position in the list (`InterpolationBenchmarkFold.jl`), so adding FY4B also shifted every product's
+  covariate-selection seed.
+- **Design:** a new arm with the qmfusion run's product list, hours and seeds, with FY4B scored but
+  left out of the merges and the agreement bands. So the two arms differ in the fusion alone.
+- **Code, branch `fy4b/same-hours-fusion`:**
+  - `d273b46`: `--fy4b-out-of-fusion` (suffix `_fy4bnofusion`), off by default;
+  - `e59f367`: `scripts/compare_fy4b_fusion_same_hours.jl`, committed with its verdict before the run;
+  - `bc4f801`: `reviewed` bumped on the 12 steps flagged by the `src/` edit, none rerun.
+- **Run:** clean at `bc4f801`, 3 h 37 min, 10 GB:
+  ```sh
+  julia -t 4 --project=. scripts/run_interpolation_benchmark.jl full --nested-covariates \
+    --satellite-wet-blend --blend-axis agreement_envelope --fused-anchor --with-fy4b \
+    --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --fy4b-qm --fy4b-qm-adaptive \
+    --fy4b-out-of-fusion
+  ```
+  Logs: `output/full_benchmark_fy4bw3h0_fy4bqm_fy4bqmadapt_fy4bnofusion.log`,
+  `output/compare_fy4b_fusion_same_hours.log`. Output: `output/fy4b_same_hours_comparison/`
+  (`paired.csv`, `fold_status.csv`, `selection.csv`, `provenance.csv`).
+- **Checks passed:** the same 237 stations, 20,087-hour grid, gauges and folds. Every `raw`, `adw`,
+  `mgwr` and `blend_mgwr` of GPM_uncal, GSMaP, FY4B and FY4B_QM is identical in both arms, NaNs and
+  masks included, against the qmfusion run from `b55a3a9`. So the later commits moved none of them.
+
+### Result: the fixed verdict is "keep FY4B out"
+
+Agreement blends (`blend_agrenv_mgwr`), balanced spatial, shared cells, FY4B_QM in the fusion against
+out of it. "First check" is the same field from the confounded comparison.
+
+| Product | RMSE | ΔRMSE (95%) | First check | ΔCSI_8 | FBI_8 | Fails on |
+|---|---|---|---|---|---|---|
+| GPM_uncal | 0.7243 vs 0.7248 | −0.06% (−0.16..+0.04) | −0.24% | −0.0005 | 0.239 → 0.235 | RMSE bar, FBI |
+| GSMaP | 0.7346 vs 0.7353 | −0.10% (−0.24..+0.04) | −0.23% | +0.0014 | 0.337 → 0.327 | RMSE bar, FBI |
+| MERGED_MEAN | 0.7212 vs 0.7244 | −0.45% (−0.74..−0.15) | −0.46% | −0.0038 | 0.307 → 0.281 | FBI |
+| MERGED_OLS | 0.7183 vs 0.7199 | −0.22% (−0.34..−0.11) | −0.63% | −0.0000 | 0.231 → 0.228 | RMSE bar |
+
+- **MERGED_OLS:** a real gain, negative in all five folds (−0.12..−0.38%), but under the 0.3% bar;
+  8 mm/h skill is flat. Most of the first check's −0.63% was the confound, not its fold set: the clean
+  effect on folds 3–5 alone is −0.19%. Its FBI failure was also the confound (+0.033 → +0.003).
+- **MERGED_MEAN:** clears the RMSE bar in every fold (−0.05..−0.75%), but heavy rain gets worse:
+  POD_8 0.110 → 0.104, FAR_8 0.641 → 0.630, |FBI_8 − 1| +0.026 (+0.004..+0.051). Unlike MERGED_OLS in
+  the first check, this failure is not fewer false alarms alone.
+- **Other fields:** MERGED_MEAN's `raw` (−4.21%) is the only field that meets the rule. Its `mgwr`
+  (−3.91%) fails on CSI and FBI. MERGED_OLS's `mgwr`, which passed in the first check at −0.67%, is
+  −0.21% and no longer does.
+- **Random split:** every agreement blend is within ±0.11%, and every interval spans 0. Merged `adw`
+  (control) is identical in balanced spatial and moves −0.18% in random, where the rule does not apply.
+- **Selection:** a merged product's covariates are selected on its own anchor's residuals, which the
+  intervals do not cover. MERGED_OLS selects the same in 5 of 5 folds in both schemes; MERGED_MEAN in
+  3 of 5 balanced (folds 3 and 4 differ) and 5 of 5 random. It decides nothing here, since neither
+  passes, and MERGED_MEAN's gain also appears in the folds that select the same.
+- **FY4B's own blends (information, in no verdict):** FY4B −2.03%, FY4B_QM −1.27% with FY4B in the
+  bands. Out of them FY4B_QM's blend is 0.7487, behind `adw` at 0.7459. So its agreement blend depends
+  on FY4B's own signal in the bands. Never read this as FY4B helping the fusion.
+
+### Fold coverage and a check on Table 3
+
+Neither arm has a failed joint-method fold for any product (only fold 4 `partial`), so GPM_uncal and
+MERGED_OLS score 4.5–4.6 M cells here against the paper run's 2.7 M on these hours. That gives the
+paper's method over all five folds, on the common hours (blend vs `adw`, out-of-fusion arm):
+
+| Product | All five folds | Folds 3–5 | Folds 1–2 | Paper run, all hours | Paper run, common hours |
+|---|---|---|---|---|---|
+| GPM_uncal | −2.79% | −2.95% | −2.56% | −2.78% | −2.72% |
+| GSMaP | −1.25% | −1.40% | −1.04% | −1.30% | −1.12% |
+| MERGED_MEAN | −3.01% | −2.97% | −3.07% | −3.17% | −3.00% |
+| MERGED_OLS | −3.63% | −3.52% | −3.79% | −3.07% | −2.91% |
+
+- Table 3's IMERG gain does not rest on its missing folds: folds 1–2 give a similar gain.
+- MERGED_OLS's gain moves by about 0.6 points between runs on much the same folds, the others by
+  about 0.2 or less. That is hours and seeds together; this run does not split them.
+- The paper still does not state that Table 3's IMERG Uncal and merged rows rest mostly on folds 3–5.
+
+**Not done, the user's call:** citing any of this. `compare_fy4b_fusion_same_hours.jl` is not a step in
+`paper/sources.toml`, so a cited number needs a `[[step]]` and a `[[table]]` first.
+
+## Earlier (2026-11-02): one FY4B series throughout the paper
 
 The user asked to rerun RQ2 on the rebuilt series and update the paper (the follow-up offered in
 Previous, last bullet).
@@ -336,6 +418,10 @@ unchanged.
   the dry-year check above).
 
 ## Earlier (2026-11-01): does FY4B help the fusion?
+
+**Superseded by Newest (2026-11-06).** Two things below were incomplete: the confound is hours *and*
+selection seeds, and the run proposed at the end, restricted to FY4B's hours, would still differ by
+seed. The numbers below are kept as the record of this check.
 
 The user asked whether FY4B should go back into the main benchmark; the paper run leaves it out
 (`_nofy4b`). This was checked from the two existing runs, with nothing refitted.
