@@ -1,0 +1,149 @@
+{
+ "source": "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_metrics.csv",
+ "source_sha256": "7d30e78c0ee4033a140dff424ffaf4468e9d6231ce5f54b3025eaa5b178c921b",
+ "rows": [
+  {
+   "event_day": "2022-06-26",
+   "product": "FY4B",
+   "r": "0.01",
+   "MB": "+50.4",
+   "CSI50": "0.40"
+  },
+  {
+   "event_day": "2022-06-26",
+   "product": "FY4B_QM",
+   "r": "-0.03",
+   "MB": "+19.5",
+   "CSI50": "0.32"
+  },
+  {
+   "event_day": "2022-06-26",
+   "product": "GPM_uncal",
+   "r": "0.04",
+   "MB": "+5.0",
+   "CSI50": "0.28"
+  },
+  {
+   "event_day": "2022-06-26",
+   "product": "GSMaP",
+   "r": "-0.11",
+   "MB": "+20.3",
+   "CSI50": "0.34"
+  },
+  {
+   "event_day": "2022-10-03",
+   "product": "FY4B",
+   "r": "0.87",
+   "MB": "-17.0",
+   "CSI50": "0.26"
+  },
+  {
+   "event_day": "2022-10-03",
+   "product": "FY4B_QM",
+   "r": "0.87",
+   "MB": "-25.9",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2022-10-03",
+   "product": "GPM_uncal",
+   "r": "0.81",
+   "MB": "-6.3",
+   "CSI50": "0.66"
+  },
+  {
+   "event_day": "2022-10-03",
+   "product": "GSMaP",
+   "r": "0.80",
+   "MB": "+10.6",
+   "CSI50": "0.77"
+  },
+  {
+   "event_day": "2023-06-17",
+   "product": "FY4B",
+   "r": "0.74",
+   "MB": "-10.5",
+   "CSI50": "0.59"
+  },
+  {
+   "event_day": "2023-06-17",
+   "product": "FY4B_QM",
+   "r": "0.75",
+   "MB": "-11.4",
+   "CSI50": "0.58"
+  },
+  {
+   "event_day": "2023-06-17",
+   "product": "GPM_uncal",
+   "r": "0.65",
+   "MB": "-7.5",
+   "CSI50": "0.46"
+  },
+  {
+   "event_day": "2023-06-17",
+   "product": "GSMaP",
+   "r": "0.80",
+   "MB": "+23.3",
+   "CSI50": "0.57"
+  },
+  {
+   "event_day": "2023-08-26",
+   "product": "FY4B",
+   "r": "-0.18",
+   "MB": "-24.5",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-08-26",
+   "product": "FY4B_QM",
+   "r": "-0.20",
+   "MB": "-24.8",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-08-26",
+   "product": "GPM_uncal",
+   "r": "0.30",
+   "MB": "-1.9",
+   "CSI50": "0.34"
+  },
+  {
+   "event_day": "2023-08-26",
+   "product": "GSMaP",
+   "r": "0.46",
+   "MB": "+78.8",
+   "CSI50": "0.51"
+  },
+  {
+   "event_day": "2023-09-10",
+   "product": "FY4B",
+   "r": "0.40",
+   "MB": "-0.2",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-09-10",
+   "product": "FY4B_QM",
+   "r": "0.32",
+   "MB": "-2.1",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-09-10",
+   "product": "GPM_uncal",
+   "r": "0.76",
+   "MB": "-5.6",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-09-10",
+   "product": "GSMaP",
+   "r": "0.75",
+   "MB": "-8.4",
+   "CSI50": "0.00"
+  }
+ ],
+ "stats": {
+  "r_0626_max": "0.04"
+ }
+}

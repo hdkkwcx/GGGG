@@ -517,6 +517,61 @@ csi = ["delta_CSI_0.1", "+3f"]
 csi_lo = ["delta_CSI_0.1_lo", "+3f"]
 csi_hi = ["delta_CSI_0.1_hi", "+3f"]
 
+# FY4B on the RQ1 events (§3.4, Draft Table 4): plain and corrected FY4B with GPM and GSMaP, each
+# event over the hours FY4B shares with them; GPM and GSMaP also over the full day.
+
+[[table]]
+name = "fy4b_events_summary"
+label = "§3.4 text and Table 4: FY4B on the RQ1 events, mean over the events it covers"
+step = "rq1_fy4b"
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_metrics_summary.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"]
+keys = ["product", "window"]
+[table.where]
+statistic = "mean_over_events"
+[table.values]
+n = ["n_events", "0f"]
+r = ["r", "2f"]
+MB = ["Bias", "+1f"]
+RMSE = ["RMSE", "1f"]
+CSI50 = ["CSI_50", "2f"]
+
+[[table]]
+name = "fy4b_event_windows"
+label = "§3.4 text and Table 4: each RQ1 event's FY4B window and the gauge rain it leaves out"
+step = "rq1_fy4b"
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_windows.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"]
+keys = ["event_day"]
+[table.values]
+net = ["excluded_rain_share", "pct0"]
+peak = ["peak_excluded_rain_share", "pct0"]
+[table.stats.hours]
+stat = "range"
+column = "common_hours"
+fmt = "0f"
+where = { eligible = "true" }
+
+[[table]]
+name = "fy4b_event_scores"
+label = "§3.4 text: FY4B on the RQ1 events, scores per event over FY4B's hours"
+step = "rq1_fy4b"
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_metrics.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"]
+keys = ["event_day", "product"]
+[table.where]
+window = "fy4b_hours"
+[table.values]
+r = ["r", "2f"]
+MB = ["Bias", "+1f"]
+CSI50 = ["CSI_50", "2f"]
+# 2022-06-26, when every product fails: the best of FY4B, GPM and GSMaP.
+[table.stats.r_0626_max]
+stat = "max"
+column = "r"
+fmt = "2f"
+where = { event_day = "2022-06-26", product = ["FY4B", "GPM_uncal", "GSMaP"] }
+
 # How each output above is made: the dependency graph `scripts/make_paper.jl` walks. Every entry
 # names its `step`. A step's `command` runs from the repository root ("julia" is the running Julia,
 # "python" the interpreter make_paper.jl resolves). An analysis or figure step is reused while its
@@ -667,6 +722,15 @@ reviewed = "9edc185f9d73e98609c26be312a41c3fb15fdf46"
 command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl"]
 marker = "output/heavy_core_diagnostics_gpmuncal/provenance.csv"
 needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
+
+# FY4B on the RQ1 events, over each day's hours FY4B shares with the gauges, GPM and GSMaP: plain
+# FY4B from the rebuild, corrected FY4B from the FY4B benchmark run's out-of-fold field.
+[[step]]
+id = "rq1_fy4b"
+kind = "analysis"
+command = ["julia", "--project=.", "scripts/run_heavy_rain_event_fy4b.jl"]
+marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"
+needs = ["rq1_events", "fy4b_rebuild", "fy4b_benchmark", "prep_study_area", "prep_gpm_uncal"]
 
 [[step]]
 id = "rq2"

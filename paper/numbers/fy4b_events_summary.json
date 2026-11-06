@@ -1,0 +1,60 @@
+{
+ "source": "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_metrics_summary.csv",
+ "source_sha256": "1a5d12ba77c7ad431a35e251c37e98a4c5503cc752213f8d7a9f93338e12a2f8",
+ "rows": [
+  {
+   "product": "FY4B",
+   "window": "fy4b_hours",
+   "n": "5",
+   "r": "0.37",
+   "MB": "-0.4",
+   "RMSE": "30.0",
+   "CSI50": "0.25"
+  },
+  {
+   "product": "FY4B_QM",
+   "window": "fy4b_hours",
+   "n": "5",
+   "r": "0.34",
+   "MB": "-8.9",
+   "RMSE": "28.8",
+   "CSI50": "0.18"
+  },
+  {
+   "product": "GPM_uncal",
+   "window": "full_day",
+   "n": "5",
+   "r": "0.52",
+   "MB": "-5.4",
+   "RMSE": "22.4",
+   "CSI50": "0.38"
+  },
+  {
+   "product": "GPM_uncal",
+   "window": "fy4b_hours",
+   "n": "5",
+   "r": "0.51",
+   "MB": "-3.2",
+   "RMSE": "20.5",
+   "CSI50": "0.35"
+  },
+  {
+   "product": "GSMaP",
+   "window": "full_day",
+   "n": "5",
+   "r": "0.55",
+   "MB": "+23.8",
+   "RMSE": "44.3",
+   "CSI50": "0.50"
+  },
+  {
+   "product": "GSMaP",
+   "window": "fy4b_hours",
+   "n": "5",
+   "r": "0.54",
+   "MB": "+24.9",
+   "RMSE": "44.2",
+   "CSI50": "0.44"
+  }
+ ]
+}
