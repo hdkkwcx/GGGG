@@ -565,6 +565,12 @@ window = "fy4b_hours"
 r = ["r", "2f"]
 MB = ["Bias", "+1f"]
 CSI50 = ["CSI_50", "2f"]
+# 2022-06-26, when every product fails: the best of FY4B, GPM and GSMaP.
+[table.stats.r_0626_max]
+stat = "max"
+column = "r"
+fmt = "2f"
+where = { event_day = "2022-06-26", product = ["FY4B", "GPM_uncal", "GSMaP"] }
 
 # How each output above is made: the dependency graph `scripts/make_paper.jl` walks. Every entry
 # names its `step`. A step's `command` runs from the repository root ("julia" is the running Julia,

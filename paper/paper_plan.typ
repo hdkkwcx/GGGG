@@ -131,6 +131,8 @@
 /// One Table 4 row: a product's means over the RQ1 events, on FY4B's hours (r, MB, RMSE, CSI 50).
 #let t4(product) = ("r", "MB", "RMSE", "CSI50").map(column =>
   val(fe, column, product: product, window: "fy4b_hours"))
+/// One product's spatial r on one RQ1 event, over FY4B's hours.
+#let ev(product, day) = val(fv, "r", product: product, event_day: day)
 
 /// Mean bias (mm h⁻¹) of one anchor and method on hours of ≥ 20 mm h⁻¹ at the held-out gauges.
 #let bias20(product, method) = val(su, "bias", product: product, method: method,
@@ -448,28 +450,39 @@ training gauges' chosen cloud class dominated raised CSI at 0.1 mm h⁻¹ by onl
 On the RQ1 heavy-rain events the hourly gain does not carry over to storm totals. Draft Table 4 scores
 the #val(fe, "n", product: "FY4B", window: "fy4b_hours") events FY4B covers, each over the hours of
 its day that the gauges and all four products share (§2.5); 2024-07-30 is left out, as FY4B misses
-hours that hold #pct(fw, "peak", event_day: "2024-07-30") of its wettest gauge's rain. FY4B places
-the event rain worse than GPM and GSMaP (mean spatial r
+hours that hold #pct(fw, "peak", event_day: "2024-07-30") of its wettest gauge's rain. On average
+FY4B places the event rain worse than GPM and GSMaP (mean spatial r
 #val(fe, "r", product: "FY4B", window: "fy4b_hours") against
 #val(fe, "r", product: G, window: "fy4b_hours") and
 #val(fe, "r", product: "GSMaP", window: "fy4b_hours")) and catches fewer of the gauges at 50 mm or
-more.
-In amount it lies between them, with RMSE #val(fe, "RMSE", product: "FY4B", window: "fy4b_hours") mm
-against #val(fe, "RMSE", product: G, window: "fy4b_hours") for GPM and
-#val(fe, "RMSE", product: "GSMaP", window: "fy4b_hours") for GSMaP; its mean bias near zero is one
-wet day (#val(fv, "MB", product: "FY4B", event_day: "2022-06-26") mm on 2022-06-26) offsetting dry
-ones. The correction does not help on these days. It dries the storm totals (mean bias
-#val(fe, "MB", product: "FY4B_QM", window: "fy4b_hours") mm), so CSI at 50 mm falls from
-#val(fe, "CSI50", product: "FY4B", window: "fy4b_hours") to
-#val(fe, "CSI50", product: "FY4B_QM", window: "fy4b_hours"), and r falls to
-#val(fe, "r", product: "FY4B_QM", window: "fy4b_hours"). On 2022-10-03 it takes the bias from
-#val(fv, "MB", product: "FY4B", event_day: "2022-10-03") to
-#val(fv, "MB", product: "FY4B_QM", event_day: "2022-10-03") mm and leaves no hit at 50 mm (CSI
-#val(fv, "CSI50", product: "FY4B", event_day: "2022-10-03") to
-#val(fv, "CSI50", product: "FY4B_QM", event_day: "2022-10-03")). Its RMSE falls only to
-#val(fe, "RMSE", product: "FY4B_QM", window: "fy4b_hours") mm, mostly because it removes much of
+more (CSI #val(fe, "CSI50", product: "FY4B", window: "fy4b_hours") against
+#val(fe, "CSI50", product: G, window: "fy4b_hours") and
+#val(fe, "CSI50", product: "GSMaP", window: "fy4b_hours")). Event by event the picture is mixed. On
+2022-10-03 its pattern is the best of the three (r #ev("FY4B", "2022-10-03") against
+#ev(G, "2022-10-03") and #ev("GSMaP", "2022-10-03")), on 2023-06-17 it beats GPM but not GSMaP
+(#ev("FY4B", "2023-06-17") against #ev(G, "2023-06-17") and #ev("GSMaP", "2023-06-17")), and on
+2022-06-26 all three fail (r ≤ #stat("fy4b_event_scores", "r_0626_max")); its CSI at 50 mm is the
+highest of the three on 2022-06-26 and 2023-06-17. The mean gap in r comes from two events:
+2023-08-26 (#ev("FY4B", "2023-08-26")) and the localized 2023-09-10 (#ev("FY4B", "2023-09-10")
+against #ev(G, "2023-09-10") and #ev("GSMaP", "2023-09-10")). In amount FY4B lies between GPM and
+GSMaP, with RMSE #val(fe, "RMSE", product: "FY4B", window: "fy4b_hours") mm against
+#val(fe, "RMSE", product: G, window: "fy4b_hours") and
+#val(fe, "RMSE", product: "GSMaP", window: "fy4b_hours") mm; its mean bias near zero is one wet day
+(#val(fv, "MB", product: "FY4B", event_day: "2022-06-26") mm on 2022-06-26) offsetting dry ones.
+
+The correction does not help on these days. It makes every event's total drier. That removes much of
 the wet bias of 2022-06-26 (#val(fv, "MB", product: "FY4B", event_day: "2022-06-26") to
-#val(fv, "MB", product: "FY4B_QM", event_day: "2022-06-26") mm). Over FY4B's hours GPM and GSMaP
+#val(fv, "MB", product: "FY4B_QM", event_day: "2022-06-26") mm), which is why the mean RMSE falls
+slightly, to #val(fe, "RMSE", product: "FY4B_QM", window: "fy4b_hours") mm, but it deepens the
+deficit on the dry days: on 2022-10-03 the bias goes from
+#val(fv, "MB", product: "FY4B", event_day: "2022-10-03") to
+#val(fv, "MB", product: "FY4B_QM", event_day: "2022-10-03") mm and no gauge at 50 mm or more is
+caught (CSI #val(fv, "CSI50", product: "FY4B", event_day: "2022-10-03") to
+#val(fv, "CSI50", product: "FY4B_QM", event_day: "2022-10-03")). Mean CSI at 50 mm falls from
+#val(fe, "CSI50", product: "FY4B", window: "fy4b_hours") to
+#val(fe, "CSI50", product: "FY4B_QM", window: "fy4b_hours"), and mean r to
+#val(fe, "r", product: "FY4B_QM", window: "fy4b_hours"), mostly on 2023-09-10
+(#ev("FY4B", "2023-09-10") to #ev("FY4B_QM", "2023-09-10")). Over FY4B's hours GPM and GSMaP
 score almost as over the full day (r #val(fe, "r", product: G, window: "fy4b_hours") against
 #val(fe, "r", product: G, window: "full_day") and
 #val(fe, "r", product: "GSMaP", window: "fy4b_hours") against
