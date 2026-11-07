@@ -1,6 +1,6 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-06 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-07 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
@@ -10,14 +10,106 @@ to be better, and the 2023 software-update gain is not shown (merged as `1dc0262
 (merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Previous, merged as
 `0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4. A same-hours,
 same-seeds test of FY4B in the fusion gives "keep FY4B out" (merged as `b5499c7`). An error budget shows
-where FY4B's error sits (Previous, branch `fy4b/error-budget`), and a near-surface humidity gate passes
-its screen with a small gain (Newest, branch `fy4b/humidity-screen`, which holds both) · **Next step:**
-the user decides whether to merge, whether the gate gets a benchmark run, and supplies two AGRI L1 files
-for the channel pilot (Newest, last section)
+where FY4B's error sits, and a near-surface humidity gate passes its screen with a small gain. With time
+held out as well as gauges, FY4B_QM's raw gain shrinks materially (Newest; branch `fy4b/time-holdout` holds
+all three, unmerged) · **Next step:** the user decides what §3.4 says, whether to merge and whether the gate
+gets a benchmark run, and supplies two AGRI L1 files for the channel pilot (Previous, last section)
 
 ---
 
-## Newest (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
+## Newest (2026-11-07): FY4B_QM's raw gain depends on having seen the same weeks
+
+A side agent warned that the channel pilot held out gauges but not days. False rain covers the network at
+once, so a held-out gauge is not new weather. That holds, and it reaches a number the paper cites. No paper
+text or number changes here: what §3.4 says is the user's call.
+- **Code:**
+  - `src/benchmark/TimeBlockFolds.jl` with `test/test-time-block-folds.jl` (`0839720`): 7-day blocks in 5 time
+    folds, balanced within regime × season, ±1 day guard, crossed with the gauge folds. A synthetic test shows
+    a table that memorises episodes scores 100% under gauges-only and under 65% crossed, and that a real
+    signal survives both.
+  - `scripts/check_fy4b_qm_time_holdout.jl` (`27f2278`), its reading committed before the run. Review bump
+    `456b9cf`, for the new module only.
+  - `scripts/explain_fy4b_qm_time_holdout.jl` (`3e45ae6`), written after that result, with no verdict of its own.
+- **Runs:** both clean, 3 min each. Logs: `output/check_fy4b_qm_time_holdout.log`,
+  `output/explain_fy4b_qm_time_holdout.log`. Output: `output/fy4b_qm_time_holdout/`,
+  `output/fy4b_qm_time_holdout_explained/`.
+- **Guards passed:** the gauges-only version equals the run's `oof_raw.csv` in all 4,760,619 cells and
+  reproduces `fy4b_quality` (−16.86%, r 0.246 vs 0.223). The pixel shift is not held out in time.
+
+### Result: material, by the reading fixed before the run
+
+Raw FY4B_QM against plain FY4B (RMSE 1.1426, r 0.223), balanced spatial, held-out gauges, whole-week intervals:
+
+| Version | RMSE | Change | r | Change in r |
+|---|---|---|---|---|
+| Gauges held out (the paper's) | 0.9500 | −16.9% (−27.6..−7.0) | 0.246 | +0.023 (+0.000..+0.043) |
+| Gauges and weeks held out | 1.0338 | **−9.5% (−15.4..−3.5)** | 0.220 | **−0.004 (−0.021..+0.015)** |
+| Same training hours, scattered at random | 0.9519 | −16.7% (−27.0..−7.2) | 0.248 | +0.025 (+0.002..+0.044) |
+| Only the map held out | 1.0092 | −11.7% (−18.0..−5.3) | 0.224 | +0.000 (−0.020..+0.021) |
+| Only the monthly strength held out | 0.9566 | −16.3% (−27.0..−6.6) | 0.245 | +0.022 (−0.000..+0.041) |
+
+The RMSE gain moves 7.3 points (limit 2) and the r gain 0.027 (limit 0.01). The random split moves about the
+same: −17.3% → −9.2%, r +0.027 → −0.001.
+
+- **Not less data:** with as many training hours, scattered so every weather system stays on both sides, the
+  gain is intact (+0.20%, −0.25..+0.72, against gauges only).
+- **The map, not the monthly strength.** My plan suspected the strength; holding it out costs 0.6 points. The
+  map's top end is what learns the weeks.
+- **A few episodes carry most of it.** 8 days hold 82% of the net rise in squared error: 2023-09-18/19,
+  2023-03-16/18/19 and 2022-09-22/23/24. On those days the crossed version scores about like plain FY4B. Most of
+  the loss is MAM (−26.7% → −9.8%) and SON (−36.2% → −20.3%). JJA hardly moves (−3.4% → −3.0%).
+- **How the map does it,** gauge fold 1. These episodes supply much of a season's largest FY4B values, so the
+  map learns to shrink those values. FY4B's 16 mm/h maps to:
+
+  | Season, regime | All hours | Without the fold holding the episode |
+  |---|---|---|
+  | R1 MAM (Mar 2023) | 4.0 | 7.1 |
+  | R1 SON (Sep 2022) | 9.0 | 15.8 |
+  | R2 SON (Sep 2023) | 5.0 | 10.7 |
+
+- **Not only the gross hours:** leaving them out, the gain still moves from −15.0% to −10.1%, and r's from +0.030
+  to +0.007 (−0.012..+0.025).
+- **Heavy rain:** POD_8 is 0.135 plain, 0.085 gauges only, 0.099 crossed; CSI_8 0.047, 0.054, 0.048. So CSI_8's
+  gain goes too, and the crossed map dries heavy rain a little less. This is consistent with the map's tail
+  drying the RQ1 storm days, though that is not tested.
+- **No sign of an artefact:** the crossed version sits at or within 0.006 of plain FY4B's RMSE in every month, so
+  its sparse-cell extrapolations (a few reach hundreds of mm/h in thin cells) do not drive the result.
+
+### How to read it
+
+**This is not a leak, and the −16.9% is not wrong.** A held-out gauge still never shapes its anchor, so §2.5's
+sentence stands. The two numbers answer different questions:
+- **−16.9%:** an ungauged site, with gauges elsewhere in the same weeks. That is the benchmark's question.
+- **−9.5%, with no gain in r:** a correction that has not seen those weeks. That is nearer what "FY4B's quality
+  was raised" suggests.
+
+**Not measured:** MGWR (−5.4%) and the blend (−0.8%). They would need a benchmark run on a crossed anchor,
+meaning a new flag and about 3.6 h. FY4B_QM vs GSMaP after MGWR (−6.8%) rests on them too.
+
+**Recommendation (the user's call):** keep §3.4's numbers, and add that the calibration sees the same weeks, with
+the time-held-out figures beside them (needs a `[[step]]` and `[[table]]`). Drop any wording that r improved as a
+lasting property of the product. Run the crossed benchmark only if the tutor or a reviewer needs the blend number.
+
+**For improving FY4B:** the map is partly absorbing a few false-rain episodes, at a cost to real heavy rain. A way
+to flag those episodes would help more than a better map, which is the channel pilot's target.
+
+### What changes elsewhere
+
+- **The humidity gate's verdict stands** (exploratory run, not committed). With gauges and weeks held out it picks
+  the same cuts and barely moves (CSI_0.1 0.1890 → 0.1888, RMSE 0.9328 → 0.9322). One cut cannot memorise an
+  episode. It was not retested on the crossed FY4B_QM.
+- **The channel pilot's design changes, before its rule is committed.** No extra download:
+  1. Crossed hold-out with `TimeBlockFolds`, judged on that; gauges-only reported, to measure the optimism.
+  2. A table cell needs at least 10 distinct days as well as its pairs: `TS_MIN_PAIRS = 200` can be one hour.
+  3. Rule (proposed): at a cut losing ≤10% of hits, the extra channels remove ≥50% of held-out gross false-rain
+     squared error, and ≥50% in at least half of the 81 runs of consecutive days, and beat IR1 alone by ≥20 points
+     with the difference's interval above 0. Intervals resample whole weeks.
+  4. Train on two regimes and score the third, reported only.
+  5. The whole-record screen and any later product are cross-fitted in time as well.
+- **Why the sample is small:** FY4B's 398 gross hours are 90,125 gauge-hours, but 113 days in 81 runs, and 10 days
+  hold 73% of their false-rain squared error.
+
+## Previous (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
 
 The budget's false rain sits in episodes FY4B alone cannot flag, so this asks whether humidity on disk can.
 ERA5-Land is reanalysis, not FY4B: anything kept is "FY4B + reanalysis" and could not run in real time.
@@ -94,9 +186,10 @@ FY4B-_AGRI--_N_DISK_1330E_L1-_FDI-_MULT_NOM_20220923073000_20220923074459_4000M_
   before any reader is written. They also give a first look at whether these hours are cold cloud.
 - **After that, per the plan:** one scan per hour from gross false rain (`gross_hours.csv`), real widespread
   rain matched by month and hour of day, and missed rain; counting tables on training gauges over IR1, water
-  vapour minus IR1, and the split-window difference; a rule fixed before the run.
+  vapour minus IR1, and the split-window difference; a rule fixed before the run. The hold-out, table cells
+  and rule changed on 2026-11-07: see Newest.
 
-## Previous (2026-11-06): where FY4B's error sits
+## Earlier (2026-11-06): where FY4B's error sits
 
 The user asked what makes FY4B hard to improve. No paper number moves, and nothing here is cited yet:
 the script is not a step in `paper/sources.toml`.
@@ -174,7 +267,7 @@ GPM_uncal is, 0.49 when both are and 0.03 when neither is.
   20 mm/h in 1,420 cells, and FY4B is at the cap in 27 of them.
 - Gauge noise: gauges within 5 km correlate at r 0.76 (71 pairs), at 5–10 km 0.63 (246), at 10–20 km 0.47 (918).
 
-## Previous (2026-11-06): FY4B in the fusion, on the same hours and seeds
+## Earlier (2026-11-06): FY4B in the fusion, on the same hours and seeds
 
 The user asked for FY4B in the comparison on the hours common to all three satellites. The first
 check (below, 2026-11-01) was confounded, so this replaces it as the answer on the fusion. No paper
