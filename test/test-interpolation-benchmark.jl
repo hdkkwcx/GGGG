@@ -1921,6 +1921,73 @@ end
         plain_betas = CSV.read(joinpath(temp_dir, "qm_plain", "fused_anchor_selection.csv"), DataFrame)
         @test fed_betas.beta_fy4b != plain_betas.beta_fy4b
 
+        # `fy4b_out_of_fusion`: FY4B stays scored but reaches neither the fused anchors nor the
+        # agreement bands. Against the same run with FY4B in the fusion, every scored product's raw
+        # and unblended rows stay put and the merges move; against a run that never loaded FY4B,
+        # the fusion's rows are the same.
+        outdir_out = joinpath(temp_dir, "qm_out_of_fusion")
+        out_cfg(outdir) = InterpolationBenchmarkConfig(
+            mger=MGERConfig(
+                station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=sat_paths, outdir=outdir, kernels=[GAUSSIAN],
+                bw_adaptive=[8.0, 16.0], bw_fixed_km=[20.0, 100.0],
+                expected_common_time_count=length(times),
+            ),
+            k=3, seed=11, cv_schemes=[:balanced_spatial],
+            idw_powers=[2.0], neighbor_candidates=Union{Nothing,Int}[8],
+            tps_smooth_candidates=[0.01], min_tuning_coverage=0.8, bootstrap_reps=0,
+            tuning_geometry=:inner_spatial, fy4b_qm_grid=grid_path,
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS), satellite_wet_blend=true,
+            blend_axes=[:constant, :agreement_envelope], fy4b_out_of_fusion=true,
+        )
+        qm_out = run_interpolation_benchmark(out_cfg(outdir_out))
+        @test Set(qm_out.metrics.product) == Set(plain_fed.metrics.product)
+        unfused_methods = Set(vcat(BENCHMARK_METHODS, _blend_method("mgwr")))
+        unfused_rows(result) = filter(row -> row.product in ("FY4B", "GPM", FY4B_QM_PRODUCT) &&
+            row.method in unfused_methods, result.metrics)
+        out_lookup = Dict(rowkey(row) => (row.n, row.RMSE) for row in eachrow(unfused_rows(qm_out)))
+        @test nrow(unfused_rows(plain_fed)) == length(out_lookup)
+        @test all(eachrow(unfused_rows(plain_fed))) do row
+            haskey(out_lookup, rowkey(row)) && isequal(out_lookup[rowkey(row)], (row.n, row.RMSE))
+        end
+        @test merged_raw(qm_out) != merged_raw(plain_fed)
+        out_betas = CSV.read(joinpath(outdir_out, "fused_anchor_selection.csv"), DataFrame)
+        @test !("beta_fy4b" in names(out_betas)) && "beta_gpm" in names(out_betas)
+        @test "fy4b_out_of_fusion" in
+            CSV.read(joinpath(outdir_out, "benchmark_scope.csv"), DataFrame).key
+        no_fy4b = run_interpolation_benchmark(InterpolationBenchmarkConfig(
+            mger=MGERConfig(
+                station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=Dict("GPM" => sat_paths["GPM"]), outdir=joinpath(temp_dir, "qm_no_fy4b"),
+                kernels=[GAUSSIAN], bw_adaptive=[8.0, 16.0], bw_fixed_km=[20.0, 100.0],
+                expected_common_time_count=length(times),
+            ),
+            k=3, seed=11, cv_schemes=[:balanced_spatial],
+            idw_powers=[2.0], neighbor_candidates=Union{Nothing,Int}[8],
+            tps_smooth_candidates=[0.01], min_tuning_coverage=0.8, bootstrap_reps=0,
+            tuning_geometry=:inner_spatial,
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS), satellite_wet_blend=true,
+            blend_axes=[:constant, :agreement_envelope],
+        ))
+        fusion_rows(result) = filter(row -> startswith(row.product, "MERGED_") ||
+            (row.product == "GPM" && row.method == _blend_method("mgwr", :agreement_envelope)),
+            result.metrics)
+        no_fy4b_lookup = Dict(rowkey(row) => (row.n, row.RMSE) for row in eachrow(fusion_rows(no_fy4b)))
+        @test nrow(fusion_rows(qm_out)) == length(no_fy4b_lookup) > 0
+        @test all(eachrow(fusion_rows(qm_out))) do row
+            haskey(no_fy4b_lookup, rowkey(row)) &&
+                isequal(no_fy4b_lookup[rowkey(row)], (row.n, row.RMSE))
+        end
+        # Refused where it contradicts the fed fusion, has no FY4B, or has nothing to leave it out of.
+        refuse_out(; mger=out_cfg(outdir_out).mger, kwargs...) = @test_throws "fy4b_out_of_fusion" _validate_benchmark_config(
+            InterpolationBenchmarkConfig(; mger, fy4b_out_of_fusion=true, kwargs...), n_station)
+        refuse_out(fy4b_qm_grid=grid_path, fy4b_qm_fusion=true,
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
+        refuse_out(mger=MGERConfig(station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=Dict("GPM" => sat_paths["GPM"]), outdir=outdir_out),
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
+        refuse_out()
+
         # `--blend-dry-band`: the dry axes add methods and move no other row. Their bands 1-9
         # repeat the agreement blend's weights; only the dry band's weight is new.
         outdir_dry = joinpath(temp_dir, "qm_dry")

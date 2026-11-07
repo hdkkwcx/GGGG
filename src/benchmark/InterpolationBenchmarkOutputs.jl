@@ -413,6 +413,13 @@ function _write_benchmark_outputs(
             "the raw and unblended rows of a run without this option",
         ]))
     end
+    if cfg.fy4b_out_of_fusion
+        append!(scope, DataFrame(key=["fy4b_out_of_fusion"], value=[
+            "FY4B is scored but left out of the fused anchors and the blend's non-constant bands; " *
+            "the product list, hours and selection seeds stay those of a run with FY4B in the " *
+            "fusion, so the products with files keep that run's raw and unblended rows",
+        ]))
+    end
     grouped = [v for v in sort(cfg.fused_anchor_variants) if v in GROUPED_FUSION_VARIANTS]
     if !isempty(grouped)
         append!(scope, DataFrame(
