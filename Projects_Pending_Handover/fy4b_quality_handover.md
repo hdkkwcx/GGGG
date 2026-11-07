@@ -10,12 +10,91 @@ to be better, and the 2023 software-update gain is not shown (merged as `1dc0262
 (merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Previous, merged as
 `0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4. A same-hours,
 same-seeds test of FY4B in the fusion gives "keep FY4B out" (Newest, branch
-`fy4b/same-hours-fusion`) · **Next step:** the user decides whether to merge that branch and
-whether the paper cites the result
+`fy4b/same-hours-fusion`, merged as `b5499c7`). An error budget shows where FY4B's error sits (Newest,
+branch `fy4b/error-budget`) · **Next step:** the user decides whether to merge that branch and
+whether the paper cites the fusion result
 
 ---
 
-## Newest (2026-11-06): FY4B in the fusion, on the same hours and seeds
+## Newest (2026-11-06): where FY4B's error sits
+
+The user asked what makes FY4B hard to improve. No paper number moves, and nothing here is cited yet:
+the script is not a step in `paper/sources.toml`.
+- **Script:** `scripts/diagnose_fy4b_error_budget.jl` (`5a8e9d5`), run clean, 25 s. It fits nothing.
+  Log: `output/fy4b_error_budget.log`. Output: `output/fy4b_error_budget/`.
+- **Sample:** the raw fields of the `fy4b_benchmark` run, on the cells all four products score
+  (4,452,108 of 4,760,619, balanced spatial).
+- **Check:** FY4B_QM and FY4B on their shared mask reproduce `output/fy4b_quality/paired.csv` in both
+  schemes (balanced: n 4,476,387, RMSE 0.95005 and 1.14265).
+
+### What it finds
+
+**FY4B's number holds one channel's information.** NSMC's slides
+(`img.nsmc.org.cn/PORTAL/NSMC/VIDEO/FY4B/20230818/09-Atmosphere_Properties.pdf`) describe the
+satellite-only estimate as a lookup from one infrared brightness temperature (IR1), matched offline to
+polar-orbiter microwave rain. The 15-minute files hold only `Precipitation` and `DQF`, with an algorithm
+dated 2016-10-10. Every fix so far reworks that number, or a class from the same imager (CLT). AGRI's
+other infrared channels are untried.
+
+**The gap is whether it rains, and misses count nearly as much as false rain** (0.1 mm/h; the last three
+columns are shares of squared error):
+
+| Raw field | r | RMSE | POD | FAR | False rain | Misses | Hit amounts |
+|---|---|---|---|---|---|---|---|
+| FY4B | 0.223 | 1.143 | 0.311 | 0.710 | 39.8% | 20.3% | 39.9% |
+| FY4B_QM | 0.246 | 0.951 | 0.296 | 0.701 | 28.0% | 30.2% | 41.9% |
+| GSMaP | 0.380 | 1.074 | 0.624 | 0.598 | 13.6% | 9.5% | 76.9% |
+| GPM_uncal | 0.436 | 0.802 | 0.601 | 0.563 | 11.8% | 20.9% | 67.3% |
+
+- FY4B_QM's MSE gap to GPM_uncal is +0.262 (+0.167..+0.370): false rain +0.177 (+0.095..+0.273), misses
+  +0.139 (+0.101..+0.183), hit amounts −0.054 (−0.096..−0.010). The last is partly because it has half as
+  many hits, so never read it as FY4B's amounts being better.
+- With all false rain removed by oracle, FY4B_QM's r is 0.386, still below GPM_uncal as it stands. An
+  oracle is a bound, not a method.
+- §3.4's "What remains is false rain" holds for the blend (51% of the gap below), not the raw field.
+  Not changed; the user's call.
+
+**It is not mainly misplacement.** r at the stations and for the network mean:
+
+| | 1 h station | 24 h station | 1 h network | 24 h network |
+|---|---|---|---|---|
+| FY4B | 0.223 | 0.378 | 0.405 | 0.458 |
+| FY4B_QM | 0.246 | 0.417 | 0.451 | 0.514 |
+| GSMaP | 0.380 | 0.658 | 0.668 | 0.803 |
+| GPM_uncal | 0.436 | 0.721 | 0.833 | 0.894 |
+
+Averaging does not close the gap, and rank correlation shows the same (network-day Spearman 0.53 vs 0.76),
+as does dropping each product's worst 10 days (0.53 vs 0.92). So §4's "location error" row is not
+supported as the reason point r is below areal r.
+
+**False rain comes in episodes that FY4B alone cannot flag.**
+- 30 of its worst days hold 80.8% of FY4B's false-rain squared error (GPM_uncal 43.6%).
+- Gross false-rain hours, with the product wet at ≥50% of gauges and the gauges wet at ≤5%: 398 for FY4B
+  (1.98% of hours, 113 days), holding 38.7% of its false-rain squared error and 15.8% of all of it. FY4B_QM:
+  362 hours, 38.4%, 11.1%. GPM_uncal: 94 hours, 6.6%, 0.8%. The thresholds were chosen after a first look;
+  under the others in `gross_summary.csv`, FY4B's share of false rain runs 27.6–48.4%.
+- They fall in every month but January and February, most in September and October, at all hours of the day.
+- Worst hour, label 2023-03-19 08 BJT: FY4B's network mean is 16.3 mm/h, wet at every gauge; the gauges
+  read 0.00 and GPM_uncal 0.08.
+- On the two worst days looked at, the files' quality flags read 0, and the first scan of one hour on each
+  day shows a coherent cloud-like shape, not stripes. Cold non-raining cloud read as rain would fit, but
+  it is **not shown**: there are no brightness temperatures for these hours.
+- FY4B's own amounts overlap: median 0.80 mm/h in gross hours, 1.19 in real widespread rain. Of hours FY4B
+  calls wet at ≥90% of gauges, 24% are false, against 3% for GPM_uncal.
+
+**The product changes between regimes.** FY4B's June–August total against the gauges is ×1.76 in R1 (2022),
+×0.89 in R2 (2023) and ×0.59 in R3 (2024). Each regime has one year, so software, position and weather
+cannot be separated.
+
+**FY4B adds little that the others lack.** P(gauge wet) is 0.07 when only FY4B is wet, 0.40 when only
+GPM_uncal is, 0.49 when both are and 0.03 when neither is.
+
+**Not the limit:**
+- The 20 mm/h cap: FY4B reaches it in 743 cells, against 120 for GPM_uncal with no such cap. Gauges reach
+  20 mm/h in 1,420 cells, and FY4B is at the cap in 27 of them.
+- Gauge noise: gauges within 5 km correlate at r 0.76 (71 pairs), at 5–10 km 0.63 (246), at 10–20 km 0.47 (918).
+
+## Previous (2026-11-06): FY4B in the fusion, on the same hours and seeds
 
 The user asked for FY4B in the comparison on the hours common to all three satellites. The first
 check (below, 2026-11-01) was confounded, so this replaces it as the answer on the fusion. No paper
