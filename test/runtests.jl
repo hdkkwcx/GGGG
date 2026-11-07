@@ -38,6 +38,7 @@ try
   include("test-fy4b-cloud-type.jl")
   include("test-satellite-calibration.jl")
   include("test-satellite-two-stage.jl")
+  include("test-time-block-folds.jl")
   include("test-run-provenance.jl")
   include("test-imerg-uncal-stations.jl")
 finally
