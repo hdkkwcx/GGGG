@@ -56,8 +56,9 @@ same: −17.3% → −9.2%, r +0.027 → −0.001.
 - **The map, not the monthly strength.** My plan suspected the strength; holding it out costs 0.6 points. The
   map's top end is what learns the weeks.
 - **A few episodes carry most of it.** 8 days hold 82% of the net rise in squared error: 2023-09-18/19,
-  2023-03-16/18/19 and 2022-09-22/23/24. On those days the crossed version scores about like plain FY4B. Most of
-  the loss is MAM (−26.7% → −9.8%) and SON (−36.2% → −20.3%). JJA hardly moves (−3.4% → −3.0%).
+  2023-03-16/18/19 and 2022-09-22/23/24. On the March 2023 and September 2022 days the crossed version scores about
+  like plain FY4B; on the September 2023 days it lies between plain and gauges only. Most of the loss is MAM
+  (−26.7% → −9.8%) and SON (−36.2% → −20.3%). JJA hardly moves (−3.4% → −3.0%).
 - **How the map does it,** gauge fold 1. These episodes supply much of a season's largest FY4B values, so the
   map learns to shrink those values. FY4B's 16 mm/h maps to:
 
