@@ -9,14 +9,94 @@ to be better, and the 2023 software-update gain is not shown (merged as `1dc0262
 `3796bdb`). The cloud filter from FY4B's Cloud Type product (`CLT`) fails its pilot on July 2023
 (merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Previous, merged as
 `0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4. A same-hours,
-same-seeds test of FY4B in the fusion gives "keep FY4B out" (Newest, branch
-`fy4b/same-hours-fusion`, merged as `b5499c7`). An error budget shows where FY4B's error sits (Newest,
-branch `fy4b/error-budget`) · **Next step:** the user decides whether to merge that branch and
-whether the paper cites the fusion result
+same-seeds test of FY4B in the fusion gives "keep FY4B out" (merged as `b5499c7`). An error budget shows
+where FY4B's error sits (Previous, branch `fy4b/error-budget`), and a near-surface humidity gate passes
+its screen with a small gain (Newest, branch `fy4b/humidity-screen`, which holds both) · **Next step:**
+the user decides whether to merge, whether the gate gets a benchmark run, and supplies two AGRI L1 files
+for the channel pilot (Newest, last section)
 
 ---
 
-## Newest (2026-11-06): where FY4B's error sits
+## Newest (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
+
+The budget's false rain sits in episodes FY4B alone cannot flag, so this asks whether humidity on disk can.
+ERA5-Land is reanalysis, not FY4B: anything kept is "FY4B + reanalysis" and could not run in real time.
+No paper number moves.
+- **Script:** `scripts/screen_fy4b_humidity.jl` (`3f1c3cc`), committed with its rule before any run, run
+  clean, 2 min. Log: `output/screen_fy4b_humidity.log`. Output: `output/fy4b_humidity_screen/`.
+- **Setup:** as the CLT screen, on all grid hours. Held-out FY4B_QM equals the run's `oof_raw.csv` in all
+  4,760,619 cells of both schemes.
+- **Alignment:** read as the benchmark reads its covariates, `load_era5_panel` at `time_utc + 9 h`, so an
+  hour takes the value at its start. t2m peaks at label 15 BJT. RH's anomaly best matches the gauge's wet
+  call at lag +3 h (r 0.314; 0.296 at lag 0), within the allowed −2..+4: RH responds after rain.
+- **Arms,** fitted per fold on training gauges:
+  - A FY4B_QM;
+  - B `FY4B_QM_RH`, set to 0 where RH is below the cut that most raises training CSI_0.1;
+  - B8 `FY4B_QM_RH8`, the same but leaving values ≥ 8 mm/h alone;
+  - C and C8, each one's amount-matched control;
+  - D `GPM_uncal_RH`, the same gate on GPM_uncal, in no rule.
+- **Rule:** the CLT screen's, for B and B8: ΔCSI_0.1 ≥ +0.01 over the control with its interval above 0, POD_8
+  not significantly lower, and a gate in at least 3 of 5 balanced folds. GO if either passes.
+
+### Result: GO for the gate that spares heavy rain, and a small gain
+
+The folds pick RH < 70 (RH < 75 in balanced fold 4), and RH < 75 for GPM_uncal. Held out, balanced spatial:
+
+| Series | r | RMSE | bias | CSI_0.1 | POD_0.1 | FAR_0.1 | FBI_0.1 | POD_8 |
+|---|---|---|---|---|---|---|---|---|
+| FY4B_QM | 0.247 | 0.949 | −0.0152 | 0.175 | 0.296 | 0.702 | 0.99 | 0.086 |
+| B gate | 0.253 | 0.898 | −0.0400 | 0.188 | 0.275 | 0.626 | 0.73 | 0.064 |
+| C control | 0.244 | 0.950 | −0.0202 | 0.163 | 0.250 | 0.681 | 0.78 | 0.086 |
+| B8 gate | 0.249 | 0.933 | −0.0345 | 0.189 | 0.277 | 0.626 | 0.74 | 0.086 |
+| C8 control | 0.245 | 0.950 | −0.0186 | 0.165 | 0.259 | 0.688 | 0.83 | 0.086 |
+| GPM_uncal | 0.437 | 0.800 | −0.0119 | 0.338 | 0.602 | 0.565 | 1.38 | 0.102 |
+| GPM_uncal gate | 0.419 | 0.799 | −0.0327 | 0.366 | 0.541 | 0.469 | 1.02 | 0.083 |
+
+- **B fails:** ΔCSI_0.1 over C +0.0256 (+0.0189..+0.0326), but POD_8 −0.0216 (−0.0441..−0.0056).
+- **B8 passes:** ΔCSI_0.1 over C8 +0.0243 (+0.0174..+0.0312). Its POD_8 cannot fall, by construction.
+- **Against FY4B_QM, B8 gives:** CSI_0.1 +0.0143 (+0.0095..+0.0189), CSI_2 +0.0054 (+0.0013..+0.0098), RMSE −1.70%
+  (−2.46..−1.01), r +0.0014 (−0.0040..+0.0074).
+
+**How to read the GO:**
+- **The gain is small and r does not move.** FY4B's real deficit, half of GPM_uncal's POD, gets worse:
+  POD_0.1 0.296 → 0.277.
+- **Bias worsens.** |bias| +0.0193 (+0.0142..+0.0237), so the bias goes to about 30% of mean gauge rain
+  (0.114), and FBI_0.1 from 0.99 to 0.74. This rule has no bias test. The tolerance used in the blend screen
+  (+0.005) would fail it.
+- **Not specific to FY4B.** GPM_uncal gains more, ΔCSI_0.1 +0.0281 (+0.0209..+0.0353), though its r falls by
+  0.0185. FY4B_QM's CSI stays far behind (0.189 vs 0.338).
+- **The episodes mostly survive B8.** Of the false-rain squared error in FY4B_QM's gross hours, B8 removes
+  20.8% and B 56.5%, because much of it sits at ≥ 8 mm/h. Controls remove under 1%. The worst hour's
+  network RH is about 90%, so no cut near the chosen ones touches it.
+- **B's RMSE gain is mostly R1,** which holds the dry 2022 season: −13.5% in R1, −0.8% in R2, −2.5% in R3. For
+  B8: −2.8%, −0.7%, −2.3%.
+- **By season,** ΔCSI_0.1 over the control is significant in JJA, SON and, barely, DJF, but not in MAM.
+- **Downstream is untested and looks unpromising.** `d2m_c` is already a local MGWR covariate in 8 of
+  FY4B_QM's 10 folds (3 of 5 balanced, 5 of 5 random), and a raw gain of 17% became 0.8% in the blend.
+- **Correction to the first look:** an in-sample check with RH at the hour's end gave r +0.013. Per fold with
+  RH at the hour's start, B gives +0.0053 (−0.0176..+0.0261), so most of that was RH responding to the rain.
+
+**Recommendation:** by its rule the gate has earned a benchmark run, but that run needs a new derived product
+and flag, and these numbers do not suggest it will survive. Do the channel pilot first. The user's call.
+
+### Next: the channel pilot needs two files first
+
+No AGRI L1 file is on the T9, and their size and the archive's reach back to June 2022 are unknown. So the
+pilot stops at its first gate until these two exist, the scans of two of the worst gross hours, both in R1
+(the matching QPE files exist):
+```
+FY4B-_AGRI--_N_DISK_1330E_L1-_FDI-_MULT_NOM_20230318233000_20230318234459_4000M_V0001.HDF
+FY4B-_AGRI--_N_DISK_1330E_L1-_FDI-_MULT_NOM_20220923073000_20220923074459_4000M_V0001.HDF
+```
+- **Where to put them:** a new folder on the T9 linked as `data/FY4B_L1`, never under `data/FY4B`:
+  `find_nc_files` keys on start time only, as for CLT.
+- **They decide:** whether the sample's download is practical, and they settle the file layout and channels
+  before any reader is written. They also give a first look at whether these hours are cold cloud.
+- **After that, per the plan:** one scan per hour from gross false rain (`gross_hours.csv`), real widespread
+  rain matched by month and hour of day, and missed rain; counting tables on training gauges over IR1, water
+  vapour minus IR1, and the split-window difference; a rule fixed before the run.
+
+## Previous (2026-11-06): where FY4B's error sits
 
 The user asked what makes FY4B hard to improve. No paper number moves, and nothing here is cited yet:
 the script is not a step in `paper/sources.toml`.
