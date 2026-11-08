@@ -730,7 +730,7 @@ note = "restores the published copy; scripts/clip_dem.R made it from a nationwid
 [[step]]
 id = "rq1_events"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_heavy_rain_event_evaluation.jl", "--gpm-gsmap"]
 marker = "output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal"]
@@ -738,7 +738,7 @@ needs = ["prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "rq1_cores"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl"]
 marker = "output/heavy_core_diagnostics_gpmuncal/provenance.csv"
 needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
@@ -748,7 +748,7 @@ needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
 [[step]]
 id = "rq1_fy4b"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_heavy_rain_event_fy4b.jl"]
 marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"
 needs = ["rq1_events", "fy4b_rebuild", "fy4b_benchmark", "prep_study_area", "prep_gpm_uncal"]
@@ -756,6 +756,7 @@ needs = ["rq1_events", "fy4b_rebuild", "fy4b_benchmark", "prep_study_area", "pre
 [[step]]
 id = "rq2"
 kind = "analysis"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--block-days", "7"]
 marker = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
@@ -765,7 +766,7 @@ note = "intervals over whole 7-met-day blocks; rq2_fy4b's gpm_gsmap_full point e
 [[step]]
 id = "rq2_fy4b"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--with-fy4b",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv"]
 marker = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"
@@ -779,7 +780,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform", "fy4b_rebuild"]
 [[step]]
 id = "benchmark"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
            "--fused-anchor"]
@@ -789,6 +790,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep
 [[step]]
 id = "claims"
 kind = "analysis"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal",
            "--block-days", "7"]
@@ -798,6 +800,7 @@ needs = ["benchmark", "prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "fusion"
 kind = "analysis"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal",
            "--block-days", "7"]
@@ -809,7 +812,7 @@ needs = ["claims"]
 [[step]]
 id = "fy4b_rebuild"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/prepare_fy4b_rebuild.jl"]
 marker = "output/fy4b_rebuild_2022_2024/provenance.csv"
 needs = ["raw_fy4b", "prep_study_area"]
@@ -817,7 +820,7 @@ needs = ["raw_fy4b", "prep_study_area"]
 [[step]]
 id = "fy4b_benchmark"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
            "--fused-anchor", "--with-fy4b", "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv",
@@ -829,7 +832,7 @@ note = "about 2 h with 4 threads; reads the rebuild's fy4b_offset_grid.nc beside
 [[step]]
 id = "fy4b_quality"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl"]
 marker = "output/fy4b_quality/provenance.csv"
 needs = ["fy4b_benchmark"]
@@ -838,6 +841,7 @@ note = "day-block intervals; kept as the input fy4b_time_holdout's guard reads. 
 [[step]]
 id = "fy4b_quality_week"
 kind = "analysis"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl", "--block-days", "7"]
 marker = "output/fy4b_quality_block7d/provenance.csv"
 needs = ["fy4b_benchmark"]
@@ -845,7 +849,7 @@ needs = ["fy4b_benchmark"]
 [[step]]
 id = "fy4b_time_holdout"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/check_fy4b_qm_time_holdout.jl"]
 marker = "output/fy4b_qm_time_holdout/provenance.csv"
 needs = ["fy4b_benchmark", "fy4b_quality"]
@@ -854,7 +858,7 @@ note = "about 3 min; refits FY4B_QM per gauge fold and per gauge fold x 7-day ti
 [[step]]
 id = "fy4b_clt"
 kind = "analysis"
-reviewed = "a72500036817e96fa71492ca2d6ef7d30ccd2d3f"
+reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/screen_fy4b_clt.jl"]
 marker = "output/fy4b_clt_screen/provenance.csv"
 needs = ["fy4b_benchmark", "fy4b_rebuild", "raw_fy4b", "raw_fy4b_clt"]
