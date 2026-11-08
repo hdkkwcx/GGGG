@@ -278,7 +278,7 @@ Every method is scored at gauges held out of the fit, by balanced spatial 5-fold
 26,304 hours of 2022–2024, using RMSE, correlation and CSI, overall and by intensity and distance to
 the nearest training gauge. Differences from ADW are tested by a paired bootstrap that resamples whole
 7-day blocks 2,000 times, with Holm's correction across the methods and anchors compared in each
-stratum. These intervals, like RQ2's and §3.4's, resample time only: the gauges and the five
+stratum. These intervals, like those of RQ2 and §3.4, resample time only: the gauges and the five
 cross-validation folds stay fixed, so they do not cover which gauges the network has or how they were
 split.
 
