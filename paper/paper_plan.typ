@@ -2,8 +2,12 @@
 // Compile from the repository root:  typst compile paper/paper_plan.typ
 // Figures are copies of the `--gpm-gsmap` outputs of scripts/plot_heavy_rain_events.py,
 // scripts/plot_satellite_temporal_evaluation.py and scripts/plot_gauge_satellite_fusion.py
-// (the fusion figures from its FY4B-free IMERG Uncal report, output/gauge_satellite_fusion_nofy4b_gpmuncal).
+// (the fusion figures from its FY4B-free IMERG Uncal report, output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d).
 // Numbers are read from the CSVs beside those figures in output/.
+// Intervals and p-values resample whole 7-day blocks (2026-11-07): the claim re-assessment, the fusion
+// report, RQ2 and §3.4's FY4B comparison were rerun at a725000 with `--block-days 7` into `_block7d`
+// folders, which feed Table 3's text, Figs. 4 and 6-7 and §3.4. Point estimates are those of the
+// day-block runs below; scripts/compare_interval_blocks.jl lists what changed.
 // Fig. 1 is scripts/plot_study_area_map.py's output/study_area_map/figures/fig1_study_area.png, drawn
 // straight from data/ (its plot_provenance.csv records the inputs' SHA-256).
 // Table 3 and Figs. 6-7 come from a clean benchmark run at commit 94afc78 (git_dirty=false, recorded
@@ -125,8 +129,8 @@
   [#val(rows, "vs_adw", product: product, method: method)%],
 )
 
-/// Corrected FY4B's change in RMSE against `baseline`, same method, with its 95% day-block
-/// interval, signed: "−16.9% (−24.8 to −10.0%)".
+/// Corrected FY4B's change in RMSE against `baseline`, same method, with its 95% interval over
+/// whole 7-day blocks, signed: "−16.9% (−27.6 to −7.0%)".
 #let dq(baseline, method, scheme: "balanced_spatial") = {
   let row = (scheme: scheme, product: "FY4B_QM", baseline: baseline, method: method)
   [#val(fq, "change", ..row)% (#val(fq, "lo", ..row) to #val(fq, "hi", ..row)%)]
@@ -257,7 +261,8 @@ bias, RMSE and CSI at 50 mm.
 == Hourly evaluation by intensity (RQ2)
 
 Only gauge-wet hours are scored, in five intensity classes (0.1–2, 2–4, 4–8, 8–20 and ≥ 20 mm h⁻¹),
-stratified by season and landform region, with day-block bootstrap intervals. Rain events are runs of
+stratified by season and landform region, with 95% bootstrap intervals that resample whole 7-day blocks
+(rain episodes often span several days, so single days are not independent). Rain events are runs of
 wet hours separated by at least 3 dry hours and are scored for detection, timing and volume. Areal-mean
 series are compared at hourly and daily scale.
 
@@ -271,7 +276,9 @@ rates (edges 0.1, 2.5 and 8 mm h⁻¹). MGWR with the agreement blend is the hea
 Anchors are GPM (IMERG Uncal), GSMaP and an OLS merge of the two.
 Every method is scored at gauges held out of the fit, by balanced spatial 5-fold cross-validation over all
 26,304 hours of 2022–2024, using RMSE, correlation and CSI, overall and by intensity and distance to
-the nearest training gauge.
+the nearest training gauge. Differences from ADW are tested by a paired bootstrap that resamples whole
+7-day blocks 2,000 times, with Holm's correction across the methods and anchors compared in each
+stratum.
 
 == Raising FY4B's quality
 
@@ -443,7 +450,7 @@ Corrected FY4B (§2.5) gains at every stage of the hourly evaluation. Every comp
 fields score within FY4B's record (§2.5). Against plain FY4B (the rebuilt series before the shift
 and the map) on the same cells, its RMSE changes by
 #dq("FY4B", "raw") raw, #dq("FY4B", "mgwr") after MGWR and #dq("FY4B", B) after MGWR and the
-agreement blend (95% day-block intervals, balanced spatial CV), and raw r over all gauge-hours rises
+agreement blend (95% intervals over whole 7-day blocks, balanced spatial CV), and raw r over all gauge-hours rises
 from
 #val(fq, "r0", scheme: "balanced_spatial", baseline: "FY4B", method: "raw") to
 #val(fq, "r", scheme: "balanced_spatial", baseline: "FY4B", method: "raw"). These gains come from a
@@ -468,7 +475,8 @@ false alarms but also #pct(fc, "hits", name: "ice") of its hits; their false-ala
 #val(fc, "far", name: "ice"), against #val(fc, "far_gpm", name: "ice") for GPM. Zeroing FY4B where the
 training gauges' chosen cloud class dominated raised CSI at 0.1 mm h⁻¹ by only
 #val(fcf, "csi", candidate: "FY4B_QM_CLT") (#val(fcf, "csi_lo", candidate: "FY4B_QM_CLT") to
-#val(fcf, "csi_hi", candidate: "FY4B_QM_CLT")) over removing as many of its lightest rain hours.
+#val(fcf, "csi_hi", candidate: "FY4B_QM_CLT"), over day blocks, as one month holds too few weeks) over
+removing as many of its lightest rain hours.
 
 On the RQ1 heavy-rain events the hourly gain does not carry over to storm totals. Draft Table 4 scores
 the #val(fe, "n", product: "FY4B", window: "fy4b_hours") events FY4B covers, each over the hours of

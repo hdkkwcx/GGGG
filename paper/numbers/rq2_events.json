@@ -1,6 +1,6 @@
 {
- "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal/event_timing_summary.csv",
- "source_sha256": "019a8a5ec6906a8cfedda19f34d36fc75ac684f0186df0519472ae532297cfbb",
+ "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/event_timing_summary.csv",
+ "source_sha256": "c686b9bbdb701a8cbaa2afa96588132f7978ce2377e7f8e6181d832d3b27ccc9",
  "rows": [
   {
    "product": "GPM_uncal",
