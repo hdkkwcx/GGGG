@@ -1,6 +1,6 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-06 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-07 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
@@ -9,13 +9,360 @@ to be better, and the 2023 software-update gain is not shown (merged as `1dc0262
 `3796bdb`). The cloud filter from FY4B's Cloud Type product (`CLT`) fails its pilot on July 2023
 (merged as `1a61f2a`). The paper now has FY4B as "raising its quality" (Previous, merged as
 `0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4. A same-hours,
-same-seeds test of FY4B in the fusion gives "keep FY4B out" (Newest, branch
-`fy4b/same-hours-fusion`) · **Next step:** the user decides whether to merge that branch and
-whether the paper cites the result
+same-seeds test of FY4B in the fusion gives "keep FY4B out" (merged as `b5499c7`). An error budget shows
+where FY4B's error sits, and a near-surface humidity gate passes its screen with a small gain. With time
+held out as well as gauges, FY4B_QM's raw gain shrinks materially (Newest; branch `fy4b/time-holdout` holds
+all three, unmerged). The first two AGRI L1 scans show the worst false rain as thick, cold, high ice cloud
+(Newest, last subsection). Four contrast scans show real rain's cloud tops inside the false rain's range, so
+by the reading fixed before looking the channel pilot stops · **Next step:** the user decides what §3.4 says,
+whether to merge and whether the gate gets a benchmark run
 
 ---
 
-## Newest (2026-11-06): FY4B in the fusion, on the same hours and seeds
+## Newest (2026-11-07): FY4B_QM's raw gain depends on having seen the same weeks
+
+A side agent warned that the channel pilot held out gauges but not days. False rain covers the network at
+once, so a held-out gauge is not new weather. That holds, and it reaches a number the paper cites. No paper
+text or number changes here: what §3.4 says is the user's call.
+- **Code:**
+  - `src/benchmark/TimeBlockFolds.jl` with `test/test-time-block-folds.jl` (`0839720`): 7-day blocks in 5 time
+    folds, balanced within regime × season, ±1 day guard, crossed with the gauge folds. A synthetic test shows
+    a table that memorises episodes scores 100% under gauges-only and under 65% crossed, and that a real
+    signal survives both.
+  - `scripts/check_fy4b_qm_time_holdout.jl` (`27f2278`), its reading committed before the run. Review bump
+    `456b9cf`, for the new module only.
+  - `scripts/explain_fy4b_qm_time_holdout.jl` (`3e45ae6`), written after that result, with no verdict of its own.
+- **Runs:** both clean, 3 min each. Logs: `output/check_fy4b_qm_time_holdout.log`,
+  `output/explain_fy4b_qm_time_holdout.log`. Output: `output/fy4b_qm_time_holdout/`,
+  `output/fy4b_qm_time_holdout_explained/`.
+- **Guards passed:** the gauges-only version equals the run's `oof_raw.csv` in all 4,760,619 cells and
+  reproduces `fy4b_quality` (−16.86%, r 0.246 vs 0.223). The pixel shift is not held out in time.
+
+### Result: material, by the reading fixed before the run
+
+Raw FY4B_QM against plain FY4B (RMSE 1.1426, r 0.223), balanced spatial, held-out gauges, whole-week intervals:
+
+| Version | RMSE | Change | r | Change in r |
+|---|---|---|---|---|
+| Gauges held out (the paper's) | 0.9500 | −16.9% (−27.6..−7.0) | 0.246 | +0.023 (+0.000..+0.043) |
+| Gauges and weeks held out | 1.0338 | **−9.5% (−15.4..−3.5)** | 0.220 | **−0.004 (−0.021..+0.015)** |
+| Same training hours, scattered at random | 0.9519 | −16.7% (−27.0..−7.2) | 0.248 | +0.025 (+0.002..+0.044) |
+| Only the map held out | 1.0092 | −11.7% (−18.0..−5.3) | 0.224 | +0.000 (−0.020..+0.021) |
+| Only the monthly strength held out | 0.9566 | −16.3% (−27.0..−6.6) | 0.245 | +0.022 (−0.000..+0.041) |
+
+The RMSE gain moves 7.3 points (limit 2) and the r gain 0.027 (limit 0.01). The random split moves about the
+same: −17.3% → −9.2%, r +0.027 → −0.001.
+
+- **Not less data:** with as many training hours, scattered so every weather system stays on both sides, the
+  gain is intact (+0.20%, −0.25..+0.72, against gauges only).
+- **The map, not the monthly strength.** My plan suspected the strength; holding it out costs 0.6 points. The
+  map's top end is what learns the weeks.
+- **A few episodes carry most of it.** 8 days hold 82% of the net rise in squared error: 2023-09-18/19,
+  2023-03-16/18/19 and 2022-09-22/23/24. On the March 2023 and September 2022 days the crossed version scores about
+  like plain FY4B; on the September 2023 days it lies between plain and gauges only. Most of the loss is MAM
+  (−26.7% → −9.8%) and SON (−36.2% → −20.3%). JJA hardly moves (−3.4% → −3.0%).
+- **How the map does it,** gauge fold 1. These episodes supply much of a season's largest FY4B values, so the
+  map learns to shrink those values. FY4B's 16 mm/h maps to:
+
+  | Season, regime | All hours | Without the fold holding the episode |
+  |---|---|---|
+  | R1 MAM (Mar 2023) | 4.0 | 7.1 |
+  | R1 SON (Sep 2022) | 9.0 | 15.8 |
+  | R2 SON (Sep 2023) | 5.0 | 10.7 |
+
+- **Not only the gross hours:** leaving them out, the gain still moves from −15.0% to −10.1%, and r's from +0.030
+  to +0.007 (−0.012..+0.025).
+- **Heavy rain:** POD_8 is 0.135 plain, 0.085 gauges only, 0.099 crossed; CSI_8 0.047, 0.054, 0.048. So CSI_8's
+  gain goes too, and the crossed map dries heavy rain a little less. This is consistent with the map's tail
+  drying the RQ1 storm days, though that is not tested.
+- **No sign of an artefact:** the crossed version sits at or within 0.006 of plain FY4B's RMSE in every month, so
+  its sparse-cell extrapolations (a few reach hundreds of mm/h in thin cells) do not drive the result.
+
+### How to read it
+
+**This is not a leak, and the −16.9% is not wrong.** A held-out gauge still never shapes its anchor, so §2.5's
+sentence stands. The two numbers answer different questions:
+- **−16.9%:** an ungauged site, with gauges elsewhere in the same weeks. That is the benchmark's question.
+- **−9.5%, with no gain in r:** a correction that has not seen those weeks. That is nearer what "FY4B's quality
+  was raised" suggests.
+
+**Not measured:** MGWR (−5.4%) and the blend (−0.8%). They would need a benchmark run on a crossed anchor,
+meaning a new flag and about 3.6 h. FY4B_QM vs GSMaP after MGWR (−6.8%) rests on them too.
+
+**Recommendation (the user's call):** keep §3.4's numbers, and add that the calibration sees the same weeks, with
+the time-held-out figures beside them (needs a `[[step]]` and `[[table]]`). Drop any wording that r improved as a
+lasting property of the product. Run the crossed benchmark only if the tutor or a reviewer needs the blend number.
+
+**For improving FY4B:** the map is partly absorbing a few false-rain episodes, at a cost to real heavy rain. A way
+to flag those episodes would help more than a better map, which is the channel pilot's target.
+
+### What changes elsewhere
+
+- **The humidity gate's verdict stands** (exploratory run, not committed). With gauges and weeks held out it picks
+  the same cuts and barely moves (CSI_0.1 0.1890 → 0.1888, RMSE 0.9328 → 0.9322). One cut cannot memorise an
+  episode. It was not retested on the crossed FY4B_QM.
+- **The channel pilot's design changes, before its rule is committed.** No extra download:
+  1. Crossed hold-out with `TimeBlockFolds`, judged on that; gauges-only reported, to measure the optimism.
+  2. A table cell needs at least 10 distinct days as well as its pairs: `TS_MIN_PAIRS = 200` can be one hour.
+  3. Rule (proposed): at a cut losing ≤10% of hits, the extra channels remove ≥50% of held-out gross false-rain
+     squared error, and ≥50% in at least half of the 81 runs of consecutive days, and beat IR1 alone by ≥20 points
+     with the difference's interval above 0. Intervals resample whole weeks.
+  4. Train on two regimes and score the third, reported only.
+  5. The whole-record screen and any later product are cross-fitted in time as well.
+- **Why the sample is small:** FY4B's 398 gross hours are 90,125 gauge-hours, but 113 days in 81 runs, and 10 days
+  hold 73% of their false-rain squared error.
+
+### Later the same day: a first look at two AGRI L1 scans
+
+The user downloaded the two scans named in Previous to `/Volumes/T9/FY4B_L1`, linked as `data/FY4B_L1`. These
+are read-only checks run inline, with nothing committed.
+
+**The files:**
+- 107 and 108 MB each. September 2022 was available, so the archive reaches back at least that far.
+- HDF5, which `NCDatasets` opens. `Data/NOMChannel01`–`15` hold counts on the 2748 × 2748 nominal grid at 133°E.
+  `Calibration/CALChannel01`–`15` are 4096-entry lookups from count to brightness temperature (or reflectance).
+- Infrared channels: 9 is 6.25 µm, 10 is 6.95, 11 is 7.42, 12 is 8.55, 13 is 10.8, 14 is 12.0, 15 is 13.3; 7 and 8
+  are 3.75 µm.
+
+**Aligned with QPE as `[x, y]`:** of QPE's pixels wet at ≥ 1 mm/h, 0.7% and 0.2% are warmer than 250 K as read,
+against 88% and 74% with the axes swapped.
+
+**QPE is a one-channel lookup per region.**
+- Within any 5° × 5° box, BT10.8 alone (0.5 K bins) explains R² 0.93–0.995 of QPE; over the whole disk only
+  0.51–0.64, because the threshold varies by region.
+- Hubei's box (30–35°N, 108–113°E) gives 0.982 and 0.931. At ≤ 220 K, 94–100% of pixels are wet.
+- So the earlier description holds, with "per region" added.
+
+**The two worst false-rain hours are thick, cold, high ice cloud, not thin cirrus.** Medians at the gauges, with
+the same scan's QPE-wet pixels over the whole disk in brackets:
+
+| Scan, gauges | BT10.8 | BT6.25 − BT10.8 | Split window BT10.8 − BT12.0 |
+|---|---|---|---|
+| 2023-03-18 23:30 UTC; gauges dry, QPE 16.2 mm/h | 213.7 K (221.3) | −2.0 (−4.8) | 1.18 (1.59) |
+| 2022-09-23 07:30 UTC; gauges dry, QPE 8.6 mm/h | 226.1 K (220.1) | −6.4 (−4.1) | 1.53 (1.59) |
+
+- Water vapour minus window near 0 means a high cloud top. A small split window means the cloud is optically
+  thick: thin cirrus would show a larger one. So on these channels, these false-rain pixels look at least as
+  rain-like as FY4B's typical rain pixels.
+- Two scans cannot decide this, but they lower the chance that a table over these channels separates the worst
+  episodes.
+
+**Practicality:** the pilot's ~1,100 scans are about 118 GB, which fits on the T9 (786 GB free). The whole record
+at one scan per hour is about 2.1 TB, which does not; it would need a download, extract, delete loop.
+
+**Proposed next, about 430 MB:** four scans to contrast real and false rain in the same seasons and regimes. All
+four QPE scans exist.
+
+| Scan (UTC start) | Label (BJT) | Kind |
+|---|---|---|
+| `20230918203000` | 2023-09-19 05 | False: FY4B 2.5 mm/h, wet at 55% of gauges, gauges 0.01 |
+| `20230919123000` | 2023-09-19 21 | Real, same day: gauges 3.4 mm/h, wet at 80% |
+| `20221005213000` | 2022-10-06 06 | Real, R1 SON: gauges 2.1 mm/h, wet at 98% |
+| `20230422223000` | 2023-04-23 07 | Real, R1 MAM: gauges 2.6 mm/h, wet at 89% |
+
+- File names follow `FY4B-_AGRI--_N_DISK_1330E_L1-_FDI-_MULT_NOM_<start>_<start + 14:59>_4000M_V0001.HDF`.
+- The September 2023 episode's large errors are mostly FY4B far too wet during real rain. At label 2023-09-19 20,
+  FY4B shows 13.0 mm/h against the gauges' 3.1, so its pure false-rain hour is milder.
+- **Reading, fixed before looking:** if the real-rain scans' cloud tops at the gauges fall inside the false ones'
+  10–90% range on BT10.8, water vapour minus window, and the split window, stop the channel pilot. If they clearly
+  differ, go to the ~1,100-scan sample.
+
+### Result of the four contrast scans: stop the channel pilot
+
+The user downloaded the four scans (85–103 MB each), and all six now sit in `/Volumes/T9/FY4B_L1`, linked as
+`data/FY4B_L1`. They were read inline; nothing is committed. Medians at all gauges (10–90%):
+
+| Scan, label (BJT) | Kind | Gauges | QPE | BT10.8 (K) | WV − IR | Split window |
+|---|---|---|---|---|---|---|
+| 2023-03-19 08 | false | 0.00, wet 0% | 16.2, wet 100% | 213.6 (211.9..221.9) | −2.0 (−5.4..−1.4) | 1.18 (0.90..1.46) |
+| 2022-09-23 16 | false | 0.01, wet 1% | 8.6, wet 100% | 226.1 (218.0..239.2) | −6.4 (−15.1..−1.6) | 1.53 (1.18..2.24) |
+| 2023-09-19 05 | false | 0.01, wet 2% | 2.8, wet 51% | 252.6 (222.2..281.6) | −22.5 (−46.4..−5.0) | 1.51 (0.87..2.55) |
+| 2023-09-19 21 | real | 3.37, wet 80% | 11.3, wet 93% | 221.8 (206.1..244.8) | −5.4 (−18.4..−2.2) | 2.01 (1.43..3.05) |
+| 2022-10-06 06 | real | 2.06, wet 98% | 1.4, wet 73% | 239.9 (228.2..251.9) | −12.5 (−19.5..−6.6) | 1.45 (0.85..2.09) |
+| 2023-04-23 07 | real | 2.60, wet 89% | 1.2, wet 79% | 228.7 (223.8..237.6) | −4.7 (−9.4..−3.1) | 1.26 (1.04..1.47) |
+
+- **The reading says stop.** All 9 real-scan medians fall inside the false scans' pooled 10–90% ranges.
+- **The pooled range is wide partly from one scan.** The third false scan is partly clear (FY4B wet at 51% of
+  gauges), which widens it.
+- **The sharper comparison points the same way** (information only). At gauges where QPE is wet, pooled over the six
+  scans, there are 515 hits and 635 false alarms. Single features barely separate them, and false alarms look *more*
+  rain-like:
+
+  | Feature | Hits | False alarms | AUC |
+  |---|---|---|---|
+  | BT10.8 | 227.9 K | 223.6 K (colder) | 0.58 |
+  | WV − IR | −5.4 | −4.5 (higher top) | 0.43 |
+  | Split window | 1.50 | 1.35 | 0.60 |
+  | QPE amount | 2.4 | 9.4 | 0.35 |
+
+  FY4B's false rain sits under its coldest, highest, thickest cloud tops. This fits the CLT pilot, where ice cloud
+  held 83% of the false alarms and 88% of the hits.
+- **Limits:** six scans from six episodes, and only three infrared features. Visible and near-infrared channels
+  (daytime only) were not looked at.
+- **So:** no L1 sample download. `FY4B_QM` stays the quality step. The budget, the time-holdout check and this
+  result answer "how far can FY4B's quality be raised": FY4B's own infrared does not tell this false rain from real
+  rain. Separating them needs information FY4B does not have, such as microwave, which the fusion tests already
+  cover.
+
+## Previous (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
+
+The budget's false rain sits in episodes FY4B alone cannot flag, so this asks whether humidity on disk can.
+ERA5-Land is reanalysis, not FY4B: anything kept is "FY4B + reanalysis" and could not run in real time.
+No paper number moves.
+- **Script:** `scripts/screen_fy4b_humidity.jl` (`3f1c3cc`), committed with its rule before any run, run
+  clean, 2 min. Log: `output/screen_fy4b_humidity.log`. Output: `output/fy4b_humidity_screen/`.
+- **Setup:** as the CLT screen, on all grid hours. Held-out FY4B_QM equals the run's `oof_raw.csv` in all
+  4,760,619 cells of both schemes.
+- **Alignment:** read as the benchmark reads its covariates, `load_era5_panel` at `time_utc + 9 h`, so an
+  hour takes the value at its start. t2m peaks at label 15 BJT. RH's anomaly best matches the gauge's wet
+  call at lag +3 h (r 0.314; 0.296 at lag 0), within the allowed −2..+4: RH responds after rain.
+- **Arms,** fitted per fold on training gauges:
+  - A FY4B_QM;
+  - B `FY4B_QM_RH`, set to 0 where RH is below the cut that most raises training CSI_0.1;
+  - B8 `FY4B_QM_RH8`, the same but leaving values ≥ 8 mm/h alone;
+  - C and C8, each one's amount-matched control;
+  - D `GPM_uncal_RH`, the same gate on GPM_uncal, in no rule.
+- **Rule:** the CLT screen's, for B and B8: ΔCSI_0.1 ≥ +0.01 over the control with its interval above 0, POD_8
+  not significantly lower, and a gate in at least 3 of 5 balanced folds. GO if either passes.
+
+### Result: GO for the gate that spares heavy rain, and a small gain
+
+The folds pick RH < 70 (RH < 75 in balanced fold 4), and RH < 75 for GPM_uncal. Held out, balanced spatial:
+
+| Series | r | RMSE | bias | CSI_0.1 | POD_0.1 | FAR_0.1 | FBI_0.1 | POD_8 |
+|---|---|---|---|---|---|---|---|---|
+| FY4B_QM | 0.247 | 0.949 | −0.0152 | 0.175 | 0.296 | 0.702 | 0.99 | 0.086 |
+| B gate | 0.253 | 0.898 | −0.0400 | 0.188 | 0.275 | 0.626 | 0.73 | 0.064 |
+| C control | 0.244 | 0.950 | −0.0202 | 0.163 | 0.250 | 0.681 | 0.78 | 0.086 |
+| B8 gate | 0.249 | 0.933 | −0.0345 | 0.189 | 0.277 | 0.626 | 0.74 | 0.086 |
+| C8 control | 0.245 | 0.950 | −0.0186 | 0.165 | 0.259 | 0.688 | 0.83 | 0.086 |
+| GPM_uncal | 0.437 | 0.800 | −0.0119 | 0.338 | 0.602 | 0.565 | 1.38 | 0.102 |
+| GPM_uncal gate | 0.419 | 0.799 | −0.0327 | 0.366 | 0.541 | 0.469 | 1.02 | 0.083 |
+
+- **B fails:** ΔCSI_0.1 over C +0.0256 (+0.0189..+0.0326), but POD_8 −0.0216 (−0.0441..−0.0056).
+- **B8 passes:** ΔCSI_0.1 over C8 +0.0243 (+0.0174..+0.0312). Its POD_8 cannot fall, by construction.
+- **Against FY4B_QM, B8 gives:** CSI_0.1 +0.0143 (+0.0095..+0.0189), CSI_2 +0.0054 (+0.0013..+0.0098), RMSE −1.70%
+  (−2.46..−1.01), r +0.0014 (−0.0040..+0.0074).
+
+**How to read the GO:**
+- **The gain is small and r does not move.** FY4B's real deficit, half of GPM_uncal's POD, gets worse:
+  POD_0.1 0.296 → 0.277.
+- **Bias worsens.** |bias| +0.0193 (+0.0142..+0.0237), so the bias goes to about 30% of mean gauge rain
+  (0.114), and FBI_0.1 from 0.99 to 0.74. This rule has no bias test. The tolerance used in the blend screen
+  (+0.005) would fail it.
+- **Not specific to FY4B.** GPM_uncal gains more, ΔCSI_0.1 +0.0281 (+0.0209..+0.0353), though its r falls by
+  0.0185. FY4B_QM's CSI stays far behind (0.189 vs 0.338).
+- **The episodes mostly survive B8.** Of the false-rain squared error in FY4B_QM's gross hours, B8 removes
+  20.8% and B 56.5%, because much of it sits at ≥ 8 mm/h. Controls remove under 1%. The worst hour's
+  network RH is about 90%, so no cut near the chosen ones touches it.
+- **B's RMSE gain is mostly R1,** which holds the dry 2022 season: −13.5% in R1, −0.8% in R2, −2.5% in R3. For
+  B8: −2.8%, −0.7%, −2.3%.
+- **By season,** ΔCSI_0.1 over the control is significant in JJA, SON and, barely, DJF, but not in MAM.
+- **Downstream is untested and looks unpromising.** `d2m_c` is already a local MGWR covariate in 8 of
+  FY4B_QM's 10 folds (3 of 5 balanced, 5 of 5 random), and a raw gain of 17% became 0.8% in the blend.
+- **Correction to the first look:** an in-sample check with RH at the hour's end gave r +0.013. Per fold with
+  RH at the hour's start, B gives +0.0053 (−0.0176..+0.0261), so most of that was RH responding to the rain.
+
+**Recommendation:** by its rule the gate has earned a benchmark run, but that run needs a new derived product
+and flag, and these numbers do not suggest it will survive. Do the channel pilot first. The user's call.
+
+### Next: the channel pilot needs two files first
+
+No AGRI L1 file is on the T9, and their size and the archive's reach back to June 2022 are unknown. So the
+pilot stops at its first gate until these two exist, the scans of two of the worst gross hours, both in R1
+(the matching QPE files exist):
+```
+FY4B-_AGRI--_N_DISK_1330E_L1-_FDI-_MULT_NOM_20230318233000_20230318234459_4000M_V0001.HDF
+FY4B-_AGRI--_N_DISK_1330E_L1-_FDI-_MULT_NOM_20220923073000_20220923074459_4000M_V0001.HDF
+```
+- **Where to put them:** a new folder on the T9 linked as `data/FY4B_L1`, never under `data/FY4B`:
+  `find_nc_files` keys on start time only, as for CLT.
+- **They decide:** whether the sample's download is practical, and they settle the file layout and channels
+  before any reader is written. They also give a first look at whether these hours are cold cloud.
+- **After that, per the plan:** one scan per hour from gross false rain (`gross_hours.csv`), real widespread
+  rain matched by month and hour of day, and missed rain; counting tables on training gauges over IR1, water
+  vapour minus IR1, and the split-window difference; a rule fixed before the run. The hold-out, table cells
+  and rule changed on 2026-11-07: see Newest.
+
+## Earlier (2026-11-06): where FY4B's error sits
+
+The user asked what makes FY4B hard to improve. No paper number moves, and nothing here is cited yet:
+the script is not a step in `paper/sources.toml`.
+- **Script:** `scripts/diagnose_fy4b_error_budget.jl` (`5a8e9d5`), run clean, 25 s. It fits nothing.
+  Log: `output/fy4b_error_budget.log`. Output: `output/fy4b_error_budget/`.
+- **Sample:** the raw fields of the `fy4b_benchmark` run, on the cells all four products score
+  (4,452,108 of 4,760,619, balanced spatial).
+- **Check:** FY4B_QM and FY4B on their shared mask reproduce `output/fy4b_quality/paired.csv` in both
+  schemes (balanced: n 4,476,387, RMSE 0.95005 and 1.14265).
+
+### What it finds
+
+**FY4B's number holds one channel's information.** NSMC's slides
+(`img.nsmc.org.cn/PORTAL/NSMC/VIDEO/FY4B/20230818/09-Atmosphere_Properties.pdf`) describe the
+satellite-only estimate as a lookup from one infrared brightness temperature (IR1), matched offline to
+polar-orbiter microwave rain. The 15-minute files hold only `Precipitation` and `DQF`, with an algorithm
+dated 2016-10-10. Every fix so far reworks that number, or a class from the same imager (CLT). AGRI's
+other infrared channels are untried.
+
+**The gap is whether it rains, and misses count nearly as much as false rain** (0.1 mm/h; the last three
+columns are shares of squared error):
+
+| Raw field | r | RMSE | POD | FAR | False rain | Misses | Hit amounts |
+|---|---|---|---|---|---|---|---|
+| FY4B | 0.223 | 1.143 | 0.311 | 0.710 | 39.8% | 20.3% | 39.9% |
+| FY4B_QM | 0.246 | 0.951 | 0.296 | 0.701 | 28.0% | 30.2% | 41.9% |
+| GSMaP | 0.380 | 1.074 | 0.624 | 0.598 | 13.6% | 9.5% | 76.9% |
+| GPM_uncal | 0.436 | 0.802 | 0.601 | 0.563 | 11.8% | 20.9% | 67.3% |
+
+- FY4B_QM's MSE gap to GPM_uncal is +0.262 (+0.167..+0.370): false rain +0.177 (+0.095..+0.273), misses
+  +0.139 (+0.101..+0.183), hit amounts −0.054 (−0.096..−0.010). The last is partly because it has half as
+  many hits, so never read it as FY4B's amounts being better.
+- With all false rain removed by oracle, FY4B_QM's r is 0.386, still below GPM_uncal as it stands. An
+  oracle is a bound, not a method.
+- §3.4's "What remains is false rain" holds for the blend (51% of the gap below), not the raw field.
+  Not changed; the user's call.
+
+**It is not mainly misplacement.** r at the stations and for the network mean:
+
+| | 1 h station | 24 h station | 1 h network | 24 h network |
+|---|---|---|---|---|
+| FY4B | 0.223 | 0.378 | 0.405 | 0.458 |
+| FY4B_QM | 0.246 | 0.417 | 0.451 | 0.514 |
+| GSMaP | 0.380 | 0.658 | 0.668 | 0.803 |
+| GPM_uncal | 0.436 | 0.721 | 0.833 | 0.894 |
+
+Averaging does not close the gap, and rank correlation shows the same (network-day Spearman 0.53 vs 0.76),
+as does dropping each product's worst 10 days (0.53 vs 0.92). So §4's "location error" row is not
+supported as the reason point r is below areal r.
+
+**False rain comes in episodes that FY4B alone cannot flag.**
+- 30 of its worst days hold 80.8% of FY4B's false-rain squared error (GPM_uncal 43.6%).
+- Gross false-rain hours, with the product wet at ≥50% of gauges and the gauges wet at ≤5%: 398 for FY4B
+  (1.98% of hours, 113 days), holding 38.7% of its false-rain squared error and 15.8% of all of it. FY4B_QM:
+  362 hours, 38.4%, 11.1%. GPM_uncal: 94 hours, 6.6%, 0.8%. The thresholds were chosen after a first look;
+  under the others in `gross_summary.csv`, FY4B's share of false rain runs 27.6–48.4%.
+- They fall in every month but January and February, most in September and October, at all hours of the day.
+- Worst hour, label 2023-03-19 08 BJT: FY4B's network mean is 16.3 mm/h, wet at every gauge; the gauges
+  read 0.00 and GPM_uncal 0.08.
+- On the two worst days looked at, the files' quality flags read 0, and the first scan of one hour on each
+  day shows a coherent cloud-like shape, not stripes. Cold non-raining cloud read as rain would fit, but
+  it is **not shown**: there are no brightness temperatures for these hours.
+- FY4B's own amounts overlap: median 0.80 mm/h in gross hours, 1.19 in real widespread rain. Of hours FY4B
+  calls wet at ≥90% of gauges, 24% are false, against 3% for GPM_uncal.
+
+**The product changes between regimes.** FY4B's June–August total against the gauges is ×1.76 in R1 (2022),
+×0.89 in R2 (2023) and ×0.59 in R3 (2024). Each regime has one year, so software, position and weather
+cannot be separated.
+
+**FY4B adds little that the others lack.** P(gauge wet) is 0.07 when only FY4B is wet, 0.40 when only
+GPM_uncal is, 0.49 when both are and 0.03 when neither is.
+
+**Not the limit:**
+- The 20 mm/h cap: FY4B reaches it in 743 cells, against 120 for GPM_uncal with no such cap. Gauges reach
+  20 mm/h in 1,420 cells, and FY4B is at the cap in 27 of them.
+- Gauge noise: gauges within 5 km correlate at r 0.76 (71 pairs), at 5–10 km 0.63 (246), at 10–20 km 0.47 (918).
+
+## Earlier (2026-11-06): FY4B in the fusion, on the same hours and seeds
 
 The user asked for FY4B in the comparison on the hours common to all three satellites. The first
 check (below, 2026-11-01) was confounded, so this replaces it as the answer on the fusion. No paper
