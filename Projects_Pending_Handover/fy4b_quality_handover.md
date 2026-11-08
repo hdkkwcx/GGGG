@@ -65,6 +65,11 @@ FY4B_QM_RH against FY4B_QM, balanced spatial, 95% intervals over 7-day blocks:
 - **Reading:** the gate does sort light rain (CSI at 0.1 mm/h +0.02 at every stage), but its RMSE gain is gone after
   MGWR. That fits the screen's warning: `d2m_c` is already a local MGWR covariate in most folds, so the residual model
   already knows the air is dry. At MGWR alone it even loses some 8 mm/h detection.
+- **Dew point and the gate do the same job** (checked after the merge, in the run's `joint_fold_roles.csv`): MGWR
+  picks `d2m_c` in 8 of 10 fold fits for FY4B_QM (3 of 5 balanced, 5 of 5 random) but in 1 of 10 for FY4B_QM_RH
+  (1 of 5, 0 of 5). The other covariates hold: `u10` 10 of 10 in both, `sp_hpa` 9 → 7, `v10` 2 → 1. Once the gate
+  has removed the dry-air rain, the residual model no longer needs humidity. FY4B_QM_RH comes last in the product
+  list, so its selection seed differs from FY4B_QM's (`run_seed`): strong evidence, not a clean test.
 - **So:** FY4B_QM stays FY4B's quality step, and no humidity gate goes into the paper. Merging the branch keeps the
   option and the module as the record; that is the user's call.
 
