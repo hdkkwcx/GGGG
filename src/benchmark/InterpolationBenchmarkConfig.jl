@@ -169,21 +169,31 @@ end
 # fused products, so it has no file of its own.
 const FY4B_QM_PRODUCT = "FY4B_QM"
 
+# FY4B_QM with its light rain set to 0 where the gauge's air is too dry for rain to reach the ground
+# (`HumidityGate`), the cut chosen per fold on training stations and per 7-day time fold on the other
+# blocks. ERA5-Land humidity is reanalysis, so this is "FY4B + reanalysis", not FY4B alone.
+const FY4B_QM_RH_PRODUCT = "FY4B_QM_RH"
+# The time folds the gate's cut is cross-fitted over (`TimeBlockFolds.time_block_folds`).
+const FY4B_QM_RH_TIME_FOLD_SEED = 20261107
+
 """The rebuild writes each hour's satellite longitude and software beside the offset grid."""
 _fy4b_hour_meta_path(cfg) = joinpath(dirname(something(cfg.fy4b_qm_grid)), "fy4b_hour_meta.csv")
 
 """
 The products a run scores: the ones with files, plus one derived product per fusion variant, plus
-`FY4B_QM_PRODUCT` when `fy4b_qm_grid` is set.
+`FY4B_QM_PRODUCT` when `fy4b_qm_grid` is set, plus `FY4B_QM_RH_PRODUCT` when `fy4b_qm_rh_gate` is.
 
 The fused names are sorted so the order does not depend on how the variants were listed, matching
-`load_global_common_product_data`, which sorts `sat_paths`; the calibrated product comes last.
+`load_global_common_product_data`, which sorts `sat_paths`; the calibrated product comes after them
+and the gated one last. A product's position sets its selection seed, so appending the gated one
+leaves every other product's seed, and so its rows, as they are.
 """
 function benchmark_products(cfg, products::Vector{String})
     derived = sort([_fused_product_name(variant) for variant in cfg.fused_anchor_variants])
     # `hasproperty` so a caller describing the options as a partial NamedTuple need not name it.
     hasproperty(cfg, :fy4b_qm_grid) && cfg.fy4b_qm_grid !== nothing &&
         push!(derived, FY4B_QM_PRODUCT)
+    hasproperty(cfg, :fy4b_qm_rh_gate) && cfg.fy4b_qm_rh_gate && push!(derived, FY4B_QM_RH_PRODUCT)
     return isempty(derived) ? products : vcat(products, derived)
 end
 
@@ -252,6 +262,11 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # fusion, which makes the two runs differ in the fusion alone. Output directory suffix
     # `_fy4bnofusion`.
     fy4b_out_of_fusion::Bool = false
+    # Add `FY4B_QM_RH_PRODUCT`: each fold's FY4B_QM gated by near-surface humidity (`HumidityGate`,
+    # the screen's gate "B8"). Kept out of the fusion: its blends use FY4B_QM's bands, and every
+    # other product keeps its seed and rows. Needs `fy4b_qm_grid` and the joint covariates, whose
+    # ERA5-Land t2m and d2m give the humidity. Output directory suffix `_qmrhgate`.
+    fy4b_qm_rh_gate::Bool = false
     # Acknowledges that this run's numbers are not admissible as a result.
     #
     # `joint_covariates.spec_path` names a variable set and local/global role map screened over
@@ -502,6 +517,13 @@ function _validate_benchmark_config(cfg::InterpolationBenchmarkConfig, n_station
             !(cfg.satellite_wet_blend && any(!=(:constant), cfg.blend_axes)) &&
             throw(ArgumentError("fy4b_qm_fusion needs a fused anchor or a non-constant blend " *
                 "axis to feed"))
+    end
+    if cfg.fy4b_qm_rh_gate
+        cfg.fy4b_qm_grid === nothing &&
+            throw(ArgumentError("fy4b_qm_rh_gate gates $FY4B_QM_PRODUCT, which needs fy4b_qm_grid"))
+        cfg.joint_covariates === nothing && throw(ArgumentError(
+            "fy4b_qm_rh_gate reads ERA5-Land t2m and d2m from the joint covariates, which this " *
+            "run does not load"))
     end
     if cfg.fy4b_out_of_fusion
         haskey(cfg.mger.sat_paths, "FY4B") || throw(ArgumentError(

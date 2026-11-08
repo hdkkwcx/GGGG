@@ -101,6 +101,8 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     fusion_products = cfg.fy4b_out_of_fusion ? filter(!=("FY4B"), source_products) : source_products
     _, fused_specifications = _build_fused_products!(cfg, fusion_products, product_data, lonlat)
     fy4b_calibration = _prepare_fy4b_calibration!(cfg, ids, product_data)
+    # The gated product shares FY4B_QM's grid and gauges; its anchor is built per fold below.
+    cfg.fy4b_qm_rh_gate && (product_data[FY4B_QM_RH_PRODUCT] = product_data[FY4B_QM_PRODUCT])
     products = benchmark_products(cfg, source_products)
     terrain = _dem_enabled(cfg) ? load_aligned_terrain(something(cfg.terrain_path), ids) : nothing
     dem_store = _empty_dem_store()
@@ -109,6 +111,14 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
         something(cfg.joint_covariates), source_products, ids, common_times,
     ) : nothing
     nested_joint = _joint_enabled(cfg) && cfg.joint_selection !== nothing
+    # The humidity gate's inputs: RH at every gauge-hour from the joint covariates' ERA5-Land (read
+    # at the benchmark's own alignment), and 7-day time folds balanced within FY4B's season x regime
+    # cells, over which each fold's cut is cross-fitted.
+    gate_inputs = cfg.fy4b_qm_rh_gate ? (;
+        humidity=station_humidity(joint_inputs.era5.values[:t2m_c], joint_inputs.era5.values[:d2m_c]),
+        time_folds=time_block_folds(product_data[FY4B_QM_PRODUCT].times, fy4b_calibration.cells;
+            seed=FY4B_QM_RH_TIME_FOLD_SEED),
+    ) : nothing
     # Band matrices for the non-constant blend axes. They are read off the source products alone,
     # so they depend on neither the fold nor the scheme nor which product is being corrected, and
     # are built once here rather than per fold. The constant axis keeps its own code path in
@@ -150,6 +160,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     fy4b_shift_rows = NamedTuple[]
     fy4b_map_rows = NamedTuple[]
     fy4b_strength_rows = NamedTuple[]
+    fy4b_gate_rows = NamedTuple[]
     hurdle_rows = NamedTuple[]
     # Cells where the fold was too small for an inner selection split and fell back to
     # leave-one-out. Reported in `benchmark_scope.csv` so the fallback is never silent.
@@ -191,6 +202,16 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                     choice_labels=fy4b_calibration.month_labels,
                 )
             end
+            # Each fold's gated FY4B_QM: the cut chosen on that fold's training stations, per time
+            # fold on the other blocks' hours, and applied at every station.
+            fold_gate = gate_inputs === nothing ? nothing : map(1:cfg.k) do fold
+                _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+                time_crossed_gate(
+                    first(fold_calibration[fold]), product_data[FY4B_QM_PRODUCT].Y_obs,
+                    gate_inputs.humidity, train_idx, gate_inputs.time_folds.fold_of_time,
+                    product_data[FY4B_QM_PRODUCT].times; wet=cfg.mger.rain_threshold,
+                )
+            end
             fold_bands = if cfg.fy4b_qm_fusion && !isempty(blend_bands)
                 map(1:cfg.k) do fold
                     sources = _fold_sources(cfg, source_products, band_sources, fold_calibration, fold)
@@ -208,12 +229,13 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                 y_sat = data.Y_sat
                 fusion = get(fused_specifications, product, nothing)
                 calibrated = product == FY4B_QM_PRODUCT
+                gated = product == FY4B_QM_RH_PRODUCT
                 predictions = Dict(
                     method => fill(NaN, size(y_obs)) for method in benchmark_methods(cfg)
                 )
                 # A derived product has no anchor until a fold says which stations may be used to
                 # fit one, so `raw` is filled per fold below instead of in one assignment here.
-                fusion === nothing && !calibrated && (predictions["raw"] .= y_sat)
+                fusion === nothing && !calibrated && !gated && (predictions["raw"] .= y_sat)
                 nearest_train_distance = fill(NaN, length(ids))
 
                 for fold in 1:cfg.k
@@ -232,6 +254,14 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         append!(fy4b_map_rows, [merge(context, row) for row in map_rows])
                         append!(fy4b_strength_rows,
                             [merge(context, row) for row in strength_rows])
+                    elseif gated
+                        _, _, gate_train_idx, gate_val_idx =
+                            _fold_station_indices(folds, id_map, cfg.k, fold)
+                        fold_sat, cut_rows = fold_gate[fold]
+                        predictions["raw"][gate_val_idx, :] = fold_sat[gate_val_idx, :]
+                        context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
+                            n_train_station=length(gate_train_idx))
+                        append!(fy4b_gate_rows, [merge(context, row) for row in cut_rows])
                     elseif fusion !== nothing && fusion.design !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
@@ -355,6 +385,10 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     isempty(fy4b_strength_rows) ||
         CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_strengths.csv"),
             DataFrame(fy4b_strength_rows))
+    # One row per fold x time fold: the humidity cut (-Inf for no gate) chosen on the fold's training
+    # stations over the other time folds' hours, with the training CSI before and after it.
+    isempty(fy4b_gate_rows) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_rh_gate_cuts.csv"), DataFrame(fy4b_gate_rows))
 
     return _write_benchmark_outputs(
         cfg, products, seeds, nested_joint, joint_inputs,

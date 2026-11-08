@@ -157,6 +157,11 @@ using Main.BenchmarkDiagnostics
   (`_fy4bnofusion`, with `--with-fy4b`) keeps FY4B in the list and on the common hours but out of
   the fused anchors and the agreement bands, so it differs from `--fy4b-qm-fusion` in the fusion
   alone; `scripts/compare_fy4b_fusion_same_hours.jl` compares the two.
+- `--fy4b-qm-rh-gate` (`_qmrhgate`, with `--fy4b-qm`) appends `FY4B_QM_RH`: each fold's `FY4B_QM`
+  set to 0 where ERA5-Land humidity is too low (`HumidityGate`), with the cut cross-fitted over
+  gauges and 7-day time folds. Appended last and kept out of the fusion, so no other row moves. It
+  needs the joint covariates' ERA5, which the end-to-end test cannot load, so
+  `scripts/compare_fy4b_humidity_gate.jl` checks that against the paper run cell by cell instead.
 - By default the CLI scores uncalibrated IMERG (`GPM_uncal`, output suffix `_gpmuncal`).
   `--gpm-cal` scores calibrated `GPM` instead. `benchmark_config`'s `gpm_uncal` keyword still
   defaults to `false`, so the verify scripts reproduce the calibrated baselines.
