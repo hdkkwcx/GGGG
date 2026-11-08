@@ -5,6 +5,12 @@
 #
 #   julia --project=. scripts/run_gauge_satellite_fusion.jl
 #   julia --project=. scripts/run_gauge_satellite_fusion.jl <benchmark_output_dir>
+#   julia --project=. scripts/run_gauge_satellite_fusion.jl <benchmark_output_dir> --block-days 7
+#
+# `--block-days N` reads the claim re-assessment written with the same flag and resamples whole N-day
+# blocks in this report's own bootstraps, writing to `<report folder>_block{N}d`. The metrics are
+# unchanged. `--block-days 1` must reproduce the default files; without the flag nothing changes
+# (`TimeBlockFolds.block_times`).
 #
 # Reads a finished `run_interpolation_benchmark.jl full --nested-covariates --satellite-wet-blend
 # --blend-axis agreement_envelope --fused-anchor` run and the `run_claim_reassessment.jl` tables
@@ -22,9 +28,10 @@ using CSV, DataFrames, Dates, Random, Statistics
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("InterpolationBenchmark")
-load_standalone_modules("BenchmarkDiagnostics", "TableIO")
+load_standalone_modules("BenchmarkDiagnostics", "TableIO", "TimeBlockFolds")
 using Main.BenchmarkDiagnostics
 using Main.TableIO: write_csv_atomic
+using Main.TimeBlockFolds: block_times, block_days_option
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
 const DEFAULT_RUN = joinpath(
@@ -182,10 +189,10 @@ Interpolators never read the satellite, so their predictions are the same whiche
 directory they are read from; only the evaluation mask differs. GPM's (`gpm`) is used because GPM
 and GSMaP share it and it is the larger of the two masks.
 """
-function interpolation_ranking(cfg, grid, predictions, mask, gpm)
+function interpolation_ranking(cfg, grid, predictions, mask, gpm; bootstrap_times=grid.times)
     rows = NamedTuple[]
     for method in ("adw", "gwr")
-        for row in paired_bootstrap_rows(cfg, SCHEME, gpm, grid.times, grid.Y_obs,
+        for row in paired_bootstrap_rows(cfg, SCHEME, gpm, bootstrap_times, grid.Y_obs,
                 predictions, mask; method, pairwise_mask=true)
             row.baseline == row.method && continue
             push!(rows, row)
@@ -203,7 +210,8 @@ Their intersection is the one population on which "which anchor is better" has a
 every anchor is bootstrapped against GPM (`gpm`) - the best single product - with the same method on
 both sides.
 """
-function anchor_comparison(cfg, grid, anchor_predictions, masks, nearest_distance, gpm, anchors)
+function anchor_comparison(cfg, grid, anchor_predictions, masks, nearest_distance, gpm, anchors;
+                           bootstrap_times=grid.times)
     shared = reduce(.&, (masks[product] for product in anchors))
     metric_rows = NamedTuple[]
     bootstrap_rows = NamedTuple[]
@@ -219,7 +227,7 @@ function anchor_comparison(cfg, grid, anchor_predictions, masks, nearest_distanc
             baseline = anchor_predictions[gpm][method]
             test_mask = BitMatrix(shared .& .!isnan.(baseline) .& .!isnan.(prediction))
             deltas = _daily_bootstrap_delta(MersenneTwister(SEED + 100 * product_index),
-                grid.times, grid.Y_obs, baseline, prediction, test_mask, BOOTSTRAP_REPS)
+                bootstrap_times, grid.Y_obs, baseline, prediction, test_mask, BOOTSTRAP_REPS)
             base_rmse = metric_continuous(grid.Y_obs, baseline; mask=test_mask).RMSE
             method_rmse = metric_continuous(grid.Y_obs, prediction; mask=test_mask).RMSE
             push!(bootstrap_rows, (;
@@ -249,7 +257,7 @@ storm's peak away, and `metric_event` counts that as a miss. The intervals come 
 whole days' contingency counts, so they carry the same weather-system dependence the RMSE
 intervals do.
 """
-function detection_skill(grid, product_predictions, masks, anchors)
+function detection_skill(grid, product_predictions, masks, anchors; bootstrap_times=grid.times)
     rows = NamedTuple[]
     for (product_index, product) in enumerate(anchors)
         predictions = product_predictions[product]
@@ -263,7 +271,7 @@ function detection_skill(grid, product_predictions, masks, anchors)
                 result = daily_bootstrap_event_delta(
                     MersenneTwister(SEED + 10_000 * product_index + 100 * method_index +
                                     threshold_index),
-                    grid.times, grid.Y_obs, baseline, treatment, test_mask, threshold,
+                    bootstrap_times, grid.Y_obs, baseline, treatment, test_mask, threshold,
                     BOOTSTRAP_REPS,
                 )
                 for (metric_index, metric) in enumerate(("POD", "FAR", "CSI"))
@@ -305,6 +313,8 @@ blend_weights(selection::DataFrame) = combine(
 )
 
 function main(args=ARGS)
+    block_days, args = block_days_option(args)
+    suffix = block_days === nothing ? "" : "_block$(block_days)d"
     run_dir = isempty(args) ? DEFAULT_RUN : abspath(args[1])
     isdir(run_dir) || error("benchmark output directory not found: $run_dir")
     # The suffixes `run_interpolation_benchmark.jl` gives runs that scored uncalibrated IMERG, and
@@ -314,11 +324,12 @@ function main(args=ARGS)
     fy4b = !occursin("_nofy4b", run_name)
     gpm = gpm_uncal ? "GPM_uncal" : "GPM"
     anchors = anchor_products(gpm, fy4b)
-    outdir = report_outdir(gpm_uncal, fy4b)
-    diagnostics_dir = joinpath(ROOT, "output", "benchmark_diagnostics", basename(run_dir))
+    outdir = report_outdir(gpm_uncal, fy4b) * suffix
+    diagnostics_dir = joinpath(ROOT, "output", "benchmark_diagnostics", basename(run_dir) * suffix)
     comparisons_path = joinpath(diagnostics_dir, "paired_comparisons_by_method.csv")
     isfile(comparisons_path) || error(
-        "no $comparisons_path; run scripts/run_claim_reassessment.jl $run_dir first")
+        "no $comparisons_path; run scripts/run_claim_reassessment.jl $run_dir" *
+        (block_days === nothing ? "" : " --block-days $block_days") * " first")
     mkpath(outdir)
     write(joinpath(outdir, "source_run.txt"), run_dir * "\n")
 
@@ -346,6 +357,8 @@ function main(args=ARGS)
     mger = study_config(outdir; gpm_uncal, fy4b)
     _, ids, product_data = load_global_common_product_data(mger)
     grid = product_data[gpm]
+    # The hours the bootstraps group by date: the hours themselves, or each hour's block start.
+    bootstrap_times = block_days === nothing ? grid.times : block_times(grid.times; block_days)
     cfg = InterpolationBenchmarkConfig(mger=mger, bootstrap_reps=BOOTSTRAP_REPS, seed=20260627)
     scheme_dir = joinpath(run_dir, SCHEME)
     station_meta = load_station_meta(mger.station_meta_path;
@@ -362,18 +375,18 @@ function main(args=ARGS)
         for product in anchors)
     println("Loaded predictions for $(join(anchors, ", "))")
 
-    ranking = interpolation_ranking(cfg, grid, predictions[gpm], masks[gpm], gpm)
+    ranking = interpolation_ranking(cfg, grid, predictions[gpm], masks[gpm], gpm; bootstrap_times)
     write_csv_atomic(joinpath(outdir, "interpolation_ranking.csv"), ranking)
     println("Wrote interpolation_ranking.csv")
 
     anchor_metrics, anchor_tests, shared_cells = anchor_comparison(
-        cfg, grid, predictions, masks, nearest_distance, gpm, anchors)
+        cfg, grid, predictions, masks, nearest_distance, gpm, anchors; bootstrap_times)
     write_csv_atomic(joinpath(outdir, "anchor_metrics.csv"), anchor_metrics)
     write_csv_atomic(joinpath(outdir, "anchor_comparison.csv"), anchor_tests)
     println("Wrote the anchor comparison on $shared_cells shared cells")
 
     write_csv_atomic(joinpath(outdir, "detection_skill_bootstrap.csv"),
-        detection_skill(grid, predictions, masks, anchors))
+        detection_skill(grid, predictions, masks, anchors; bootstrap_times))
     println("Wrote detection_skill_bootstrap.csv to $outdir")
 end
 

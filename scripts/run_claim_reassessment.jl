@@ -12,6 +12,12 @@
 #
 #   julia --project=. scripts/run_claim_reassessment.jl
 #   julia --project=. scripts/run_claim_reassessment.jl <benchmark_output_dir>
+#   julia --project=. scripts/run_claim_reassessment.jl <benchmark_output_dir> --block-days 7
+#
+# `--block-days N` resamples whole N-day blocks in the paired bootstrap instead of days, and writes to
+# `<diagnostics folder>_block{N}d`. The metrics are unchanged; only the intervals and p-values move.
+# `--block-days 1` goes through the same path and must reproduce the default files. Without the flag
+# nothing changes (`TimeBlockFolds.block_times`).
 #
 # Records `claim_provenance.csv` beside its tables (the folder is shared with the other benchmark
 # diagnostics). Its inputs are the study-area files and the run's `benchmark_scope.csv`,
@@ -25,9 +31,10 @@ using CSV, DataFrames, Dates, Random, Statistics
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("InterpolationBenchmark")
-load_standalone_modules("BenchmarkDiagnostics")
+load_standalone_modules("BenchmarkDiagnostics", "TimeBlockFolds")
 using Main.BenchmarkDiagnostics
 using Main.RunProvenance: start_provenance, finish_provenance!
+using Main.TimeBlockFolds: block_times, block_days_option
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
 const DEFAULT_RUN = joinpath(
@@ -139,8 +146,13 @@ function scheme_directory(run_dir::AbstractString)
 end
 
 function main(args=ARGS)
+    block_days, args = block_days_option(args)
     run_dir = isempty(args) ? DEFAULT_RUN : abspath(args[1])
     outdir = benchmark_diagnostics_outdir(ROOT, run_dir)
+    if block_days !== nothing
+        outdir *= "_block$(block_days)d"
+        mkpath(outdir)
+    end
 
     run_name = basename(rstrip(run_dir, '/'))
     mger = study_config(outdir; gpm_uncal=endswith(run_name, "_gpmuncal"),
@@ -175,6 +187,8 @@ function main(args=ARGS)
     # Observations and the time axis are shared across products, so they come from whichever
     # product the grid was loaded for; a derived product has no entry of its own in `product_data`.
     grid = product_data[first(keys(product_data))]
+    # The hours the bootstrap groups by date: the hours themselves, or each hour's block start.
+    bootstrap_times = block_days === nothing ? grid.times : block_times(grid.times; block_days)
     # Rebuilt for the `nearest_train_km` stratum of the metrics table assembled below.
     station_meta = load_station_meta(mger.station_meta_path;
         station_id_col=mger.station_id_col, lon_col=mger.lon_col, lat_col=mger.lat_col)
@@ -240,7 +254,7 @@ function main(args=ARGS)
                 )
             end
             append!(method_bootstrap_rows, paired_bootstrap_rows(
-                cfg, SCHEME, product, grid.times, grid.Y_obs, predictions[product], claim_mask;
+                cfg, SCHEME, product, bootstrap_times, grid.Y_obs, predictions[product], claim_mask;
                 method, pairwise_mask=true,
             ))
             println("  $method / $product: own coverage " *
