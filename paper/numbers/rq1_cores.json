@@ -1,54 +1,78 @@
 {
- "source": "output/heavy_core_diagnostics_gpmuncal/summary.csv",
- "source_sha256": "8f1755e62640e9feda99a2a719a09d3de32721c76be0005cb10faab10be29b84",
+ "source": "output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/summary.csv",
+ "source_sha256": "7d4f11cfae0bd9fcb208e17f9284ae5b349307482642f9564ec80f832eee665d",
  "rows": [
   {
    "event_day": "2022-06-26",
    "event_type": "widespread",
-   "product": "GPM",
-   "repr": "+39",
+   "product": "FY4B",
+   "repr": "+74",
    "top3": "+75",
-   "peak_ratio": "0.27"
+   "peak_ratio": "0.44"
+  },
+  {
+   "event_day": "2022-06-26",
+   "event_type": "widespread",
+   "product": "GPM",
+   "repr": "+32",
+   "top3": "+75",
+   "peak_ratio": "0.31"
   },
   {
    "event_day": "2022-06-26",
    "event_type": "widespread",
    "product": "GPM_uncal",
-   "repr": "+50",
+   "repr": "+40",
    "top3": "+75",
-   "peak_ratio": "0.39"
+   "peak_ratio": "0.40"
   },
   {
    "event_day": "2022-06-26",
    "event_type": "widespread",
    "product": "GSMaP",
-   "repr": "+59",
+   "repr": "+42",
    "top3": "+75",
-   "peak_ratio": "0.48"
+   "peak_ratio": "0.37"
+  },
+  {
+   "event_day": "2022-10-03",
+   "event_type": "widespread",
+   "product": "FY4B",
+   "repr": "+9",
+   "top3": "+31",
+   "peak_ratio": "1.10"
   },
   {
    "event_day": "2022-10-03",
    "event_type": "widespread",
    "product": "GPM",
-   "repr": "+173",
-   "top3": "+34",
-   "peak_ratio": "1.19"
+   "repr": "-9",
+   "top3": "+31",
+   "peak_ratio": "1.70"
   },
   {
    "event_day": "2022-10-03",
    "event_type": "widespread",
    "product": "GPM_uncal",
-   "repr": "+78",
-   "top3": "+34",
-   "peak_ratio": "1.11"
+   "repr": "-9",
+   "top3": "+31",
+   "peak_ratio": "1.68"
   },
   {
    "event_day": "2022-10-03",
    "event_type": "widespread",
    "product": "GSMaP",
-   "repr": "-14",
-   "top3": "+34",
-   "peak_ratio": "1.90"
+   "repr": "-2",
+   "top3": "+31",
+   "peak_ratio": "3.65"
+  },
+  {
+   "event_day": "2023-06-17",
+   "event_type": "widespread",
+   "product": "FY4B",
+   "repr": "+25",
+   "top3": "+48",
+   "peak_ratio": "0.56"
   },
   {
    "event_day": "2023-06-17",
@@ -75,28 +99,76 @@
    "peak_ratio": "1.49"
   },
   {
+   "event_day": "2023-07-31",
+   "event_type": "localized",
+   "product": "FY4B",
+   "repr": "+45",
+   "top3": "+100",
+   "peak_ratio": "0.12"
+  },
+  {
+   "event_day": "2023-07-31",
+   "event_type": "localized",
+   "product": "GPM",
+   "repr": "+84",
+   "top3": "+100",
+   "peak_ratio": "0.20"
+  },
+  {
+   "event_day": "2023-07-31",
+   "event_type": "localized",
+   "product": "GPM_uncal",
+   "repr": "+65",
+   "top3": "+100",
+   "peak_ratio": "0.16"
+  },
+  {
+   "event_day": "2023-07-31",
+   "event_type": "localized",
+   "product": "GSMaP",
+   "repr": "+60",
+   "top3": "+100",
+   "peak_ratio": "0.26"
+  },
+  {
+   "event_day": "2023-08-26",
+   "event_type": "widespread",
+   "product": "FY4B",
+   "repr": "+17",
+   "top3": "+35",
+   "peak_ratio": "0.32"
+  },
+  {
    "event_day": "2023-08-26",
    "event_type": "widespread",
    "product": "GPM",
-   "repr": "+36",
-   "top3": "+27",
-   "peak_ratio": "0.71"
+   "repr": "+38",
+   "top3": "+35",
+   "peak_ratio": "0.64"
   },
   {
    "event_day": "2023-08-26",
    "event_type": "widespread",
    "product": "GPM_uncal",
-   "repr": "+25",
-   "top3": "+27",
-   "peak_ratio": "0.55"
+   "repr": "+26",
+   "top3": "+35",
+   "peak_ratio": "0.48"
   },
   {
    "event_day": "2023-08-26",
    "event_type": "widespread",
    "product": "GSMaP",
-   "repr": "-22",
-   "top3": "+27",
-   "peak_ratio": "2.78"
+   "repr": "-24",
+   "top3": "+35",
+   "peak_ratio": "2.56"
+  },
+  {
+   "event_day": "2023-09-10",
+   "event_type": "localized",
+   "product": "FY4B",
+   "repr": "+17",
+   "top3": "+87",
+   "peak_ratio": "0.32"
   },
   {
    "event_day": "2023-09-10",
@@ -121,35 +193,11 @@
    "repr": "+16",
    "top3": "+87",
    "peak_ratio": "0.23"
-  },
-  {
-   "event_day": "2024-07-30",
-   "event_type": "localized",
-   "product": "GPM",
-   "repr": "+43",
-   "top3": "+76",
-   "peak_ratio": "0.37"
-  },
-  {
-   "event_day": "2024-07-30",
-   "event_type": "localized",
-   "product": "GPM_uncal",
-   "repr": "+25",
-   "top3": "+76",
-   "peak_ratio": "0.20"
-  },
-  {
-   "event_day": "2024-07-30",
-   "event_type": "localized",
-   "product": "GSMaP",
-   "repr": "+24",
-   "top3": "+76",
-   "peak_ratio": "0.16"
   }
  ],
  "stats": {
-  "repr_local": "16–25",
-  "top3_local_max": "87",
-  "peak_ratio_local": "0.16–0.23"
+  "repr_0910": "16–18",
+  "repr_0731": "45–65",
+  "peak_ratio_local": "0.12–0.32"
  }
 }

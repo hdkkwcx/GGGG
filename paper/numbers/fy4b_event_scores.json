@@ -1,6 +1,6 @@
 {
- "source": "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_metrics.csv",
- "source_sha256": "7d30e78c0ee4033a140dff424ffaf4468e9d6231ce5f54b3025eaa5b178c921b",
+ "source": "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/event_metrics.csv",
+ "source_sha256": "9944ddeaa66fb4c25d6e5276bc0ee0478751749d1abb5ce48a41deeaf46f1f16",
  "rows": [
   {
    "event_day": "2022-06-26",
@@ -85,6 +85,34 @@
    "r": "0.80",
    "MB": "+23.3",
    "CSI50": "0.57"
+  },
+  {
+   "event_day": "2023-07-31",
+   "product": "FY4B",
+   "r": "0.35",
+   "MB": "-2.3",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-07-31",
+   "product": "FY4B_QM",
+   "r": "0.40",
+   "MB": "-2.1",
+   "CSI50": "0.00"
+  },
+  {
+   "event_day": "2023-07-31",
+   "product": "GPM_uncal",
+   "r": "0.56",
+   "MB": "-1.3",
+   "CSI50": "0.31"
+  },
+  {
+   "event_day": "2023-07-31",
+   "product": "GSMaP",
+   "r": "0.45",
+   "MB": "+0.1",
+   "CSI50": "0.25"
   },
   {
    "event_day": "2023-08-26",

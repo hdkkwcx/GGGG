@@ -1,0 +1,9 @@
+{
+ "source": "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/candidate_days.csv",
+ "source_sha256": "ef393ad8d0d651c19bf8ee3957428b461d8f7c1fd933bb62a24225850fbb1dd2",
+ "rows": [],
+ "stats": {
+  "days": "53",
+  "eligible": "42"
+ }
+}

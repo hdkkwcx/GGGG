@@ -1,18 +1,24 @@
 {
- "source": "output/heavy_rain_events_gpm_gsmap_gpmuncal/event_metrics_summary.csv",
- "source_sha256": "35c14f960c07eb2670dadd8eec76bb9aa44b67054892765962858987abbb1132",
+ "source": "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/event_metrics_summary.csv",
+ "source_sha256": "7f90e86a0a6710cd3e6ac1947f13f274c110d187a90f11f37f877249c9fc5232",
  "rows": [
+  {
+   "product": "FY4B",
+   "r": "0.36",
+   "MB": "-0.7",
+   "RMSE": "27.9"
+  },
   {
    "product": "GPM_uncal",
    "r": "0.52",
-   "MB": "-5.7",
-   "RMSE": "21.8"
+   "MB": "-2.9",
+   "RMSE": "19.7"
   },
   {
    "product": "GSMaP",
-   "r": "0.55",
-   "MB": "+18.9",
-   "RMSE": "39.9"
+   "r": "0.53",
+   "MB": "+20.8",
+   "RMSE": "39.7"
   }
  ]
 }

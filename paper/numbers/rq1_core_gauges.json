@@ -1,9 +1,9 @@
 {
- "source": "output/heavy_core_diagnostics_gpmuncal/core_gauges.csv",
- "source_sha256": "793715762a43b59dea5ce271b626cfe3df27813dc8855c969bb38dc54465d7ca",
+ "source": "output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/core_gauges.csv",
+ "source_sha256": "462e0d1d016aed2df7b5a64930930b5c16fe29133d6c2d777bdfa3843c040c9f",
  "rows": [],
  "stats": {
   "peak_0910": "27",
-  "peak_0730": "26"
+  "peak_0731": "68"
  }
 }

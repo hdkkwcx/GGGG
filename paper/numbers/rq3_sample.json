@@ -1,0 +1,11 @@
+{
+ "source": "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/matched_sample.csv",
+ "source_sha256": "833c1964f452253de08e6b75566dc1741d56979a8adc808163fa356bf259364b",
+ "rows": [
+  {
+   "scheme": "balanced_spatial",
+   "n": "4,451,967",
+   "hours": "19,816"
+  }
+ ]
+}

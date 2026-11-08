@@ -1,16 +1,12 @@
 {
- "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/sample_coverage.csv",
- "source_sha256": "1770048e1a9e6f3969913edb5d874fcac34a77a97e997c755d1027b69fdb7e78",
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/sample_coverage.csv",
+ "source_sha256": "f9bb6e4f167ccc90846ab9fe1c2bac135fff70f6720eaf1f082fa5a5bf165bb5",
  "rows": [
   {
    "sample": "all_products",
    "hours": "19,818",
-   "days": "908"
-  },
-  {
-   "sample": "gpm_gsmap_full",
-   "hours": "26,304",
-   "days": "1,096"
+   "days": "908",
+   "cells": "4,571,475"
   }
  ]
 }
