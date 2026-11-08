@@ -1304,6 +1304,12 @@ end
     @test benchmark_products((; fused_anchor_variants=Symbol[]), products) == products
     @test benchmark_products((; fused_anchor_variants=[:ols, :mean]), products) ==
         ["FY4B", "GPM", "GSMaP", "MERGED_MEAN", "MERGED_OLS"]
+    # The gated FY4B_QM comes last, so every other product keeps its position and its seed.
+    without_gate = benchmark_products((; fused_anchor_variants=[:ols, :mean], fy4b_qm_grid="g"), products)
+    with_gate = benchmark_products(
+        (; fused_anchor_variants=[:ols, :mean], fy4b_qm_grid="g", fy4b_qm_rh_gate=true), products)
+    @test with_gate == vcat(without_gate, FY4B_QM_RH_PRODUCT)
+    @test last(without_gate) == FY4B_QM_PRODUCT
 end
 
 @testset "Day-block bootstrap of detection skill" begin
@@ -1987,6 +1993,15 @@ end
                 sat_paths=Dict("GPM" => sat_paths["GPM"]), outdir=outdir_out),
             fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
         refuse_out()
+
+        # `fy4b_qm_rh_gate` gates FY4B_QM with the joint covariates' humidity, so it needs both. The
+        # run itself needs ERA5 files, so its rows are checked against the paper run instead
+        # (`scripts/compare_fy4b_humidity_gate.jl`).
+        refuse_gate(; kwargs...) = @test_throws "fy4b_qm_rh_gate" _validate_benchmark_config(
+            InterpolationBenchmarkConfig(; mger=out_cfg(outdir_out).mger, fy4b_qm_rh_gate=true,
+                kwargs...), n_station)
+        refuse_gate()
+        refuse_gate(fy4b_qm_grid=grid_path)
 
         # `--blend-dry-band`: the dry axes add methods and move no other row. Their bands 1-9
         # repeat the agreement blend's weights; only the dry band's weight is new.

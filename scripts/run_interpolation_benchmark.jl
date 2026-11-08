@@ -36,8 +36,12 @@ function benchmark_config(
     fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
     fy4b::Bool=true, fy4b_file::Union{Nothing,String}=nothing, fy4b_qm::Bool=false,
     fy4b_qm_adaptive::Bool=false, fy4b_qm_fusion::Bool=false, fy4b_out_of_fusion::Bool=false,
+    fy4b_qm_rh_gate::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
+    fy4b_qm_rh_gate && !fy4b_qm && throw(ArgumentError(
+        "--fy4b-qm-rh-gate gates FY4B_QM, which needs --fy4b-qm",
+    ))
     fy4b_file === nothing || fy4b || throw(ArgumentError("--fy4b-file needs --with-fy4b"))
     fy4b_out_of_fusion && !fy4b && throw(ArgumentError(
         "--fy4b-out-of-fusion needs --with-fy4b: it scores FY4B outside the fusion",
@@ -110,6 +114,7 @@ function benchmark_config(
             (fy4b_qm_adaptive ? "_fy4bqmadapt" : "") *
             (fy4b_qm_fusion ? "_qmfusion" : "") *
             (fy4b_out_of_fusion ? "_fy4bnofusion" : "") *
+            (fy4b_qm_rh_gate ? "_qmrhgate" : "") *
             # Before `_gpmuncal`, which the report scripts detect with `endswith`.
             (fy4b ? "" : "_nofy4b") *
             (gpm_uncal ? "_gpmuncal" : "") *
@@ -287,6 +292,7 @@ function benchmark_config(
         fy4b_qm_adaptive=fy4b_qm_adaptive,
         fy4b_qm_fusion=fy4b_qm_fusion,
         fy4b_out_of_fusion=fy4b_out_of_fusion,
+        fy4b_qm_rh_gate=fy4b_qm_rh_gate,
         # The joint path without nested selection reads a full-data spec, which the config
         # validator refuses unless the run admits it is exploratory. --no-nested-covariates is
         # exactly that admission, so it is the only way this turns on.
@@ -489,11 +495,17 @@ function main(args=ARGS)
     # (`scripts/compare_fy4b_fusion_same_hours.jl`). Changes MERGED_*'s rows and the agreement
     # blends by design; no real product's raw or unblended row moves.
     fy4b_out_of_fusion = "--fy4b-out-of-fusion" in args
+    # With --fy4b-qm: add FY4B_QM_RH, each fold's FY4B_QM set to 0 where ERA5-Land humidity at the
+    # gauge is below a cut chosen on training stations and, per 7-day time fold, on the other
+    # blocks (`HumidityGate`; values >= 8 mm/h are spared). It stays out of the fusion, so every
+    # other product keeps its seed and rows (`scripts/compare_fy4b_humidity_gate.jl`). ERA5-Land is
+    # reanalysis: this is FY4B + reanalysis.
+    fy4b_qm_rh_gate = "--fy4b-qm-rh-gate" in args
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
         fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm,
-        fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion)
+        fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion, fy4b_qm_rh_gate)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -522,6 +534,7 @@ function main(args=ARGS)
         (fy4b_qm_adaptive ? "fy4b_qm_adaptive=true, " : "") *
         (fy4b_qm_fusion ? "fy4b_qm_fusion=true, " : "") *
         (fy4b_out_of_fusion ? "fy4b_out_of_fusion=true, " : "") *
+        (fy4b_qm_rh_gate ? "fy4b_qm_rh_gate=true, " : "") *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
     println("Finished: $(nrow(result.metrics)) metric rows, $(nrow(result.scans)) scan rows")

@@ -1,6 +1,6 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-07 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-08 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
@@ -14,12 +14,61 @@ where FY4B's error sits, and a near-surface humidity gate passes its screen with
 held out as well as gauges, FY4B_QM's raw gain shrinks materially (Previous). Six AGRI L1 scans give a weak
 "no" to the channel pilot. All of it is merged (`be63c2e`), and §3.4 now carries the time-held-out figures. The
 paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states, and the
-paper now uses 7-day blocks (Newest, branch `paper/week-block-intervals`, which holds `stats/week-block-intervals`;
-unmerged) · **Next step:** the user decides whether to merge, and whether the humidity gate gets a benchmark run
+paper now uses 7-day blocks (Previous, merged as `3d41498`). The humidity gate's benchmark run says stop: the gate
+does not survive MGWR and the blend (Newest, branch `fy4b/humidity-gate-benchmark`, unmerged) · **Next step:** the
+user decides whether to merge that branch; no FY4B quality step is pending
 
 ---
 
-## Newest (2026-11-07): the paper's intervals with week blocks
+## Newest (2026-11-08): the humidity gate in the benchmark: stop
+
+The user asked for the benchmark run of the humidity gate that passed its screen. ERA5-Land is reanalysis, so a kept
+gate would have been "FY4B + reanalysis". No paper text or number changes.
+- **Code** (branch `fy4b/humidity-gate-benchmark`):
+  - `src/models/HumidityGate.jl` (`24f63ca`): the screen's gate B8, with the cut cross-fitted over gauge folds and
+    7-day time folds;
+  - `--fy4b-qm-rh-gate` (`d7a8cc7`, suffix `_qmrhgate`): appends `FY4B_QM_RH`, kept out of the fusion. It writes
+    `fy4b_qm_rh_gate_cuts.csv`;
+  - `scripts/compare_fy4b_humidity_gate.jl` (`423b2f4`), committed with its rule before the run;
+  - review bump `682655a`.
+- **Run:** clean at `682655a`, `-t 4`, 3 h 52 min, 12 GB. Log: `output/full_benchmark_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_qmrhgate.log`.
+  Output: `..._qmfusion_qmrhgate_gpmuncal/`; comparison in `output/fy4b_humidity_gate_comparison/`.
+- **Guards passed:**
+  - every base product's `raw`, `adw`, `mgwr`, both blends and mask are identical, cell for cell, to the paper's
+    `fy4b_benchmark` run;
+  - `FY4B_QM_RH` raw differs from FY4B_QM only where the gate zeroed a value under 8 mm/h.
+- **What the gate did:** it zeroed 26% of FY4B_QM's wet cells. The cut was RH < 70 in 37 fold × time-fold fits and
+  RH < 75 in 13, like the screen.
+
+### Result: the gain at raw does not survive MGWR or the blend
+
+FY4B_QM_RH against FY4B_QM, balanced spatial, 95% intervals over 7-day blocks:
+
+| Field | ΔRMSE | ΔCSI_0.1 | ΔCSI_8 |
+|---|---|---|---|
+| raw | −1.73% (−2.81..−0.84) | +0.014 | 0 |
+| MGWR | +0.25% (−0.20..+0.71) | +0.024 | −0.006 (−0.010..−0.003) |
+| ADW blend | +0.31% (−0.03..+0.76) | +0.021 | −0.001 |
+| agreement blend | +0.03% (−0.13..+0.21) | +0.022 | −0.000 |
+
+**Rule (agreement blend): fails.**
+
+| Check | Result |
+|---|---|
+| ΔRMSE −0.3% or better, interval below 0 | FAIL: +0.03% |
+| ΔCSI_8 not significantly lower | pass: −0.0002 (−0.0016..+0.0014) |
+| \|FBI_8 − 1\| not significantly worse | FAIL: +0.005 (+0.000..+0.010) |
+| \|bias\| up by at most 0.005 mm/h | pass: +0.004 |
+
+- **The gap to GPM_uncal's agreement blend does not move:** +2.01% with the gate, +1.98% without.
+- **Random split** (reported only): every blend is within ±0.3%.
+- **Reading:** the gate does sort light rain (CSI at 0.1 mm/h +0.02 at every stage), but its RMSE gain is gone after
+  MGWR. That fits the screen's warning: `d2m_c` is already a local MGWR covariate in most folds, so the residual model
+  already knows the air is dry. At MGWR alone it even loses some 8 mm/h detection.
+- **So:** FY4B_QM stays FY4B's quality step, and no humidity gate goes into the paper. Merging the branch keeps the
+  option and the module as the record; that is the user's call.
+
+## Previous (2026-11-07): the paper's intervals with week blocks
 
 A side agent noted that most of the paper's 95% intervals resample single days, but FY4B's errors come in
 multi-day episodes. On §3.4's raw −16.9%, week blocks had widened the interval about 40%. No paper number changes.

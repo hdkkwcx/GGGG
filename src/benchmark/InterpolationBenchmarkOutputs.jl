@@ -413,6 +413,17 @@ function _write_benchmark_outputs(
             "the raw and unblended rows of a run without this option",
         ]))
     end
+    if cfg.fy4b_qm_rh_gate
+        append!(scope, DataFrame(key=["fy4b_qm_rh_gate"], value=[
+            "derived product $(FY4B_QM_RH_PRODUCT): each fold's $(FY4B_QM_PRODUCT) set to 0 where " *
+            "ERA5-Land relative humidity at the gauge is below a cut in $(first(GATE_CUTS))-" *
+            "$(last(GATE_CUTS))% and the value is below $(GATE_SPARED_MM) mm/h. The cut raises " *
+            "training CSI the most, chosen per fold on training stations and per 7-day time fold on " *
+            "the other blocks' hours (seed $(FY4B_QM_RH_TIME_FOLD_SEED)); see " *
+            "fy4b_qm_rh_gate_cuts.csv. It stays out of the fusion. ERA5-Land is reanalysis, so this " *
+            "is FY4B + reanalysis",
+        ]))
+    end
     if cfg.fy4b_out_of_fusion
         append!(scope, DataFrame(key=["fy4b_out_of_fusion"], value=[
             "FY4B is scored but left out of the fused anchors and the blend's non-constant bands; " *

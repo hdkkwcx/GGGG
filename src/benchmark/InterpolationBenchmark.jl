@@ -10,7 +10,8 @@ load_pipeline("MGERPipeline")
 load_standalone_modules(
     "TraditionalInterpolation", "DEMTerrainExperiment", "JointCovariateModels",
     "ERA5VariableSelection", "NDVIVariableSelection", "JointVariableSelection",
-    "SatelliteFusion", "SatelliteCalibration", "HurdleGWR", "RunProvenance",
+    "SatelliteFusion", "SatelliteCalibration", "HurdleGWR", "RunProvenance", "TimeBlockFolds",
+    "HumidityGate",
 )
 
 using .TraditionalInterpolation
@@ -21,6 +22,8 @@ using .JointCovariateModels
 using .JointVariableSelection: JointSelectionConfig, select_joint_covariates
 using .SatelliteFusion
 using .SatelliteCalibration
+using .TimeBlockFolds: time_block_folds
+using .HumidityGate: station_humidity, time_crossed_gate, GATE_CUTS, GATE_SPARED_MM
 using .HurdleGWR
 using .RunProvenance: start_provenance, git_provenance
 
