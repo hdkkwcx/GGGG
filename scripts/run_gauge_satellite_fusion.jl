@@ -12,6 +12,15 @@
 # unchanged. `--block-days 1` must reproduce the default files; without the flag nothing changes
 # (`TimeBlockFolds.block_times`).
 #
+# `--fy4b-file <path>` names the rebuilt FY4B series a run was given (run name `_fy4bw3h0` etc.), as
+# in `run_claim_reassessment.jl`. `--matched-products` reads the claim re-assessment written with the
+# same flag and scores every product and method on one sample, the cells every product of the run is
+# scored on (`matched_evaluation_mask`): the pooled and stratified tables are re-scored from the
+# out-of-fold files on it, and the bootstraps use it for every anchor. Writes to
+# `<report folder>_matched`, then `_block{N}d`. The report folder is named after the part of the run
+# name from `_fusedanchor` on (`..._fusedanchor_nofy4b_gpmuncal` -> `gauge_satellite_fusion_nofy4b_gpmuncal`).
+# FY4B_QM, in a run that has it, is appended last to the anchors, so no other anchor's seed moves.
+#
 # Reads a finished `run_interpolation_benchmark.jl full --nested-covariates --satellite-wet-blend
 # --blend-axis agreement_envelope --fused-anchor` run and the `run_claim_reassessment.jl` tables
 # written for it; fits nothing. Writes CSVs to output/gauge_satellite_fusion/, which
@@ -30,6 +39,7 @@ include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("InterpolationBenchmark")
 load_standalone_modules("BenchmarkDiagnostics", "TableIO", "TimeBlockFolds")
 using Main.BenchmarkDiagnostics
+using Main.DayBlockBootstrap: read_wide_mask, read_wide_values
 using Main.TableIO: write_csv_atomic
 using Main.TimeBlockFolds: block_times, block_days_option
 
@@ -39,10 +49,14 @@ const DEFAULT_RUN = joinpath(
     "interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_" *
         "blendagrenv_fusedanchor",
 )
-# A `_gpmuncal` run (uncalibrated IMERG, `GPM_uncal`) or a `_nofy4b` run (no FY4B) writes beside
-# the calibrated report.
-report_outdir(gpm_uncal::Bool, fy4b::Bool=true) = joinpath(ROOT, "output",
-    "gauge_satellite_fusion" * (fy4b ? "" : "_nofy4b") * (gpm_uncal ? "_gpmuncal" : ""))
+# Named after the run's options from `_fusedanchor` on, so a `_gpmuncal` run (uncalibrated IMERG,
+# `GPM_uncal`), a `_nofy4b` run (no FY4B) or a run on a rebuilt FY4B series (`_fy4bw3h0...`) writes
+# beside the calibrated report, never over it.
+function report_outdir(run_name::AbstractString)
+    parts = split(run_name, "_fusedanchor"; limit=2)
+    length(parts) == 2 || error("$run_name is not a --fused-anchor run")
+    return joinpath(ROOT, "output", "gauge_satellite_fusion" * parts[2])
+end
 const SCHEME = "balanced_spatial"
 const SEED = 20260913
 const BOOTSTRAP_REPS = 2000
@@ -72,9 +86,12 @@ const REFERENCE = "adw"
 """
 The `MGERConfig` the full benchmark run used, so the common station/time grid matches. `gpm_uncal`
 swaps in uncalibrated IMERG, as `run_interpolation_benchmark.jl` does for its `_gpmuncal` runs.
-`fy4b=false` leaves FY4B out, as it does for its `_nofy4b` runs.
+`fy4b=false` leaves FY4B out, as it does for its `_nofy4b` runs, and `fy4b_file` swaps in a rebuilt
+FY4B series, as its `--fy4b-file` does; that grid is pinned by the run itself and checked against
+the masks hour by hour.
 """
-function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=true)
+function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=true,
+                      fy4b_file::Union{Nothing,String}=nothing)
     return MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
@@ -83,16 +100,42 @@ function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=
                 "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
                 "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv")),
             "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
-            (fy4b ? ["FY4B" => joinpath(
+            (fy4b ? ["FY4B" => something(fy4b_file, joinpath(
                 STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-            )] : Pair{String,String}[])...,
+            ))] : Pair{String,String}[])...,
         ),
         outdir=outdir,
         rain_threshold=0.1,
         analysis_start=DateTime(2022, 1, 1, 9),
         analysis_end=DateTime(2025, 1, 1, 8),
-        expected_common_time_count=fy4b ? 13471 : 26304,
+        expected_common_time_count=fy4b_file !== nothing ? nothing : fy4b ? 13471 : 26304,
     )
+end
+
+"""
+The pooled metrics of every `(scheme, product, method)` re-scored on the matched sample of its
+scheme (`matched[scheme]`), in the layout of the run's `metrics_pooled.csv`, so `method_summary` and
+`stratified_summary` read it unchanged. Each scheme's nearest-training-gauge distances come from its
+own fold split. Prediction files are read one at a time.
+"""
+function matched_pooled_metrics(run_dir, products, ids, grid, matched, lonlat, thresholds; seed)
+    rows = NamedTuple[]
+    for (scheme, mask) in sort(collect(matched); by=first)
+        scheme_dir = joinpath(run_dir, scheme)
+        fold_map = read_fold_map(joinpath(scheme_dir, "split_common.csv"))
+        nearest_distance = nearest_train_km([fold_map[id] for id in ids], lonlat)
+        for product in products
+            product_dir = joinpath(scheme_dir, lowercase(product))
+            for name in sort(readdir(product_dir))
+                startswith(name, "oof_") && endswith(name, ".csv") || continue
+                prediction = read_wide_values(joinpath(product_dir, name), ids, grid.times)
+                append_stratified_metrics!(rows, scheme, product, name[5:end-4], grid.times,
+                    grid.Y_obs, prediction, mask, nearest_distance, thresholds; seed)
+            end
+            println("  re-scored $scheme / $product on the matched sample")
+        end
+    end
+    return DataFrame(rows)
 end
 
 _pooled(metrics) = filter(row -> ismissing(row.fold), metrics)
@@ -314,29 +357,41 @@ blend_weights(selection::DataFrame) = combine(
 
 function main(args=ARGS)
     block_days, args = block_days_option(args)
-    suffix = block_days === nothing ? "" : "_block$(block_days)d"
+    fy4b_file, args = fy4b_file_option(args; root=ROOT)
+    matched = "--matched-products" in args
+    args = filter(!=("--matched-products"), args)
+    suffix = (matched ? "_matched" : "") * (block_days === nothing ? "" : "_block$(block_days)d")
     run_dir = isempty(args) ? DEFAULT_RUN : abspath(args[1])
     isdir(run_dir) || error("benchmark output directory not found: $run_dir")
     # The suffixes `run_interpolation_benchmark.jl` gives runs that scored uncalibrated IMERG, and
     # runs that left FY4B out.
     run_name = basename(rstrip(run_dir, '/'))
+    check_fy4b_tag(run_name, fy4b_file)
     gpm_uncal = endswith(run_name, "_gpmuncal")
     fy4b = !occursin("_nofy4b", run_name)
     gpm = gpm_uncal ? "GPM_uncal" : "GPM"
     anchors = anchor_products(gpm, fy4b)
-    outdir = report_outdir(gpm_uncal, fy4b) * suffix
+    # Last, as the bootstrap seeds follow the anchor's position.
+    isdir(joinpath(run_dir, SCHEME, "fy4b_qm")) && push!(anchors, "FY4B_QM")
+    outdir = report_outdir(run_name) * suffix
     diagnostics_dir = joinpath(ROOT, "output", "benchmark_diagnostics", basename(run_dir) * suffix)
     comparisons_path = joinpath(diagnostics_dir, "paired_comparisons_by_method.csv")
     isfile(comparisons_path) || error(
         "no $comparisons_path; run scripts/run_claim_reassessment.jl $run_dir" *
+        (fy4b_file === nothing ? "" : " --fy4b-file $fy4b_file") *
+        (matched ? " --matched-products" : "") *
         (block_days === nothing ? "" : " --block-days $block_days") * " first")
     mkpath(outdir)
     write(joinpath(outdir, "source_run.txt"), run_dir * "\n")
 
-    pooled = _pooled(CSV.read(joinpath(run_dir, "metrics_pooled.csv"), DataFrame;
-        types=Dict(:level => String)))
-    write_csv_atomic(joinpath(outdir, "method_summary.csv"), method_summary(pooled))
-    write_csv_atomic(joinpath(outdir, "stratified_summary.csv"), stratified_summary(pooled))
+    pooled_all = CSV.read(joinpath(run_dir, "metrics_pooled.csv"), DataFrame;
+        types=Dict(:level => String))
+    # Matched, these two are re-scored on the matched sample below, once the grid is loaded.
+    if !matched
+        pooled = _pooled(pooled_all)
+        write_csv_atomic(joinpath(outdir, "method_summary.csv"), method_summary(pooled))
+        write_csv_atomic(joinpath(outdir, "stratified_summary.csv"), stratified_summary(pooled))
+    end
     write_csv_atomic(joinpath(outdir, "fusion_vs_gauge_only.csv"),
         fusion_vs_gauge_only(CSV.read(comparisons_path, DataFrame)))
     write_csv_atomic(joinpath(outdir, "merged_anchor_coefficients.csv"), merged_anchor_coefficients(
@@ -354,7 +409,7 @@ function main(args=ARGS)
 
     # The rest re-scores stored predictions, which needs the observations on the run's grid.
     # `load_global_common_product_data` writes its QC table into `outdir`, so it points here.
-    mger = study_config(outdir; gpm_uncal, fy4b)
+    mger = study_config(outdir; gpm_uncal, fy4b, fy4b_file)
     _, ids, product_data = load_global_common_product_data(mger)
     grid = product_data[gpm]
     # The hours the bootstraps group by date: the hours themselves, or each hour's block start.
@@ -363,13 +418,50 @@ function main(args=ARGS)
     scheme_dir = joinpath(run_dir, SCHEME)
     station_meta = load_station_meta(mger.station_meta_path;
         station_id_col=mger.station_id_col, lon_col=mger.lon_col, lat_col=mger.lat_col)
+    lonlat = build_X_lonlat(station_meta, ids)
     fold_map = read_fold_map(joinpath(scheme_dir, "split_common.csv"))
-    nearest_distance = nearest_train_km([fold_map[id] for id in ids],
-        build_X_lonlat(station_meta, ids))
+    nearest_distance = nearest_train_km([fold_map[id] for id in ids], lonlat)
 
-    masks = Dict(product => read_mask_matrix(
-        joinpath(scheme_dir, lowercase(product), "common_evaluation_mask.csv"), ids)
+    # Checked hour by hour against the grid: the OOF matrices are read by row position.
+    masks = Dict(product => read_wide_mask(
+        joinpath(scheme_dir, lowercase(product), "common_evaluation_mask.csv"), ids, grid.times)
         for product in anchors)
+    if matched
+        # Every product the run scored defines the sample, as in the claim re-assessment, whose
+        # count it must reproduce.
+        products = sort([product for product in unique(String.(pooled_all.product))
+                         if isdir(joinpath(scheme_dir, lowercase(product)))])
+        status = CSV.read(joinpath(run_dir, "run_status.csv"), DataFrame)
+        schemes = filter(scheme -> isdir(joinpath(run_dir, scheme)), ["balanced_spatial", "random"])
+        matched_masks = Dict{String,BitMatrix}()
+        sample_tables = DataFrame[]
+        for scheme in schemes
+            failures = matched_fold_failures(status; scheme, products)
+            isempty(failures) || error("--matched-products: these $scheme folds failed, so the " *
+                "matched sample would lose them for every product:\n" *
+                sprint(show, select(failures, :product, :fold, :method, :status)))
+            sample = matched_evaluation_mask(joinpath(run_dir, scheme), products, ids, grid.times)
+            matched_masks[scheme] = sample.matched
+            scheme_folds = read_fold_map(joinpath(run_dir, scheme, "split_common.csv"))
+            push!(sample_tables, matched_sample_table(sample.masks, sample.matched,
+                [scheme_folds[id] for id in ids]; scheme))
+        end
+        claims_sample = CSV.read(joinpath(diagnostics_dir, "matched_sample.csv"), DataFrame;
+            types=Dict(:fold => String))
+        claims_n = only(unique(filter(row -> row.scheme == SCHEME && row.fold == "all",
+            claims_sample).n_matched))
+        count(matched_masks[SCHEME]) == claims_n || error("the matched sample has " *
+            "$(count(matched_masks[SCHEME])) cells here but $claims_n in the claim re-assessment")
+        write_csv_atomic(joinpath(outdir, "matched_sample.csv"), vcat(sample_tables...))
+        println("Matched sample: $claims_n cells ($SCHEME); re-scoring every method on it")
+        pooled = _pooled(matched_pooled_metrics(run_dir, products, ids, grid, matched_masks,
+            lonlat, cfg.event_thresholds; seed=cfg.seed))
+        write_csv_atomic(joinpath(outdir, "method_summary.csv"), method_summary(pooled))
+        write_csv_atomic(joinpath(outdir, "stratified_summary.csv"), stratified_summary(pooled))
+        for product in anchors
+            masks[product] = matched_masks[SCHEME]
+        end
+    end
     methods = unique(vcat(PANEL_METHODS, INTERPOLATORS))
     predictions = Dict(product => load_methods(joinpath(scheme_dir, lowercase(product)), ids, methods)
         for product in anchors)

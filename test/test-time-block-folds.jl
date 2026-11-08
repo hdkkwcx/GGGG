@@ -128,6 +128,11 @@ end
         @test TBF.block_days_option(["run_dir", "--block-days", "14"]) == (14, ["run_dir"])
         @test_throws ArgumentError TBF.block_days_option(["--block-days"])
         @test_throws ArgumentError TBF.block_days_option(["--block-days", "0"])
+        @test TBF.from_option(["run_dir"]) == (nothing, ["run_dir"])
+        @test TBF.from_option(["--from", "2022-06", "x"]) == (Date(2022, 6, 1), ["x"])
+        @test TBF.from_suffix(Date(2022, 6, 1)) == "_from202206" && TBF.from_suffix(nothing) == ""
+        @test_throws ArgumentError TBF.from_option(["--from", "2022-6"])
+        @test_throws ArgumentError TBF.from_option(["--from"])
     end
 
     @testset "a signal that generalises survives both" begin

@@ -20,13 +20,16 @@ module BenchmarkDiagnostics
 
 using CSV, DataFrames, Dates, Statistics
 using MixedGWR: INTENSITY_RANGES
+using Main.DayBlockBootstrap: read_wide_mask, read_wide_values
 
 export read_wide_matrix, read_mask_matrix, read_fold_map, load_prediction_matrices
 export null_baseline_matrices, satellite_rescale_matrix
 export null_baseline_table, satellite_offset_table, mse_decomposition_table
 export bandwidth_saturation_table, covariate_contribution_table
 export rebuild_common_mask, dropout_table, mask_cost_table, run_comparison_table
-export benchmark_diagnostics_outdir
+export benchmark_diagnostics_outdir, fy4b_file_option, check_fy4b_tag
+export MATCHED_METHODS, matched_evaluation_mask, matched_fold_failures
+export matched_sample_table
 export RAIN_CLASSES, MASK_METHODS
 
 """Rain-intensity strata: the shared `MixedGWR.INTENSITY_RANGES`, as the benchmark reports them."""
@@ -55,6 +58,7 @@ include("diagnostics/satellite_offset.jl")
 include("diagnostics/mse_decomposition.jl")
 include("diagnostics/mask_cost.jl")
 include("diagnostics/run_comparison.jl")
+include("diagnostics/matched_sample.jl")
 include("diagnostics/bandwidth_saturation.jl")
 include("diagnostics/covariate_contribution.jl")
 

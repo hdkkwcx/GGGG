@@ -37,6 +37,7 @@ function standalone_module_dependencies(name::AbstractString)
         return ["TableIO"]
     name in ("HeavyRainEvents", "HeavyCoreDiagnostics") && return ["TraditionalInterpolation"]
     name == "LandformClassification" && return ["TerrainFeatures"]
+    name == "BenchmarkDiagnostics" && return ["DayBlockBootstrap"]
     name == "SatelliteTwoStage" && return ["SatelliteCalibration"]
     name == "FY4BCloudType" && return ["FY4BPreprocessing"]
     name == "HumidityGate" && return ["TimeBlockFolds", "ERA5LandProcessing"]

@@ -5,6 +5,13 @@
 # on held-out gauges. A screen, not a result: nothing downstream (MGWR, the blend) is refitted.
 #
 #   julia --project=. scripts/screen_fy4b_clt.jl
+#   julia --project=. scripts/screen_fy4b_clt.jl <run dir> --matched-products
+#
+# A run folder reads the run without `--fy4b-qm-fusion` instead (`..._fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal`,
+# whose name must be what `benchmark_config` gives); FY4B_QM's raw field does not depend on the fusion, so
+# the guard below holds it to that run as well. The output folder adds the run's options from
+# `_fusedanchor` on. `--matched-products` also keeps only the cells every product of the run is scored on
+# (`BenchmarkDiagnostics.matched_evaluation_mask`) and adds `_matched`.
 #
 # It reuses the benchmark's grid, folds and per-fold FY4B_QM, exactly as
 # `screen_fy4b_two_stage.jl` does, with the same guard: the held-out FY4B_QM built here must
@@ -33,11 +40,13 @@
 # diurnal.csv, filters.csv, metrics.csv, paired.csv, rule.csv and provenance.csv.
 
 include(joinpath(@__DIR__, "run_interpolation_benchmark.jl"))
-load_standalone_modules("FY4BCloudType", "DayBlockBootstrap", "RunProvenance", "TableIO")
+load_standalone_modules("FY4BCloudType", "DayBlockBootstrap", "RunProvenance", "TableIO",
+    "BenchmarkDiagnostics")
 
 using CSV, NCDatasets, Printf, Statistics
 using Main.FY4BCloudType
 using Main.FY4BPreprocessing: find_nc_files, parse_nc_filename
+using Main.BenchmarkDiagnostics: matched_evaluation_mask, matched_fold_failures
 using Main.DayBlockBootstrap: group_sums, sum_stats, day_groups, compare_days
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.TableIO: write_csv_atomic
@@ -67,17 +76,25 @@ const RULE_MAX_EMPTY_FOLDS = 2
 
 """
 The configuration of the run being reproduced, and a copy of its `MGERConfig` that writes to
-`OUTDIR`: loading the grid writes `global_common_time_qc.csv`, which must not land in that run.
+`outdir`: loading the grid writes `global_common_time_qc.csv`, which must not land in that run.
+`run_dir` picks the run with or without `--fy4b-qm-fusion` (by its `_qmfusion` suffix) and must be
+the folder that configuration names; without it, the `--fy4b-qm-fusion` run.
 """
-function screen_config()
+function screen_config(outdir=OUTDIR; run_dir=nothing)
+    qm_fusion = run_dir === nothing || occursin("_qmfusion", basename(rstrip(run_dir, '/')))
     reference = benchmark_config(:full; nested_covariates=true, satellite_wet_blend=true,
         blend_axes=[:constant, :agreement_envelope], fused_anchor=true, gpm_uncal=true,
         fy4b=true, fy4b_file=FY4B_FILE, fy4b_qm=true, fy4b_qm_adaptive=true,
-        fy4b_qm_fusion=true)
+        fy4b_qm_fusion=qm_fusion)
+    run_dir === nothing || rstrip(abspath(run_dir), '/') == rstrip(reference.mger.outdir, '/') ||
+        error("$run_dir is not a run this screen reads; the matching one is $(reference.mger.outdir)")
     fields = fieldnames(MGERConfig)
     values = NamedTuple{fields}(Tuple(getfield(reference.mger, field) for field in fields))
-    return reference, MGERConfig(; merge(values, (; outdir=OUTDIR))...)
+    return reference, MGERConfig(; merge(values, (; outdir))...)
 end
+
+"""The run's options from `_fusedanchor` on, which an output folder for that run carries."""
+run_tag(run_dir) = last(split(basename(rstrip(run_dir, '/')), "_fusedanchor"; limit=2))
 
 """Error unless `held` equals the stored out-of-fold table at `path` in every cell."""
 function check_reproduction(path, held, times, ids)
@@ -238,22 +255,27 @@ end
 
 _stat(row, name) = getproperty(row, Symbol(name))
 
-function screen_main()
-    mkpath(OUTDIR)
-    reference, mger = screen_config()
+function screen_main(args=ARGS)
+    matched = "--matched-products" in args
+    positional = filter(!startswith("--"), args)
+    chosen = isempty(positional) ? nothing : abspath(only(positional))
+    outdir = OUTDIR * (chosen === nothing ? "" : run_tag(chosen)) * (matched ? "_matched" : "")
+    mkpath(outdir)
+    reference, mger = screen_config(outdir; run_dir=chosen)
     oof_qm(scheme) = joinpath(reference.mger.outdir, scheme, lowercase(FY4B_QM_PRODUCT),
         "oof_raw.csv")
     grid_path = something(reference.fy4b_qm_grid)
     inputs = vcat(mger.station_meta_path, mger.obs_hourly_wide_path,
         [mger.sat_paths[name] for name in sort(collect(keys(mger.sat_paths)))], grid_path,
         joinpath(dirname(grid_path), "fy4b_hour_meta.csv"),
-        [oof_qm(string(scheme)) for scheme in reference.cv_schemes])
-    provenance = start_provenance(ROOT, OUTDIR; inputs)
+        [oof_qm(string(scheme)) for scheme in reference.cv_schemes],
+        matched ? [joinpath(reference.mger.outdir, "run_status.csv")] : String[])
+    provenance = start_provenance(ROOT, outdir; inputs)
     started = time()
 
     isdir(CLT_DIR) || error("CLT tree not found at $CLT_DIR - is the external drive mounted?")
     groups, clt_qc = find_clt_files(CLT_DIR; years=CLT_YEARS, months=CLT_MONTHS)
-    write_csv_atomic(joinpath(OUTDIR, "clt_hourly_qc.csv"), clt_qc)
+    write_csv_atomic(joinpath(outdir, "clt_hourly_qc.csv"), clt_qc)
     println("CLT: $(nrow(clt_qc)) hours, $(count(clt_qc.complete)) complete, " *
         "$(sum(clt_qc.file_count)) files")
     alignment = check_alignment(groups)
@@ -365,6 +387,17 @@ function screen_main()
         for name in SERIES
             mask .&= isfinite.(series[name])
         end
+        if matched
+            run_dir = reference.mger.outdir
+            products = sort(unique(String.(CSV.read(joinpath(run_dir, "metrics_pooled.csv"),
+                DataFrame; select=[:product]).product)))
+            failures = matched_fold_failures(CSV.read(joinpath(run_dir, "run_status.csv"), DataFrame);
+                scheme, products)
+            isempty(failures) || error("--matched-products: $scheme folds failed:\n" *
+                sprint(show, select(failures, :product, :fold, :method, :status)))
+            mask .&= matched_evaluation_mask(joinpath(run_dir, scheme), products, ids,
+                times).matched[:, columns]
+        end
 
         append!(class_table, class_rows(scheme, q, gpm_sub, y_sub, held_class, mask))
         append!(amount_table, amount_rows(scheme, q, y_sub, held_class, mask))
@@ -403,15 +436,15 @@ function screen_main()
             pass=empty_folds <= RULE_MAX_EMPTY_FOLDS),
     ]
 
-    write_csv_atomic(joinpath(OUTDIR, "filters.csv"), DataFrame(filter_rows))
-    write_csv_atomic(joinpath(OUTDIR, "class_table.csv"), DataFrame(class_table))
-    write_csv_atomic(joinpath(OUTDIR, "class_by_amount.csv"), DataFrame(amount_table))
-    write_csv_atomic(joinpath(OUTDIR, "diurnal.csv"), DataFrame(diurnal_table))
-    write_csv_atomic(joinpath(OUTDIR, "metrics.csv"), DataFrame(metric_rows))
-    write_csv_atomic(joinpath(OUTDIR, "paired.csv"), DataFrame(paired))
-    write_csv_atomic(joinpath(OUTDIR, "rule.csv"), DataFrame(rule))
-    write_csv_atomic(joinpath(OUTDIR, "alignment.csv"), DataFrame([alignment]))
-    CSV.write(joinpath(OUTDIR, "provenance.csv"), finish_provenance!(provenance, ROOT))
+    write_csv_atomic(joinpath(outdir, "filters.csv"), DataFrame(filter_rows))
+    write_csv_atomic(joinpath(outdir, "class_table.csv"), DataFrame(class_table))
+    write_csv_atomic(joinpath(outdir, "class_by_amount.csv"), DataFrame(amount_table))
+    write_csv_atomic(joinpath(outdir, "diurnal.csv"), DataFrame(diurnal_table))
+    write_csv_atomic(joinpath(outdir, "metrics.csv"), DataFrame(metric_rows))
+    write_csv_atomic(joinpath(outdir, "paired.csv"), DataFrame(paired))
+    write_csv_atomic(joinpath(outdir, "rule.csv"), DataFrame(rule))
+    write_csv_atomic(joinpath(outdir, "alignment.csv"), DataFrame([alignment]))
+    CSV.write(joinpath(outdir, "provenance.csv"), finish_provenance!(provenance, ROOT))
 
     println("\nFilters (training stations):")
     for row in filter_rows
@@ -448,7 +481,7 @@ function screen_main()
     verdict = all(row.pass for row in rule) ? "GO: the full CLT download is worth it" :
         "STOP: the rule fails (see the checks above); FY4B_QM stays the quality step"
     println("Verdict: $verdict")
-    println("Wrote $(relpath(OUTDIR, ROOT)) in $(round((time() - started) / 60; digits=1)) min")
+    println("Wrote $(relpath(outdir, ROOT)) in $(round((time() - started) / 60; digits=1)) min")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

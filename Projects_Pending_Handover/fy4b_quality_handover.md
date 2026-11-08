@@ -15,12 +15,47 @@ held out as well as gauges, FY4B_QM's raw gain shrinks materially (Previous). Si
 "no" to the channel pilot. All of it is merged (`be63c2e`), and §3.4 now carries the time-held-out figures. The
 paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states, and the
 paper now uses 7-day blocks (Previous, merged as `3d41498`). The humidity gate's benchmark run says stop: the gate
-does not survive MGWR and the blend (Newest, merged as `a7fed1b`) · **Next step:** none; no FY4B quality step is
-pending
+does not survive MGWR and the blend (Previous, merged as `a7fed1b`). FY4B is now the third product of RQ1-RQ3,
+every evaluation on one matched sample (Newest, branch `paper/three-product-matched`, not merged) · **Next step:**
+the user reviews the branch, above all RQ1's storm-core finding, which changed; merge only when asked
 
 ---
 
-## Newest (2026-11-08): the humidity gate in the benchmark: stop
+## Newest (2026-11-08): FY4B in the main comparison, one matched sample
+
+The user asked for FY4B in the main comparison of the three products, the record unified to June 2022 on, and every
+comparison on matched samples (the gauge and all three products valid). Decided with the user: plain FY4B (`fy4b_w3_h0`)
+is the third product in RQ1-RQ3, FY4B_QM an extra row in RQ3; FY4B goes into the merges and the agreement bands;
+RQ1's events are re-selected on the matched window; the full-record GPM/GSMaP results leave the paper.
+
+- **Runs.** Benchmark `..._fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal` (fe421b3, clean, 3 h 50 min, no failed
+  fold). Its FY4B/GPM/GSMaP/MERGED files equal `..._fy4bw3h0_fy4bqm_gpmuncal`'s byte for byte (190 files), and FY4B_QM's
+  `oof_raw`/mask/`oof_mgwr` equal the qmfusion run's. Claims, fusion, the FY4B quality comparison, the time holdout and
+  the CLT pilot rescore it with `--matched-products` (`BenchmarkDiagnostics.matched_evaluation_mask`); RQ1, the cores
+  and RQ2 run with `--fy4b-file ... --from 2022-06`. All downstream runs at 079ed3f, clean.
+- **The sample.** RQ2's `all_products`: 4,571,475 gauge-hours on 19,818 hours (908 days). RQ3 also needs every
+  anchor's prediction by every method: 4,451,967 gauge-hours on 19,816 hours, 97-99% of each product's own mask. The
+  old Table 3 had GPM_uncal on 58% of its cells (joint-fold failures); now every row is on the same cells.
+- **RQ1.** 53 heavy-rain days from June 2022, 42 eligible; the six are the old five plus 2023-07-31 (localized), which
+  replaces 2024-07-30. Mean r: GPM 0.52, GSMaP 0.53, FY4B 0.36. **Changed finding:** pixel averaging explains 16-18%
+  of the core deficit on 2023-09-10 but 45-65% on 2023-07-31 (before: 16-25% on both localized events). The text now
+  says it depends on the storm; the user should confirm the wording.
+- **RQ2.** GPM/GSMaP findings hold (GPM median station r 0.45, GSMaP 0.39, the same as on the full record). FY4B is
+  weakest: r 0.23, wet-hour POD 31% vs 60/62%, event POD 56-82% vs 86-96%, areal hourly r 0.41 vs 0.83/0.67. No daily
+  areal series: FY4B never has the hour ending 23 BJT.
+- **RQ3.** Agreement blend vs ADW: GPM +2.8% (sig), GSMaP +1.5% (Holm p 0.25), FY4B +0.2% (p 1.00), FY4B_QM +0.9%
+  (p 0.82), MERGED_OLS of three products +3.6% (sig, best). MGWR alone on GPM is now significantly worse than ADW
+  (-3.6%), on MERGED_OLS significantly better (+2.8%). Absolute RMSE is higher than in the old Table 3 (ADW 0.747 vs
+  0.695): FY4B's hours are wetter.
+- **§3.4.** On the matched sample: raw -16.8%, MGWR -5.3%, blend -0.7% against plain FY4B; time held out -9.5%
+  (verdict still MATERIAL, as before); CLT pilot still STOP. On the RQ1 events the correction dries five of six totals
+  and leaves mean r at 0.35 (FY4B 0.36).
+- **Not rerun:** `explain_fy4b_qm_time_holdout.jl` (3e45ae6), whose sentence §3.4 keeps; it was on the earlier run's
+  cells, but FY4B_QM's raw field is the same in both runs.
+
+---
+
+## Previous (2026-11-08): the humidity gate in the benchmark: stop
 
 The user asked for the benchmark run of the humidity gate that passed its screen. ERA5-Land is reanalysis, so a kept
 gate would have been "FY4B + reanalysis". No paper text or number changes.

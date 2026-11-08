@@ -15,6 +15,37 @@ function benchmark_diagnostics_outdir(root::AbstractString, run_dir::AbstractStr
     return outdir
 end
 
+"""
+`(fy4b_file, rest)`: a script's `--fy4b-file <path>` option, the FY4B series a benchmark run was
+given with the same flag (a relative path is read from `root`), and the arguments without it.
+"""
+function fy4b_file_option(args; root::AbstractString)
+    rest = collect(String, args)
+    index = findfirst(==("--fy4b-file"), rest)
+    index === nothing && return nothing, rest
+    index < length(rest) || throw(ArgumentError("--fy4b-file needs a path"))
+    path = isabspath(rest[index + 1]) ? rest[index + 1] : joinpath(root, rest[index + 1])
+    isfile(path) || throw(ArgumentError("--fy4b-file: no such file $path"))
+    return path, deleteat!(rest, index:(index + 1))
+end
+
+"""
+Refuse to read a run on another FY4B series' grid: the run name carries a rebuilt series' tag
+(`fy4b_w3_h0.csv` -> `_fy4bw3h0`, as `run_interpolation_benchmark.jl` names it) exactly when
+`fy4b_file` is that series.
+"""
+function check_fy4b_tag(run_name::AbstractString, fy4b_file::Union{Nothing,AbstractString})
+    tagged = match(r"_fy4bw\d+h\d+(?=_|$)", run_name)
+    if fy4b_file === nothing
+        tagged === nothing ||
+            error("$run_name was run on a rebuilt FY4B series; name it with --fy4b-file")
+        return nothing
+    end
+    tag = "_" * replace(splitext(basename(fy4b_file))[1], "_" => "")
+    tagged !== nothing && tagged.match == tag ||
+        error("--fy4b-file $(basename(fy4b_file)) does not match the run $run_name (expected $tag)")
+    return nothing
+end
 
 """Read a wide `time × station` benchmark CSV into a `station × time` matrix ordered by `ids`."""
 function read_wide_matrix(path::AbstractString, ids::Vector{String})

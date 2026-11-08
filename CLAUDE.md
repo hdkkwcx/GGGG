@@ -169,6 +169,14 @@ using Main.BenchmarkDiagnostics
   removes it from the merges and the agreement-envelope bands, and widens the common grid from
   FY4B's 13,471 hours to all 26,304 hours of 2022–2024. `--with-fy4b` restores it.
   `benchmark_config`'s `fy4b` keyword still defaults to `true`, for the verify scripts.
+- The paper's main comparison has three products on one matched sample: its `benchmark` step runs
+  `--with-fy4b --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --fy4b-qm --fy4b-qm-adaptive`
+  (plain FY4B in the merges and bands, FY4B_QM appended last). The run still scores each product on
+  its own mask; `--matched-products` on `run_claim_reassessment.jl`, `run_gauge_satellite_fusion.jl`,
+  `compare_fy4b_quality.jl`, `check_fy4b_qm_time_holdout.jl` and `screen_fy4b_clt.jl` rescores on
+  the cells every product of the run is scored on (`BenchmarkDiagnostics.matched_evaluation_mask`,
+  folder suffix `_matched`) and stops if a method failed a whole fold. Claims and fusion read a
+  rebuilt-FY4B run only with the same `--fy4b-file`; the three FY4B scripts take the run folder.
 - `hurdle_gwr` (`InterpolationBenchmarkHurdle.jl`) is deliberately disabled and absent from
   `BENCHMARK_RUNS`.
 
@@ -205,5 +213,10 @@ using Main.BenchmarkDiagnostics
   `run_heavy_core_diagnostics.jl`) follow the benchmark's defaults: IMERG Uncal (`GPM_uncal`, suffix
   `_gpmuncal`; `--gpm-cal` for IMERG Final), and RQ2 leaves FY4B out (suffix `_nofy4b`;
   `--with-fy4b` restores its `all_products` sample). `--gpm-cal --with-fy4b` reproduces RQ2's
-  original run. As in the benchmark, `--fy4b-file <path>` (with `--with-fy4b`) scores a rebuilt FY4B
-  series instead of the shipped one (suffix `_fy4bw3h0` for `fy4b_w3_h0.csv`).
+  original run. As in the benchmark, `--fy4b-file <path>` (with `--with-fy4b` in RQ2) scores a rebuilt
+  FY4B series instead of the shipped one (suffix `_fy4bw3h0` for `fy4b_w3_h0.csv`); in RQ1 it selects
+  the events on the hours the gauges and all three products share, and the core diagnostics then work
+  on those windows. `--from YYYY-MM` starts the record at that month (suffix `_from<yyyymm>`, before
+  `_block<N>d`). The paper runs all three, and `run_heavy_rain_event_fy4b.jl`, with
+  `--fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --from 2022-06` (RQ2 also `--with-fy4b
+  --block-days 7`) and cites RQ2's `all_products` sample only.

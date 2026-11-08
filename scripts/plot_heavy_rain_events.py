@@ -263,7 +263,7 @@ def fig1_point_maps(events, stations, metrics, bounds) -> None:
     fig.suptitle("Heavy-rain events: gauge-observed vs satellite precipitation at the gauge locations",
                  fontsize=9, y=0.985)
     fig.text(0.5, 0.958, "Each dot is one gauge; satellite values are the pixels sampled at the same gauges. "
-             "Totals over the hours all sources cover (08-08 BJT day).",
+             "Totals over the hours all sources cover within the 08-08 BJT day.",
              ha="center", fontsize=6.5, color=INK_SECONDARY)
     horizontal_colorbar(fig, [0.30, 0.035, 0.52, 0.011], RAIN_CMAP, RAIN_NORM, RAIN_BOUNDS,
                         "Accumulated precipitation (mm), CMA daily rain classes")
@@ -325,7 +325,7 @@ def fig0_event_overview(events, stations, metrics, bounds) -> None:
     error = horizontal_colorbar(fig, [0.12, 0.36 / height, 0.42, 0.08 / height], OVERVIEW_ERROR_CMAP,
                                 OVERVIEW_ERROR_NORM, ERROR_BOUNDS, "Satellite − gauge (mm)", extend="both")
     rain = horizontal_colorbar(fig, [0.62, 0.36 / height, 0.34, 0.08 / height], OVERVIEW_RAIN_CMAP, OVERVIEW_RAIN_NORM,
-                               RAIN_BOUNDS, "Gauge 24 h total (mm), CMA daily rain classes")
+                               RAIN_BOUNDS, "Gauge total over the shared hours (mm), CMA daily rain classes")
     for bar in (rain, error):
         bar.ax.tick_params(labelsize=6)
         bar.set_label(bar.ax.get_xlabel(), fontsize=6.8, color=INK_SECONDARY)

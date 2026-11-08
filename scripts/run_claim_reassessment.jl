@@ -19,6 +19,13 @@
 # `--block-days 1` goes through the same path and must reproduce the default files. Without the flag
 # nothing changes (`TimeBlockFolds.block_times`).
 #
+# `--fy4b-file <path>` names the FY4B series a run was given with the same flag (a series rebuilt by
+# `prepare_fy4b_rebuild.jl`, run name `_fy4bw3h0` etc.), so the grid is rebuilt on its hours; a run
+# with that tag in its name needs it. `--matched-products` scores every product and method on one
+# sample, the cells every product of the run is scored on (`matched_evaluation_mask`), instead of
+# each product's own mask, and writes to `<diagnostics folder>_matched`, then `_block{N}d`. It stops
+# if a method failed a whole fold for any product, as that fold would be lost for all of them.
+#
 # Records `claim_provenance.csv` beside its tables (the folder is shared with the other benchmark
 # diagnostics). Its inputs are the study-area files and the run's `benchmark_scope.csv`,
 # `metrics_pooled.csv` and fold split, not the ~4.5 GB of out-of-fold predictions: those belong to
@@ -33,6 +40,7 @@ include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("InterpolationBenchmark")
 load_standalone_modules("BenchmarkDiagnostics", "TimeBlockFolds")
 using Main.BenchmarkDiagnostics
+using Main.DayBlockBootstrap: read_wide_mask, read_wide_values
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.TimeBlockFolds: block_times, block_days_option
 
@@ -79,9 +87,12 @@ end
 """
 The `MGERConfig` the full benchmark run used, so the common station/time grid matches. `gpm_uncal`
 swaps in uncalibrated IMERG, as `run_interpolation_benchmark.jl` does for its `_gpmuncal` runs.
-`fy4b=false` leaves FY4B out, as it does for its `_nofy4b` runs.
+`fy4b=false` leaves FY4B out, as it does for its `_nofy4b` runs, and `fy4b_file` swaps in a rebuilt
+FY4B series, as its `--fy4b-file` does. That grid is pinned by the run itself, and every mask read
+below is checked against it hour by hour.
 """
-function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=true)
+function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=true,
+                      fy4b_file::Union{Nothing,String}=nothing)
     return MGERConfig(
         station_meta_path=joinpath(STUDY_DATA, "station_meta.csv"),
         obs_hourly_wide_path=joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),
@@ -90,15 +101,15 @@ function study_config(outdir::AbstractString; gpm_uncal::Bool=false, fy4b::Bool=
                 "GPM_uncal" => joinpath(STUDY_DATA, "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv") :
                 "GPM" => joinpath(STUDY_DATA, "hubei_gpm_hourly_2022_2024_full_aligned.csv")),
             "GSMaP" => joinpath(STUDY_DATA, "hubei_gsmap_hourly_2022_2024_full_aligned.csv"),
-            (fy4b ? ["FY4B" => joinpath(
+            (fy4b ? ["FY4B" => something(fy4b_file, joinpath(
                 STUDY_DATA, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
-            )] : Pair{String,String}[])...,
+            ))] : Pair{String,String}[])...,
         ),
         outdir=outdir,
         rain_threshold=0.1,
         analysis_start=DateTime(2022, 1, 1, 9),
         analysis_end=DateTime(2025, 1, 1, 8),
-        expected_common_time_count=fy4b ? 13471 : 26304,
+        expected_common_time_count=fy4b_file !== nothing ? nothing : fy4b ? 13471 : 26304,
     )
 end
 
@@ -147,20 +158,25 @@ end
 
 function main(args=ARGS)
     block_days, args = block_days_option(args)
+    fy4b_file, args = fy4b_file_option(args; root=ROOT)
+    matched = "--matched-products" in args
+    args = filter(!=("--matched-products"), args)
     run_dir = isempty(args) ? DEFAULT_RUN : abspath(args[1])
+    run_name = basename(rstrip(run_dir, '/'))
+    check_fy4b_tag(run_name, fy4b_file)
     outdir = benchmark_diagnostics_outdir(ROOT, run_dir)
-    if block_days !== nothing
-        outdir *= "_block$(block_days)d"
+    if matched || block_days !== nothing
+        outdir *= (matched ? "_matched" : "") * (block_days === nothing ? "" : "_block$(block_days)d")
         mkpath(outdir)
     end
 
-    run_name = basename(rstrip(run_dir, '/'))
     mger = study_config(outdir; gpm_uncal=endswith(run_name, "_gpmuncal"),
-        fy4b=!occursin("_nofy4b", run_name))
+        fy4b=!occursin("_nofy4b", run_name), fy4b_file)
     provenance = start_provenance(ROOT, outdir; inputs=[
         mger.station_meta_path, mger.obs_hourly_wide_path, values(mger.sat_paths)...,
         joinpath(run_dir, "benchmark_scope.csv"), joinpath(run_dir, "metrics_pooled.csv"),
         joinpath(scheme_directory(run_dir), "split_common.csv"),
+        (matched ? [joinpath(run_dir, "run_status.csv")] : String[])...,
     ])
     # The three products with files define the common station/time grid, which every product in
     # the run shares - a derived product is built on that grid by construction. Which products to
@@ -181,12 +197,13 @@ function main(args=ARGS)
     println("Assessing products: $(join(products, ", "))")
     predictions = Dict(product => load_predictions(
         joinpath(scheme_dir, lowercase(product)), ids) for product in products)
-    masks = Dict(product => read_mask_matrix(
-        joinpath(scheme_dir, lowercase(product), "common_evaluation_mask.csv"), ids)
-        for product in products)
     # Observations and the time axis are shared across products, so they come from whichever
     # product the grid was loaded for; a derived product has no entry of its own in `product_data`.
     grid = product_data[first(keys(product_data))]
+    # Checked hour by hour against the grid: the OOF matrices are read by row position.
+    masks = Dict(product => read_wide_mask(
+        joinpath(scheme_dir, lowercase(product), "common_evaluation_mask.csv"), ids, grid.times)
+        for product in products)
     # The hours the bootstrap groups by date: the hours themselves, or each hour's block start.
     bootstrap_times = block_days === nothing ? grid.times : block_times(grid.times; block_days)
     # Rebuilt for the `nearest_train_km` stratum of the metrics table assembled below.
@@ -202,6 +219,22 @@ function main(args=ARGS)
     end
     evaluable = Dict(product => evaluable_cells(grid.Y_obs, predictions[product]["raw"])
                      for product in products)
+    # One sample for every product (`--matched-products`): the cells all of them are scored on.
+    matched_cells = nothing
+    if matched
+        failures = matched_fold_failures(CSV.read(joinpath(run_dir, "run_status.csv"), DataFrame);
+            scheme=SCHEME, products)
+        isempty(failures) || error("--matched-products: these folds failed, so the matched " *
+            "sample would lose them for every product:\n" *
+            sprint(show, select(failures, :product, :fold, :method, :status)))
+        sample = matched_evaluation_mask(scheme_dir, products, ids, grid.times)
+        matched_cells = sample.matched
+        CSV.write(joinpath(outdir, "matched_sample.csv"),
+            matched_sample_table(sample.masks, matched_cells, fold_of; scheme=SCHEME))
+        println("Matched sample: $(count(matched_cells)) cells, " *
+            "$(round(count(matched_cells) / count(masks[first(products)]); digits=4)) of " *
+            "$(first(products))'s own mask")
+    end
 
     bootstrap_rows = NamedTuple[]
     claim_frames = DataFrame[]
@@ -237,6 +270,9 @@ function main(args=ARGS)
             for baseline in TRADITIONAL_METHODS
                 claim_mask = claim_mask .& .!isnan.(predictions[product][baseline])
             end
+            # Matched: the same cells for every product. They already need this method and the
+            # baselines finite (`MATCHED_METHODS`), so the intersection only makes that explicit.
+            matched_cells === nothing || (claim_mask = claim_mask .& matched_cells)
             claim_mask = BitMatrix(claim_mask)
             push!(coverage_rows, (;
                 scheme=SCHEME, product, method, n_evaluable, own_coverage=own[product],

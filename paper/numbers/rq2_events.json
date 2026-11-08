@@ -1,59 +1,84 @@
 {
- "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/event_timing_summary.csv",
- "source_sha256": "c686b9bbdb701a8cbaa2afa96588132f7978ce2377e7f8e6181d832d3b27ccc9",
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/event_timing_summary.csv",
+ "source_sha256": "557435d86aa1c65b7ab9a65325e71dd1673455f939660b34ab3b9d9647d6e5dd",
  "rows": [
+  {
+   "product": "FY4B",
+   "event_class": "moderate",
+   "POD": "+56",
+   "centroid": "-0.7"
+  },
+  {
+   "product": "FY4B",
+   "event_class": "heavy",
+   "POD": "+74",
+   "centroid": "-0.2"
+  },
+  {
+   "product": "FY4B",
+   "event_class": "rainstorm",
+   "POD": "+75",
+   "centroid": "0.3"
+  },
+  {
+   "product": "FY4B",
+   "event_class": "severe_rainstorm",
+   "POD": "+82",
+   "centroid": "0.5"
+  },
   {
    "product": "GPM_uncal",
    "event_class": "moderate",
-   "POD": "+87",
-   "centroid": "-0.4"
+   "POD": "+86",
+   "centroid": "-0.3"
   },
   {
    "product": "GPM_uncal",
    "event_class": "heavy",
-   "POD": "+93",
-   "centroid": "-0.1"
+   "POD": "+89",
+   "centroid": "0.0"
   },
   {
    "product": "GPM_uncal",
    "event_class": "rainstorm",
-   "POD": "+93",
-   "centroid": "0.1"
+   "POD": "+89",
+   "centroid": "0.3"
   },
   {
    "product": "GPM_uncal",
    "event_class": "severe_rainstorm",
-   "POD": "+97",
+   "POD": "+96",
    "centroid": "0.4"
   },
   {
    "product": "GSMaP",
    "event_class": "moderate",
-   "POD": "+90",
-   "centroid": "-0.4"
+   "POD": "+88",
+   "centroid": "-0.3"
   },
   {
    "product": "GSMaP",
    "event_class": "heavy",
-   "POD": "+95",
-   "centroid": "-0.2"
-  },
-  {
-   "product": "GSMaP",
-   "event_class": "rainstorm",
-   "POD": "+94",
+   "POD": "+91",
    "centroid": "0.0"
   },
   {
    "product": "GSMaP",
-   "event_class": "severe_rainstorm",
-   "POD": "+96",
+   "event_class": "rainstorm",
+   "POD": "+90",
    "centroid": "0.3"
+  },
+  {
+   "product": "GSMaP",
+   "event_class": "severe_rainstorm",
+   "POD": "+93",
+   "centroid": "0.4"
   }
  ],
  "stats": {
-  "pod": "87–97",
-  "centroid_min": "-0.4",
-  "centroid_max": "0.4"
+  "pod": "86–96",
+  "pod_fy4b": "56–82",
+  "centroid_min": "-0.7",
+  "centroid_max": "0.5"
  }
 }

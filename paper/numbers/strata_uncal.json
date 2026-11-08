@@ -1,7 +1,655 @@
 {
- "source": "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/stratified_summary.csv",
- "source_sha256": "234e2144d6987dd7b7d1803d6f9370beb814f1c1ad011343f8c309925989c113",
+ "source": "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/stratified_summary.csv",
+ "source_sha256": "5d1a64e292fb3bfa97d94adcc43993466556fb9b6a8ecf9bfd50843376da5d9b",
  "rows": [
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-2.5"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.8"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-8.2"
+  },
+  {
+   "product": "FY4B",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-25.9"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "-0.4",
+   "change0": "0",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "+0.4",
+   "change0": "0",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "+1.0",
+   "change0": "+1",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "+2.4",
+   "change0": "+2",
+   "bias": "-2.4"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "-5.5",
+   "change0": "-5",
+   "bias": "-0.1"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "-2.0",
+   "change0": "-2",
+   "bias": "-0.8"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "-11.8",
+   "change0": "-12",
+   "bias": "0.1"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "+3.3",
+   "change0": "+3",
+   "bias": "-7.9"
+  },
+  {
+   "product": "FY4B",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "+2.1",
+   "change0": "+2",
+   "bias": "-25.4"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "-10.9",
+   "change0": "-11",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "-11.0",
+   "change0": "-11",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "-12.3",
+   "change0": "-12",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "-4.2",
+   "change0": "-4",
+   "bias": "-2.1"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "-44.6",
+   "change0": "-45",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "-26.6",
+   "change0": "-27",
+   "bias": "-0.7"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "-74.9",
+   "change0": "-75",
+   "bias": "0.1"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "+6.0",
+   "change0": "+6",
+   "bias": "-7.5"
+  },
+  {
+   "product": "FY4B",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "+5.6",
+   "change0": "+6",
+   "bias": "-24.4"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "-72.5",
+   "change0": "-72",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "-45.1",
+   "change0": "-45",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "-33.3",
+   "change0": "-33",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "-49.6",
+   "change0": "-50",
+   "bias": "-3.1"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "-131.5",
+   "change0": "-132",
+   "bias": "-0.3"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "-105.4",
+   "change0": "-105",
+   "bias": "-1.3"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "-198.6",
+   "change0": "-199",
+   "bias": "0.1"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "-7.2",
+   "change0": "-7",
+   "bias": "-8.5"
+  },
+  {
+   "product": "FY4B",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "+3.1",
+   "change0": "+3",
+   "bias": "-24.9"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-2.5"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-0.8"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-8.2"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "adw",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-25.9"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "+0.1",
+   "change0": "0",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "+1.1",
+   "change0": "+1",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "+2.2",
+   "change0": "+2",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "+1.0",
+   "change0": "+1",
+   "bias": "-2.5"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "+0.3",
+   "change0": "0",
+   "bias": "-0.1"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "-1.7",
+   "change0": "-2",
+   "bias": "-0.9"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "-7.1",
+   "change0": "-7",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "+2.5",
+   "change0": "+2",
+   "bias": "-8.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "blend_agrenv_mgwr",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "+2.3",
+   "change0": "+2",
+   "bias": "-25.3"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "-6.7",
+   "change0": "-7",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "-4.8",
+   "change0": "-5",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "-3.0",
+   "change0": "-3",
+   "bias": "0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "-3.2",
+   "change0": "-3",
+   "bias": "-2.4"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "-19.2",
+   "change0": "-19",
+   "bias": "-0.1"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "-14.9",
+   "change0": "-15",
+   "bias": "-0.9"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "-48.6",
+   "change0": "-49",
+   "bias": "0.1"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "+3.9",
+   "change0": "+4",
+   "bias": "-7.8"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "mgwr",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "+5.1",
+   "change0": "+5",
+   "bias": "-24.4"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "nearest_train_km",
+   "level": "0_20",
+   "change": "-43.3",
+   "change0": "-43",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "nearest_train_km",
+   "level": "20_50",
+   "change": "-21.0",
+   "change0": "-21",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "nearest_train_km",
+   "level": "50_100",
+   "change": "-10.2",
+   "change0": "-10",
+   "bias": "-0.0"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "heavy",
+   "change": "-37.9",
+   "change0": "-38",
+   "bias": "-3.7"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "light",
+   "change": "-55.7",
+   "change0": "-56",
+   "bias": "-0.4"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "moderate",
+   "change": "-61.4",
+   "change0": "-61",
+   "bias": "-1.7"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "no_rain",
+   "change": "-108.3",
+   "change0": "-108",
+   "bias": "0.1"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "rainstorm",
+   "change": "-9.6",
+   "change0": "-10",
+   "bias": "-9.2"
+  },
+  {
+   "product": "FY4B_QM",
+   "method": "raw",
+   "group": "rain_intensity",
+   "level": "severe_rainstorm",
+   "change": "+1.3",
+   "change0": "+1",
+   "bias": "-25.6"
+  },
   {
    "product": "GPM_uncal",
    "method": "adw",
@@ -9,7 +657,7 @@
    "level": "0_20",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "GPM_uncal",
@@ -18,7 +666,7 @@
    "level": "20_50",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "GPM_uncal",
@@ -27,7 +675,7 @@
    "level": "50_100",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "GPM_uncal",
@@ -72,7 +720,7 @@
    "level": "rainstorm",
    "change": "0.0",
    "change0": "0",
-   "bias": "-8.4"
+   "bias": "-8.2"
   },
   {
    "product": "GPM_uncal",
@@ -81,14 +729,14 @@
    "level": "severe_rainstorm",
    "change": "0.0",
    "change0": "0",
-   "bias": "-26.0"
+   "bias": "-25.9"
   },
   {
    "product": "GPM_uncal",
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "+0.6",
+   "change": "+1.0",
    "change0": "+1",
    "bias": "-0.0"
   },
@@ -97,7 +745,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "+2.7",
+   "change": "+3.2",
    "change0": "+3",
    "bias": "-0.0"
   },
@@ -106,8 +754,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "+8.2",
-   "change0": "+8",
+   "change": "+6.2",
+   "change0": "+6",
    "bias": "-0.0"
   },
   {
@@ -115,8 +763,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "+2.4",
-   "change0": "+2",
+   "change": "+4.1",
+   "change0": "+4",
    "bias": "-2.3"
   },
   {
@@ -124,7 +772,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "+2.3",
+   "change": "+2.0",
    "change0": "+2",
    "bias": "-0.1"
   },
@@ -133,8 +781,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-4.5",
-   "change0": "-5",
+   "change": "-0.7",
+   "change0": "-1",
    "bias": "-0.8"
   },
   {
@@ -142,8 +790,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "+6.6",
-   "change0": "+7",
+   "change": "+4.2",
+   "change0": "+4",
    "bias": "0.0"
   },
   {
@@ -151,16 +799,16 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+3.8",
+   "change": "+4.0",
    "change0": "+4",
-   "bias": "-8.0"
+   "bias": "-7.9"
   },
   {
    "product": "GPM_uncal",
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+2.4",
+   "change": "+2.2",
    "change0": "+2",
    "bias": "-25.4"
   },
@@ -169,8 +817,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-5.9",
-   "change0": "-6",
+   "change": "-6.7",
+   "change0": "-7",
    "bias": "0.0"
   },
   {
@@ -178,8 +826,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "-2.2",
-   "change0": "-2",
+   "change": "-2.6",
+   "change0": "-3",
    "bias": "0.0"
   },
   {
@@ -187,8 +835,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "+2.5",
-   "change0": "+3",
+   "change": "+0.6",
+   "change0": "+1",
    "bias": "0.0"
   },
   {
@@ -196,8 +844,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-7.0",
-   "change0": "-7",
+   "change": "-6.2",
+   "change0": "-6",
    "bias": "-2.0"
   },
   {
@@ -205,8 +853,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-25.1",
-   "change0": "-25",
+   "change": "-28.3",
+   "change0": "-28",
    "bias": "-0.1"
   },
   {
@@ -214,8 +862,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-32.7",
-   "change0": "-33",
+   "change": "-31.1",
+   "change0": "-31",
    "bias": "-0.6"
   },
   {
@@ -223,8 +871,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-22.0",
-   "change0": "-22",
+   "change": "-25.5",
+   "change0": "-26",
    "bias": "0.0"
   },
   {
@@ -232,26 +880,26 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+5.8",
+   "change": "+5.7",
    "change0": "+6",
-   "bias": "-7.5"
+   "bias": "-7.4"
   },
   {
    "product": "GPM_uncal",
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+5.3",
+   "change": "+4.8",
    "change0": "+5",
-   "bias": "-24.4"
+   "bias": "-24.6"
   },
   {
    "product": "GPM_uncal",
    "method": "raw",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-18.9",
-   "change0": "-19",
+   "change": "-18.5",
+   "change0": "-18",
    "bias": "-0.0"
   },
   {
@@ -259,8 +907,8 @@
    "method": "raw",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "-4.1",
-   "change0": "-4",
+   "change": "-2.8",
+   "change0": "-3",
    "bias": "-0.0"
   },
   {
@@ -268,8 +916,8 @@
    "method": "raw",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "+2.2",
-   "change0": "+2",
+   "change": "+3.5",
+   "change0": "+3",
    "bias": "-0.0"
   },
   {
@@ -277,16 +925,16 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-19.4",
-   "change0": "-19",
-   "bias": "-2.6"
+   "change": "-17.0",
+   "change0": "-17",
+   "bias": "-2.5"
   },
   {
    "product": "GPM_uncal",
    "method": "raw",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-33.7",
+   "change": "-33.5",
    "change0": "-34",
    "bias": "-0.2"
   },
@@ -295,17 +943,17 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-46.8",
-   "change0": "-47",
-   "bias": "-0.9"
+   "change": "-43.3",
+   "change0": "-43",
+   "bias": "-0.8"
   },
   {
    "product": "GPM_uncal",
    "method": "raw",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-15.5",
-   "change0": "-15",
+   "change": "-14.1",
+   "change0": "-14",
    "bias": "0.0"
   },
   {
@@ -313,18 +961,18 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "-0.9",
+   "change": "-1.3",
    "change0": "-1",
-   "bias": "-8.4"
+   "bias": "-8.3"
   },
   {
    "product": "GPM_uncal",
    "method": "raw",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+0.8",
+   "change": "+1.3",
    "change0": "+1",
-   "bias": "-25.9"
+   "bias": "-25.8"
   },
   {
    "product": "GSMaP",
@@ -342,7 +990,7 @@
    "level": "20_50",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "GSMaP",
@@ -369,7 +1017,7 @@
    "level": "light",
    "change": "0.0",
    "change0": "0",
-   "bias": "-0.1"
+   "bias": "-0.0"
   },
   {
    "product": "GSMaP",
@@ -405,7 +1053,7 @@
    "level": "severe_rainstorm",
    "change": "0.0",
    "change0": "0",
-   "bias": "-25.8"
+   "bias": "-25.9"
   },
   {
    "product": "GSMaP",
@@ -421,7 +1069,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "+1.8",
+   "change": "+1.9",
    "change0": "+2",
    "bias": "0.0"
   },
@@ -430,8 +1078,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "+1.9",
-   "change0": "+2",
+   "change": "+2.8",
+   "change0": "+3",
    "bias": "0.0"
   },
   {
@@ -439,7 +1087,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "+4.9",
+   "change": "+5.1",
    "change0": "+5",
    "bias": "-2.1"
   },
@@ -448,7 +1096,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-8.0",
+   "change": "-8.1",
    "change0": "-8",
    "bias": "-0.0"
   },
@@ -457,7 +1105,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-2.7",
+   "change": "-2.5",
    "change0": "-3",
    "bias": "-0.6"
   },
@@ -466,8 +1114,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-10.8",
-   "change0": "-11",
+   "change": "-9.7",
+   "change0": "-10",
    "bias": "0.0"
   },
   {
@@ -475,7 +1123,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+5.0",
+   "change": "+5.3",
    "change0": "+5",
    "bias": "-7.6"
   },
@@ -484,16 +1132,16 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+3.5",
-   "change0": "+4",
-   "bias": "-24.9"
+   "change": "+3.3",
+   "change0": "+3",
+   "bias": "-25.0"
   },
   {
    "product": "GSMaP",
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-10.8",
+   "change": "-10.7",
    "change0": "-11",
    "bias": "0.0"
   },
@@ -502,8 +1150,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "-13.0",
-   "change0": "-13",
+   "change": "-12.4",
+   "change0": "-12",
    "bias": "0.0"
   },
   {
@@ -511,8 +1159,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "-23.2",
-   "change0": "-23",
+   "change": "-19.5",
+   "change0": "-20",
    "bias": "0.1"
   },
   {
@@ -520,8 +1168,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-21.9",
-   "change0": "-22",
+   "change": "-23.9",
+   "change0": "-24",
    "bias": "-1.3"
   },
   {
@@ -529,8 +1177,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-72.2",
-   "change0": "-72",
+   "change": "-71.4",
+   "change0": "-71",
    "bias": "0.1"
   },
   {
@@ -538,8 +1186,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-69.7",
-   "change0": "-70",
+   "change": "-71.1",
+   "change0": "-71",
    "bias": "-0.2"
   },
   {
@@ -547,8 +1195,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-51.5",
-   "change0": "-51",
+   "change": "-48.7",
+   "change0": "-49",
    "bias": "0.1"
   },
   {
@@ -565,17 +1213,17 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+8.9",
-   "change0": "+9",
-   "bias": "-22.8"
+   "change": "+8.4",
+   "change0": "+8",
+   "bias": "-23.1"
   },
   {
    "product": "GSMaP",
    "method": "raw",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-61.8",
-   "change0": "-62",
+   "change": "-59.6",
+   "change0": "-60",
    "bias": "0.0"
   },
   {
@@ -583,8 +1231,8 @@
    "method": "raw",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "-38.5",
-   "change0": "-39",
+   "change": "-36.4",
+   "change0": "-36",
    "bias": "0.0"
   },
   {
@@ -592,8 +1240,8 @@
    "method": "raw",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "-34.9",
-   "change0": "-35",
+   "change": "-32.0",
+   "change0": "-32",
    "bias": "0.0"
   },
   {
@@ -601,16 +1249,16 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-88.1",
-   "change0": "-88",
-   "bias": "-0.9"
+   "change": "-91.4",
+   "change0": "-91",
+   "bias": "-0.8"
   },
   {
    "product": "GSMaP",
    "method": "raw",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-159.5",
+   "change": "-158.9",
    "change0": "-159",
    "bias": "0.1"
   },
@@ -619,8 +1267,8 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-182.5",
-   "change0": "-183",
+   "change": "-184.2",
+   "change0": "-184",
    "bias": "0.2"
   },
   {
@@ -628,8 +1276,8 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-70.7",
-   "change0": "-71",
+   "change": "-63.8",
+   "change0": "-64",
    "bias": "0.1"
   },
   {
@@ -646,9 +1294,9 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+5.0",
+   "change": "+4.7",
    "change0": "+5",
-   "bias": "-23.7"
+   "bias": "-24.0"
   },
   {
    "product": "MERGED_MEAN",
@@ -666,7 +1314,7 @@
    "level": "20_50",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_MEAN",
@@ -693,7 +1341,7 @@
    "level": "light",
    "change": "0.0",
    "change0": "0",
-   "bias": "-0.1"
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_MEAN",
@@ -729,14 +1377,14 @@
    "level": "severe_rainstorm",
    "change": "0.0",
    "change0": "0",
-   "bias": "-25.8"
+   "bias": "-25.9"
   },
   {
    "product": "MERGED_MEAN",
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "+1.4",
+   "change": "+0.9",
    "change0": "+1",
    "bias": "0.0"
   },
@@ -745,7 +1393,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "+3.7",
+   "change": "+3.6",
    "change0": "+4",
    "bias": "0.0"
   },
@@ -754,8 +1402,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "+5.5",
-   "change0": "+5",
+   "change": "+6.2",
+   "change0": "+6",
    "bias": "0.0"
   },
   {
@@ -763,7 +1411,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "+6.0",
+   "change": "+5.6",
    "change0": "+6",
    "bias": "-2.1"
   },
@@ -772,8 +1420,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-3.2",
-   "change0": "-3",
+   "change": "-3.7",
+   "change0": "-4",
    "bias": "-0.1"
   },
   {
@@ -781,17 +1429,17 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-2.7",
+   "change": "-2.6",
    "change0": "-3",
-   "bias": "-0.6"
+   "bias": "-0.7"
   },
   {
    "product": "MERGED_MEAN",
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-1.8",
-   "change0": "-2",
+   "change": "-4.0",
+   "change0": "-4",
    "bias": "0.0"
   },
   {
@@ -799,7 +1447,7 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+5.6",
+   "change": "+6.2",
    "change0": "+6",
    "bias": "-7.6"
   },
@@ -810,15 +1458,15 @@
    "level": "severe_rainstorm",
    "change": "+4.1",
    "change0": "+4",
-   "bias": "-24.7"
+   "bias": "-24.9"
   },
   {
    "product": "MERGED_MEAN",
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-4.3",
-   "change0": "-4",
+   "change": "-3.2",
+   "change0": "-3",
    "bias": "0.0"
   },
   {
@@ -826,8 +1474,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "-2.3",
-   "change0": "-2",
+   "change": "+0.4",
+   "change0": "0",
    "bias": "0.0"
   },
   {
@@ -835,8 +1483,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "-4.5",
-   "change0": "-4",
+   "change": "+2.5",
+   "change0": "+2",
    "bias": "0.0"
   },
   {
@@ -844,17 +1492,17 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-6.5",
-   "change0": "-6",
-   "bias": "-1.5"
+   "change": "0.0",
+   "change0": "0",
+   "bias": "-1.8"
   },
   {
    "product": "MERGED_MEAN",
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-38.0",
-   "change0": "-38",
+   "change": "-25.0",
+   "change0": "-25",
    "bias": "-0.0"
   },
   {
@@ -862,44 +1510,44 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-38.3",
-   "change0": "-38",
-   "bias": "-0.3"
+   "change": "-21.8",
+   "change0": "-22",
+   "bias": "-0.5"
   },
   {
    "product": "MERGED_MEAN",
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-24.9",
-   "change0": "-25",
-   "bias": "0.0"
+   "change": "-24.1",
+   "change0": "-24",
+   "bias": "0.1"
   },
   {
    "product": "MERGED_MEAN",
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+8.3",
-   "change0": "+8",
-   "bias": "-6.8"
+   "change": "+8.6",
+   "change0": "+9",
+   "bias": "-7.1"
   },
   {
    "product": "MERGED_MEAN",
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+8.0",
-   "change0": "+8",
-   "bias": "-23.4"
+   "change": "+6.8",
+   "change0": "+7",
+   "bias": "-24.0"
   },
   {
    "product": "MERGED_MEAN",
    "method": "raw",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-25.8",
-   "change0": "-26",
+   "change": "-26.5",
+   "change0": "-27",
    "bias": "0.0"
   },
   {
@@ -907,7 +1555,7 @@
    "method": "raw",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "-9.3",
+   "change": "-8.7",
    "change0": "-9",
    "bias": "0.0"
   },
@@ -916,8 +1564,8 @@
    "method": "raw",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "-4.0",
-   "change0": "-4",
+   "change": "-2.4",
+   "change0": "-2",
    "bias": "0.0"
   },
   {
@@ -925,54 +1573,54 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-31.1",
-   "change0": "-31",
-   "bias": "-1.7"
+   "change": "-23.7",
+   "change0": "-24",
+   "bias": "-2.1"
   },
   {
    "product": "MERGED_MEAN",
    "method": "raw",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-69.6",
-   "change0": "-70",
-   "bias": "-0.0"
+   "change": "-62.0",
+   "change0": "-62",
+   "bias": "-0.1"
   },
   {
    "product": "MERGED_MEAN",
    "method": "raw",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-80.9",
-   "change0": "-81",
-   "bias": "-0.3"
+   "change": "-63.0",
+   "change0": "-63",
+   "bias": "-0.6"
   },
   {
    "product": "MERGED_MEAN",
    "method": "raw",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "-21.5",
-   "change0": "-22",
-   "bias": "0.0"
+   "change": "-47.8",
+   "change0": "-48",
+   "bias": "0.1"
   },
   {
    "product": "MERGED_MEAN",
    "method": "raw",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+0.4",
-   "change0": "0",
-   "bias": "-7.5"
+   "change": "+0.8",
+   "change0": "+1",
+   "bias": "-7.8"
   },
   {
    "product": "MERGED_MEAN",
    "method": "raw",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+4.2",
+   "change": "+4.1",
    "change0": "+4",
-   "bias": "-24.6"
+   "bias": "-24.9"
   },
   {
    "product": "MERGED_OLS",
@@ -981,7 +1629,7 @@
    "level": "0_20",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_OLS",
@@ -990,7 +1638,7 @@
    "level": "20_50",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_OLS",
@@ -999,7 +1647,7 @@
    "level": "50_100",
    "change": "0.0",
    "change0": "0",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_OLS",
@@ -1044,7 +1692,7 @@
    "level": "rainstorm",
    "change": "0.0",
    "change0": "0",
-   "bias": "-8.4"
+   "bias": "-8.2"
   },
   {
    "product": "MERGED_OLS",
@@ -1053,14 +1701,14 @@
    "level": "severe_rainstorm",
    "change": "0.0",
    "change0": "0",
-   "bias": "-26.0"
+   "bias": "-25.9"
   },
   {
    "product": "MERGED_OLS",
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "+1.2",
+   "change": "+1.5",
    "change0": "+1",
    "bias": "0.0"
   },
@@ -1069,8 +1717,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "+3.0",
-   "change0": "+3",
+   "change": "+4.0",
+   "change0": "+4",
    "bias": "0.0"
   },
   {
@@ -1078,17 +1726,17 @@
    "method": "blend_agrenv_mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "+7.7",
-   "change0": "+8",
-   "bias": "0.0"
+   "change": "+7.4",
+   "change0": "+7",
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_OLS",
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "+0.9",
-   "change0": "+1",
+   "change": "+3.6",
+   "change0": "+4",
    "bias": "-2.4"
   },
   {
@@ -1096,8 +1744,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "+4.1",
-   "change0": "+4",
+   "change": "+6.7",
+   "change0": "+7",
    "bias": "-0.1"
   },
   {
@@ -1105,8 +1753,8 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-6.1",
-   "change0": "-6",
+   "change": "-0.2",
+   "change0": "0",
    "bias": "-0.8"
   },
   {
@@ -1114,9 +1762,9 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "+9.0",
+   "change": "+9.3",
    "change0": "+9",
-   "bias": "0.0"
+   "bias": "0.1"
   },
   {
    "product": "MERGED_OLS",
@@ -1132,16 +1780,16 @@
    "method": "blend_agrenv_mgwr",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+2.7",
-   "change0": "+3",
-   "bias": "-25.3"
+   "change": "+2.4",
+   "change0": "+2",
+   "bias": "-25.4"
   },
   {
    "product": "MERGED_OLS",
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-1.0",
+   "change": "-0.6",
    "change0": "-1",
    "bias": "0.0"
   },
@@ -1150,8 +1798,8 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "+2.5",
-   "change0": "+2",
+   "change": "+3.6",
+   "change0": "+4",
    "bias": "0.0"
   },
   {
@@ -1159,7 +1807,7 @@
    "method": "mgwr",
    "group": "nearest_train_km",
    "level": "50_100",
-   "change": "+8.2",
+   "change": "+7.9",
    "change0": "+8",
    "bias": "0.0"
   },
@@ -1168,26 +1816,26 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-1.5",
-   "change0": "-2",
-   "bias": "-2.4"
+   "change": "+2.0",
+   "change0": "+2",
+   "bias": "-2.3"
   },
   {
    "product": "MERGED_OLS",
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-1.4",
-   "change0": "-1",
-   "bias": "-0.2"
+   "change": "+0.2",
+   "change0": "0",
+   "bias": "-0.1"
   },
   {
    "product": "MERGED_OLS",
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-12.3",
-   "change0": "-12",
+   "change": "-6.8",
+   "change0": "-7",
    "bias": "-0.8"
   },
   {
@@ -1195,8 +1843,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "+1.6",
-   "change0": "+2",
+   "change": "+2.8",
+   "change0": "+3",
    "bias": "0.1"
   },
   {
@@ -1204,8 +1852,8 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "+4.4",
-   "change0": "+4",
+   "change": "+4.6",
+   "change0": "+5",
    "bias": "-7.9"
   },
   {
@@ -1213,26 +1861,26 @@
    "method": "mgwr",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "+3.8",
-   "change0": "+4",
-   "bias": "-25.0"
+   "change": "+3.3",
+   "change0": "+3",
+   "bias": "-25.2"
   },
   {
    "product": "MERGED_OLS",
    "method": "raw",
    "group": "nearest_train_km",
    "level": "0_20",
-   "change": "-14.2",
-   "change0": "-14",
-   "bias": "0.0"
+   "change": "-12.6",
+   "change0": "-13",
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_OLS",
    "method": "raw",
    "group": "nearest_train_km",
    "level": "20_50",
-   "change": "+0.2",
-   "change0": "0",
+   "change": "+1.6",
+   "change0": "+2",
    "bias": "0.0"
   },
   {
@@ -1242,15 +1890,15 @@
    "level": "50_100",
    "change": "+7.9",
    "change0": "+8",
-   "bias": "0.0"
+   "bias": "-0.0"
   },
   {
    "product": "MERGED_OLS",
    "method": "raw",
    "group": "rain_intensity",
    "level": "heavy",
-   "change": "-18.9",
-   "change0": "-19",
+   "change": "-16.1",
+   "change0": "-16",
    "bias": "-3.2"
   },
   {
@@ -1258,8 +1906,8 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "light",
-   "change": "-2.1",
-   "change0": "-2",
+   "change": "+0.1",
+   "change0": "0",
    "bias": "-0.3"
   },
   {
@@ -1267,17 +1915,17 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "moderate",
-   "change": "-28.1",
-   "change0": "-28",
-   "bias": "-1.3"
+   "change": "-23.8",
+   "change0": "-24",
+   "bias": "-1.2"
   },
   {
    "product": "MERGED_OLS",
    "method": "raw",
    "group": "rain_intensity",
    "level": "no_rain",
-   "change": "+21.4",
-   "change0": "+21",
+   "change": "+24.0",
+   "change0": "+24",
    "bias": "0.1"
   },
   {
@@ -1285,18 +1933,18 @@
    "method": "raw",
    "group": "rain_intensity",
    "level": "rainstorm",
-   "change": "-4.8",
+   "change": "-5.4",
    "change0": "-5",
-   "bias": "-9.2"
+   "bias": "-9.1"
   },
   {
    "product": "MERGED_OLS",
    "method": "raw",
    "group": "rain_intensity",
    "level": "severe_rainstorm",
-   "change": "-1.8",
-   "change0": "-2",
-   "bias": "-26.9"
+   "change": "-1.2",
+   "change0": "-1",
+   "bias": "-26.7"
   }
  ]
 }

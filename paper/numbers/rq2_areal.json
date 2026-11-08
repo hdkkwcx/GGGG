@@ -1,30 +1,42 @@
 {
- "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/regional_series_metrics.csv",
- "source_sha256": "af27dbbc7ab4436e2ac6c4c94660fce155800e5e7f012508891c0cf08b25c2c2",
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/regional_series_metrics.csv",
+ "source_sha256": "6b1449a1dbf29e6a73789d4fa9cfeaf4402f1314fee23788f4c6471d69e11e6f",
  "rows": [
   {
-   "product": "GPM_uncal",
+   "product": "FY4B",
    "timescale_h": "1",
-   "r": "0.82",
-   "RB0": "-12"
+   "r": "0.41",
+   "RB0": "+19"
+  },
+  {
+   "product": "FY4B",
+   "timescale_h": "3",
+   "r": "0.40",
+   "RB0": "+21"
   },
   {
    "product": "GPM_uncal",
-   "timescale_h": "24",
-   "r": "0.90",
+   "timescale_h": "1",
+   "r": "0.83",
    "RB0": "-11"
+  },
+  {
+   "product": "GPM_uncal",
+   "timescale_h": "3",
+   "r": "0.86",
+   "RB0": "-8"
   },
   {
    "product": "GSMaP",
    "timescale_h": "1",
-   "r": "0.66",
+   "r": "0.67",
    "RB0": "+33"
   },
   {
    "product": "GSMaP",
-   "timescale_h": "24",
-   "r": "0.80",
-   "RB0": "+34"
+   "timescale_h": "3",
+   "r": "0.69",
+   "RB0": "+36"
   }
  ]
 }

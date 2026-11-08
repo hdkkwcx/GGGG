@@ -16,12 +16,14 @@ Hour labels are hour ends, so an hour's day is the day of `label - 1 h`.
 
 - `block_times` / `block_days_option`: for the day-block bootstraps, which group hours by `Date(t)`.
   Handed `block_times` in place of the hours, they resample whole blocks of days instead.
+- `from_option` / `from_suffix`: a script's `--from YYYY-MM`, the month its record starts.
 """
 module TimeBlockFolds
 
 using Dates, Random
 
-export label_day, time_block_folds, training_hours, crossed_splits, block_times, block_days_option
+export label_day, time_block_folds, training_hours, crossed_splits, block_times, block_days_option,
+    from_option, from_suffix
 
 """The calendar day of an hour labelled by its end."""
 label_day(time::DateTime) = Date(time - Hour(1))
@@ -110,5 +112,25 @@ function block_days_option(args)
     block_days >= 1 || throw(ArgumentError("--block-days must be at least 1"))
     return block_days, deleteat!(rest, index:(index + 1))
 end
+
+"""
+`--from YYYY-MM` read out of command-line `args`, as `(first day of that month, the other args)`,
+or `(nothing, args)` without the flag. A script starts its 08-08 days there instead of at its
+default start, so its day blocks and per-record counts start there too; `from_suffix` names the
+output folder after it.
+"""
+function from_option(args)
+    rest = collect(String, args)
+    index = findfirst(==("--from"), rest)
+    index === nothing && return nothing, rest
+    text = get(rest, index + 1, "")
+    parsed = match(r"^(\d{4})-(\d{2})$", text)
+    parsed === nothing && throw(ArgumentError("--from expects YYYY-MM, got \"$text\""))
+    return Date(parse(Int, parsed[1]), parse(Int, parsed[2]), 1), deleteat!(rest, index:(index + 1))
+end
+
+"""`_from<yyyymm>` for a `from_option` date, `""` for `nothing`."""
+from_suffix(from::Union{Nothing,Date}) =
+    from === nothing ? "" : "_from" * Dates.format(from, "yyyymm")
 
 end # module

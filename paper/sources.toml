@@ -6,11 +6,10 @@
 #   - every input_sha256:<path> a run recorded still matches that file in data/.
 # Paths are relative to the repository root. Update an entry when a figure is re-copied from a
 # different output.
-# RQ1/RQ2 entries point at the IMERG Uncal runs (`_gpmuncal`; RQ2 also `_nofy4b`), the paper's
-# primary product, with the heavy-core diagnostics (output/heavy_core_diagnostics_gpmuncal/) and,
-# for the Scope paragraph's FY4B numbers, the record lengths of §2.1/§2.5 and §4.1's check on
-# FY4B's hours, the Uncal RQ2 run with the rebuilt FY4B series of §2.5
-# (output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/).
+# RQ1-RQ3 compare FY4B (the rebuilt series of §2.5, fy4b_w3_h0), GPM (IMERG Uncal, `_gpmuncal`) and
+# GSMaP on one matched sample from June 2022: RQ1 and RQ2 run with `--fy4b-file ... --from 2022-06`
+# (RQ2's `all_products` sample), and RQ3 and §3.4 rescore the FY4B benchmark run with
+# `--matched-products`.
 
 [[item]]
 label = "Fig. 1 (study area)"
@@ -25,10 +24,10 @@ label = "Fig. 2 (RQ1 event maps)"
 id = "fig02"
 step = "fig_rq1"
 paper = "paper/figures/fig02_event_maps.png"
-source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/figures/fig0_event_overview.png"
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/figures/fig0_event_overview.png"
 provenance = [
-    "output/heavy_rain_events_gpm_gsmap_gpmuncal/figures/plot_provenance.csv",
-    "output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv",
+    "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/figures/plot_provenance.csv",
+    "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/provenance.csv",
 ]
 
 [[item]]
@@ -36,10 +35,10 @@ label = "Fig. 3 (RQ1 event metrics; planned, not yet in the text)"
 id = "fig03"
 step = "fig_rq1"
 paper = "paper/figures/fig03_event_metrics.png"
-source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/figures/fig5_metric_summary.png"
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/figures/fig5_metric_summary.png"
 provenance = [
-    "output/heavy_rain_events_gpm_gsmap_gpmuncal/figures/plot_provenance.csv",
-    "output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv",
+    "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/figures/plot_provenance.csv",
+    "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/provenance.csv",
 ]
 
 [[item]]
@@ -47,10 +46,10 @@ label = "Fig. 4 (RQ2 intensity classes by season)"
 id = "fig04a"
 step = "fig_rq2"
 paper = "paper/figures/fig04a_intensity_season.png"
-source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/figures/fig2_intensity_classes_gpm_gsmap_full.png"
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/figures/fig2_intensity_classes_all_products.png"
 provenance = [
-    "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/figures/plot_provenance.csv",
-    "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/provenance.csv",
+    "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/figures/plot_provenance.csv",
+    "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv",
 ]
 
 [[item]]
@@ -58,11 +57,11 @@ label = "Fig. 6 (RQ3 fusion methods)"
 id = "fig06b"
 step = "fig_fusion"
 paper = "paper/figures/fig06b_fusion_methods.png"
-source = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/figures_gpm_gsmap/fusion_fig3_methods_by_anchor.png"
+source = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/figures/fusion_fig3_methods_by_anchor.png"
 provenance = [
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/figures_gpm_gsmap/plot_provenance.csv",
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/figures/plot_provenance.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 
 [[item]]
@@ -70,26 +69,27 @@ label = "Fig. 7 (RQ3 where fusion helps; planned, not yet in the text)"
 id = "fig07"
 step = "fig_fusion"
 paper = "paper/figures/fig07_where_fusion_helps.png"
-source = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/figures_gpm_gsmap/fusion_fig4_where_it_helps.png"
+source = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/figures/fusion_fig4_where_it_helps.png"
 provenance = [
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/figures_gpm_gsmap/plot_provenance.csv",
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/figures/plot_provenance.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 
 # Numbers the paper cites. `scripts/export_paper_numbers.py` writes each block to
 # paper/numbers/<name>.json, which paper_plan.typ reads; the check re-exports them and fails on any
 # difference. `values` maps an output name to [source column, format]: Nf decimals (+Nf signed),
-# or pct1 / pct0, a fraction as a signed percentage. Every block reads an IMERG Uncal run.
+# or pct1 / pct0, a fraction as a signed percentage. Every block reads an IMERG Uncal run on the
+# matched sample of FY4B, GPM and GSMaP.
 
 [[table]]
 name = "methods_uncal"
 label = "Table 3 and RQ3 text: pooled metrics and frequency bias (IMERG Uncal)"
 step = "fusion"
-source = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/method_summary.csv"
+source = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/method_summary.csv"
 provenance = [
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 keys = ["product", "method"]
 [table.where]
@@ -110,10 +110,10 @@ vs_adw0 = ["RMSE_improvement_vs_adw", "pct0"]
 name = "vs_adw_uncal"
 label = "RQ3 text: bootstrap comparisons with ADW (IMERG Uncal)"
 step = "fusion"
-source = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/fusion_vs_gauge_only.csv"
+source = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/fusion_vs_gauge_only.csv"
 provenance = [
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 keys = ["product", "method", "stratum"]
 [table.where]
@@ -126,10 +126,10 @@ p_holm = ["pvalue_holm_family", "2f"]
 name = "strata_uncal"
 label = "RQ3 text: gain over ADW and mean bias by intensity and distance (IMERG Uncal)"
 step = "fusion"
-source = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/stratified_summary.csv"
+source = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/stratified_summary.csv"
 provenance = [
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 keys = ["product", "method", "group", "level"]
 [table.where]
@@ -145,10 +145,10 @@ bias = ["Bias", "1f"]
 name = "merge_uncal"
 label = "RQ3 text: OLS merge weights (IMERG Uncal)"
 step = "fusion"
-source = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/merged_anchor_coefficients.csv"
+source = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/merged_anchor_coefficients.csv"
 provenance = [
-    "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/source_provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv",
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 keys = ["product"]
 [table.where]
@@ -156,20 +156,39 @@ scheme = "balanced_spatial"
 product = "MERGED_OLS"
 [table.values]
 intercept = ["intercept_mean", "2f"]
+beta_fy4b = ["beta_fy4b_mean", "2f"]
 beta_gpm = ["beta_gpm_uncal_mean", "2f"]
 beta_gsmap = ["beta_gsmap_mean", "2f"]
 
-# RQ1: the six heavy-rain events (IMERG Uncal run).
+[[table]]
+name = "rq3_sample"
+label = "§2.4 and Table 3: the matched sample RQ3 scores every anchor and method on"
+step = "fusion"
+source = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/matched_sample.csv"
+provenance = [
+    "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
+]
+keys = ["scheme"]
+[table.where]
+scheme = "balanced_spatial"
+fold = "all"
+product = "GPM_uncal"
+[table.values]
+n = ["n_matched", ",0f"]
+hours = ["hours_matched", ",0f"]
+
+# RQ1: the six heavy-rain events, scored over the hours the gauges and all three products share.
 
 [[table]]
 name = "rq1_summary"
-label = "RQ1 text: mean over the six events (IMERG Uncal)"
+label = "RQ1 text: mean over the six events"
 step = "rq1_events"
-source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/event_metrics_summary.csv"
-provenance = ["output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"]
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/event_metrics_summary.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/provenance.csv"]
 keys = ["product"]
 [table.where]
-window = "full_day"
+window = "common_hours"
 statistic = "mean_over_events"
 [table.values]
 r = ["r", "2f"]
@@ -178,63 +197,77 @@ RMSE = ["RMSE", "1f"]
 
 [[table]]
 name = "rq1_events"
-label = "RQ1 text: scores per event (IMERG Uncal)"
+label = "RQ1 text: scores per event"
 step = "rq1_events"
-source = "output/heavy_rain_events_gpm_gsmap_gpmuncal/event_metrics.csv"
-provenance = ["output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"]
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/event_metrics.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/provenance.csv"]
 keys = ["event_day", "event_type", "product"]
 [table.where]
-window = "full_day"
+window = "common_hours"
 [table.values]
 r = ["r", "2f"]
 MB0 = ["Bias", "+0f"]
 CSI50 = ["CSI_50", "2f"]
-# Over both products: the four events other than 2022-06-26 and 2023-08-26, and 2022-06-26.
+# GPM and GSMaP on the four events other than 2022-06-26 and 2023-08-26; all three on 2022-06-26.
 [table.stats.r_four]
 stat = "range"
 column = "r"
 fmt = "2f"
-where = { event_day = ["2022-10-03", "2023-06-17", "2023-09-10", "2024-07-30"], product = ["GPM_uncal", "GSMaP"] }
+where = { event_day = ["2022-10-03", "2023-06-17", "2023-07-31", "2023-09-10"], product = ["GPM_uncal", "GSMaP"] }
 [table.stats.r_0626_max]
 stat = "max"
 column = "r"
 fmt = "2f"
-where = { event_day = "2022-06-26", product = ["GPM_uncal", "GSMaP"] }
+where = { event_day = "2022-06-26", product = ["FY4B", "GPM_uncal", "GSMaP"] }
+
+[[table]]
+name = "rq1_days"
+label = "§2.2 text: heavy-rain days screened, and those whose shared hours pass the rule"
+step = "rq1_events"
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/candidate_days.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/provenance.csv"]
+[table.stats.days]
+stat = "count"
+fmt = "0f"
+[table.stats.eligible]
+stat = "count"
+fmt = "0f"
+where = { eligible = "true" }
 
 [[table]]
 name = "rq1_cores"
-label = "RQ1 text: storm-core deficit per event and product"
+label = "RQ1 text: storm-core deficit per event and product, over each event's shared hours"
 step = "rq1_cores"
-source = "output/heavy_core_diagnostics_gpmuncal/summary.csv"
-provenance = ["output/heavy_core_diagnostics_gpmuncal/provenance.csv"]
+source = "output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/summary.csv"
+provenance = ["output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/provenance.csv"]
 keys = ["event_day", "event_type", "product"]
 [table.values]
 repr = ["representativeness_share", "pct0"]
 top3 = ["median_top3_share_of_obs", "pct0"]
 peak_ratio = ["median_peak_ratio", "2f"]
-# Over the two localized events and both products (IMERG Final excluded).
-[table.stats.repr_local]
+# Each localized event over the three products (IMERG Final excluded).
+[table.stats.repr_0910]
 stat = "range"
 column = "representativeness_share"
 fmt = "pct0"
-where = { event_type = "localized", product = ["GPM_uncal", "GSMaP"] }
-[table.stats.top3_local_max]
-stat = "max"
-column = "median_top3_share_of_obs"
+where = { event_day = "2023-09-10", product = ["FY4B", "GPM_uncal", "GSMaP"] }
+[table.stats.repr_0731]
+stat = "range"
+column = "representativeness_share"
 fmt = "pct0"
-where = { event_type = "localized", product = ["GPM_uncal", "GSMaP"] }
+where = { event_day = "2023-07-31", product = ["FY4B", "GPM_uncal", "GSMaP"] }
 [table.stats.peak_ratio_local]
 stat = "range"
 column = "median_peak_ratio"
 fmt = "2f"
-where = { event_type = "localized", product = ["GPM_uncal", "GSMaP"] }
+where = { event_type = "localized", product = ["FY4B", "GPM_uncal", "GSMaP"] }
 
 [[table]]
 name = "rq1_core_gauges"
 label = "RQ1 text: peak hourly rain at the core gauges of the localized events"
 step = "rq1_cores"
-source = "output/heavy_core_diagnostics_gpmuncal/core_gauges.csv"
-provenance = ["output/heavy_core_diagnostics_gpmuncal/provenance.csv"]
+source = "output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/core_gauges.csv"
+provenance = ["output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/provenance.csv"]
 [table.where]
 event_type = "localized"
 [table.stats.peak_0910]
@@ -242,18 +275,18 @@ stat = "median"
 column = "obs_peak_mm_h"
 fmt = "0f"
 where = { event_day = "2023-09-10" }
-[table.stats.peak_0730]
+[table.stats.peak_0731]
 stat = "median"
 column = "obs_peak_mm_h"
 fmt = "0f"
-where = { event_day = "2024-07-30" }
+where = { event_day = "2023-07-31" }
 
 [[table]]
 name = "rq1_phases"
 label = "RQ1 text: spatial r of each 8 h phase"
 step = "rq1_cores"
-source = "output/heavy_core_diagnostics_gpmuncal/phase_decomposition.csv"
-provenance = ["output/heavy_core_diagnostics_gpmuncal/provenance.csv"]
+source = "output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/phase_decomposition.csv"
+provenance = ["output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/provenance.csv"]
 keys = ["event_day", "phase", "product"]
 [table.where]
 phase = ["1", "2", "3"]
@@ -263,37 +296,37 @@ r = ["r", "2f"]
 stat = "range"
 column = "r"
 fmt = "2f"
-where = { event_day = "2022-06-26", product = ["GPM_uncal", "GSMaP"] }
+where = { event_day = "2022-06-26", product = ["FY4B", "GPM_uncal", "GSMaP"] }
 
 
-# RQ2: hourly evaluation over the full 2022-2024 record (IMERG Uncal run without FY4B).
+# RQ2: hourly evaluation on the matched sample (`all_products`: the gauge and all three products finite).
 
 [[table]]
 name = "rq2_classes"
 label = "RQ2 text: scores by intensity class, season and relief"
 step = "rq2"
-source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/intensity_class_metrics.csv"
-provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/provenance.csv"]
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/intensity_class_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv"]
 keys = ["product", "season", "region", "gauge_class"]
 [table.where]
-sample = "gpm_gsmap_full"
+sample = "all_products"
 region = ["all", "relief_lt500", "relief_500_1000"]
 [table.values]
 RB0 = ["RB_pct", "+0f"]
 POD = ["POD_rain", "pct0"]
 hit = ["class_hit", "pct0"]
-# At >= 8 mm/h (the rainstorm and severe classes), all seasons, both products.
+# At >= 8 mm/h (the rainstorm and severe classes), all seasons, all three products.
 [table.stats.loss_heavy]
 stat = "range"
 abs = true
 column = "RB_pct"
 fmt = "0f"
-where = { product = ["GPM_uncal", "GSMaP"], season = "all", region = "all", gauge_class = ["rainstorm", "severe_rainstorm"] }
+where = { product = ["FY4B", "GPM_uncal", "GSMaP"], season = "all", region = "all", gauge_class = ["rainstorm", "severe_rainstorm"] }
 [table.stats.hit_heavy_max]
 stat = "max"
 column = "class_hit"
 fmt = "pct0"
-where = { product = ["GPM_uncal", "GSMaP"], season = "all", region = "all", gauge_class = ["rainstorm", "severe_rainstorm"] }
+where = { product = ["FY4B", "GPM_uncal", "GSMaP"], season = "all", region = "all", gauge_class = ["rainstorm", "severe_rainstorm"] }
 # The largest class-bias difference between relief below 500 m and 500-1000 m, per product and class.
 [table.stats.relief_gap_max]
 stat = "maxgap"
@@ -303,17 +336,17 @@ key = "region"
 a = "relief_lt500"
 b = "relief_500_1000"
 by = ["product", "gauge_class"]
-where = { product = ["GPM_uncal", "GSMaP"], season = "all", gauge_class = ["light", "moderate", "heavy", "rainstorm", "severe_rainstorm"] }
+where = { product = ["FY4B", "GPM_uncal", "GSMaP"], season = "all", gauge_class = ["light", "moderate", "heavy", "rainstorm", "severe_rainstorm"] }
 
 [[table]]
 name = "rq2_events"
 label = "RQ2 text: rain-event detection and timing"
 step = "rq2"
-source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/event_timing_summary.csv"
-provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/provenance.csv"]
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/event_timing_summary.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv"]
 keys = ["product", "event_class"]
 [table.where]
-sample = "gpm_gsmap_full"
+sample = "all_products"
 season = "all"
 region = "all"
 min_dry_gap_h = "3"
@@ -326,156 +359,80 @@ stat = "range"
 column = "POD_event"
 fmt = "pct0"
 where = { product = ["GPM_uncal", "GSMaP"] }
+[table.stats.pod_fy4b]
+stat = "range"
+column = "POD_event"
+fmt = "pct0"
+where = { product = "FY4B" }
 [table.stats.centroid_min]
 stat = "min"
 column = "median_centroid_error_h"
 fmt = "1f"
-where = { product = ["GPM_uncal", "GSMaP"] }
+where = { product = ["FY4B", "GPM_uncal", "GSMaP"] }
 [table.stats.centroid_max]
 stat = "max"
 column = "median_centroid_error_h"
 fmt = "1f"
-where = { product = ["GPM_uncal", "GSMaP"] }
+where = { product = ["FY4B", "GPM_uncal", "GSMaP"] }
 
 [[table]]
 name = "rq2_areal"
 label = "RQ2 text: areal-mean series"
 step = "rq2"
-source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/regional_series_metrics.csv"
-provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/provenance.csv"]
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/regional_series_metrics.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv"]
 keys = ["product", "timescale_h"]
 [table.where]
-sample = "gpm_gsmap_full"
+sample = "all_products"
 region = "all"
 season = "all"
-timescale_h = ["1", "24"]
+timescale_h = ["1", "3"]
 [table.values]
 r = ["r", "2f"]
 RB0 = ["RB_pct", "+0f"]
 
-# Study area: the gauges RQ2 scores, in all and by landform region (both products score the same gauges).
+# Study area: the gauges RQ2 scores, in all and by landform region (every product scores the same gauges).
 [[table]]
 name = "study_gauges"
 label = "Study-area text: gauges in all and by landform region"
 step = "rq2"
-source = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/station_correlation_summary.csv"
-provenance = ["output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/provenance.csv"]
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/station_correlation_summary.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv"]
 keys = ["region"]
 [table.where]
-sample = "gpm_gsmap_full"
+sample = "all_products"
 product = "GPM_uncal"
 season = "all"
 [table.values]
 n = ["n_stations", "0f"]
 
-# Scope: FY4B against GPM and GSMaP on the hours it covers (IMERG Uncal run with the rebuilt FY4B
-# series, fy4b_w3_h0).
-
-[[table]]
-name = "scope_fy4b_r"
-label = "Scope text: FY4B, median station hourly r"
-step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/station_correlation_summary.csv"
-provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
-keys = ["product"]
-[table.where]
-sample = "all_products"
-season = "all"
-region = "all"
-[table.values]
-r = ["median_r_all_hours", "2f"]
-[table.stats.others]
-stat = "range"
-column = "median_r_all_hours"
-fmt = "2f"
-where = { product = ["GPM_uncal", "GSMaP"] }
-
-[[table]]
-name = "scope_fy4b_areal"
-label = "Scope text: FY4B, areal-mean hourly r"
-step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/regional_series_metrics.csv"
-provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
-keys = ["product"]
-[table.where]
-sample = "all_products"
-region = "all"
-season = "all"
-timescale_h = "1"
-[table.values]
-r = ["r", "2f"]
-[table.stats.others]
-stat = "range"
-column = "r"
-fmt = "2f"
-where = { product = ["GPM_uncal", "GSMaP"] }
-
-[[table]]
-name = "scope_fy4b_pod"
-label = "Scope text: FY4B, wet-hour detection"
-step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/intensity_class_metrics.csv"
-provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
-keys = ["product"]
-[table.where]
-sample = "all_products"
-season = "all"
-region = "all"
-gauge_class = "all_wet"
-[table.values]
-POD = ["POD_rain", "2f"]
-[table.stats.others]
-stat = "range"
-column = "POD_rain"
-fmt = "2f"
-where = { product = ["GPM_uncal", "GSMaP"] }
-
-# Record lengths (§2.1, §2.5): the hours and days on which FY4B has a value, against GPM's and
-# GSMaP's whole 2022-2024 record, from the same run's two samples. Its gpm_gsmap_full row is the
-# same as the _nofy4b RQ2 run's.
-
 [[table]]
 name = "data_hours"
-label = "§2.1/§2.5 text: hours and days with a value, FY4B's record and the whole record"
-step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/sample_coverage.csv"
-provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
+label = "§2.1/§2.5 text: the matched sample's hours, days and gauge-hours"
+step = "rq2"
+source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/sample_coverage.csv"
+provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv"]
 keys = ["sample"]
 [table.where]
+sample = "all_products"
 season = "all"
 region = "all"
 [table.values]
 hours = ["n_hours", ",0f"]
 days = ["n_days", ",0f"]
-
-# §4.1: GPM and GSMaP on FY4B's hours against the whole record, to show those hours are not
-# unusually easy or hard for a satellite product.
-
-[[table]]
-name = "fy4b_sample_r"
-label = "§4.1 text: GPM and GSMaP median station hourly r on FY4B's hours and on the whole record"
-step = "rq2_fy4b"
-source = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/station_correlation_summary.csv"
-provenance = ["output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"]
-keys = ["sample", "product"]
-[table.where]
-season = "all"
-region = "all"
-product = ["GPM_uncal", "GSMaP"]
-[table.values]
-r = ["median_r_all_hours", "2f"]
+cells = ["n_cells", ",0f"]
 
 # FY4B: how far its quality rises. Corrected FY4B (FY4B_QM) against plain FY4B, GPM_uncal and
-# GSMaP in the FY4B benchmark run (§3.4), and the cloud-type pilot on July 2023.
+# GSMaP in the main benchmark run on its matched sample (§3.4), and the cloud-type pilot on July 2023.
 
 [[table]]
 name = "fy4b_quality"
 label = "§3.4 text: corrected FY4B against plain FY4B, GPM_uncal and GSMaP (intervals over 7-day blocks)"
 step = "fy4b_quality_week"
-source = "output/fy4b_quality_block7d/paired.csv"
+source = "output/fy4b_quality_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/paired.csv"
 provenance = [
-    "output/fy4b_quality_block7d/provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv",
+    "output/fy4b_quality_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 keys = ["scheme", "product", "baseline", "method"]
 [table.values]
@@ -489,10 +446,10 @@ r0 = ["baseline_r", "2f"]
 name = "fy4b_time_holdout"
 label = "§3.4 text: corrected FY4B's raw change against plain FY4B, with whole weeks held out as well as gauges"
 step = "fy4b_time_holdout"
-source = "output/fy4b_qm_time_holdout/paired.csv"
+source = "output/fy4b_qm_time_holdout_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/paired.csv"
 provenance = [
-    "output/fy4b_qm_time_holdout/provenance.csv",
-    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv",
+    "output/fy4b_qm_time_holdout_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
 ]
 keys = ["scheme", "candidate", "baseline"]
 [table.where]
@@ -509,8 +466,8 @@ dr_hi = ["delta_r_hi", "+3f"]
 name = "fy4b_clt"
 label = "§3.4 text: FY4B_QM's false alarms and hits under ice cloud (July 2023 pilot)"
 step = "fy4b_clt"
-source = "output/fy4b_clt_screen/class_table.csv"
-provenance = ["output/fy4b_clt_screen/provenance.csv"]
+source = "output/fy4b_clt_screen_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/class_table.csv"
+provenance = ["output/fy4b_clt_screen_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/provenance.csv"]
 keys = ["name"]
 [table.where]
 scheme = "balanced_spatial"
@@ -525,8 +482,8 @@ far_gpm = ["gpm_FAR", "2f"]
 name = "fy4b_clt_filter"
 label = "§3.4 text: the cloud-type filter against an amount-matched control (July 2023 pilot)"
 step = "fy4b_clt"
-source = "output/fy4b_clt_screen/paired.csv"
-provenance = ["output/fy4b_clt_screen/provenance.csv"]
+source = "output/fy4b_clt_screen_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/paired.csv"
+provenance = ["output/fy4b_clt_screen_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/provenance.csv"]
 keys = ["candidate", "baseline"]
 [table.where]
 scheme = "balanced_spatial"
@@ -537,15 +494,15 @@ csi = ["delta_CSI_0.1", "+3f"]
 csi_lo = ["delta_CSI_0.1_lo", "+3f"]
 csi_hi = ["delta_CSI_0.1_hi", "+3f"]
 
-# FY4B on the RQ1 events (§3.4, Draft Table 4): plain and corrected FY4B with GPM and GSMaP, each
-# event over the hours FY4B shares with them; GPM and GSMaP also over the full day.
+# Corrected FY4B on the RQ1 events (§3.4, Draft Table 4): plain and corrected FY4B with GPM and
+# GSMaP, each event over the hours the gauges and all four share (RQ1's own window).
 
 [[table]]
 name = "fy4b_events_summary"
-label = "§3.4 text and Table 4: FY4B on the RQ1 events, mean over the events it covers"
+label = "§3.4 text and Table 4: plain and corrected FY4B on the RQ1 events, mean over the six"
 step = "rq1_fy4b"
-source = "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_metrics_summary.csv"
-provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"]
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/event_metrics_summary.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/provenance.csv"]
 keys = ["product", "window"]
 [table.where]
 statistic = "mean_over_events"
@@ -558,10 +515,10 @@ CSI50 = ["CSI_50", "2f"]
 
 [[table]]
 name = "fy4b_event_windows"
-label = "§3.4 text and Table 4: each RQ1 event's FY4B window and the gauge rain it leaves out"
+label = "§3.4 text and Table 4: each RQ1 event's four-product window and the gauge rain it leaves out"
 step = "rq1_fy4b"
-source = "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_windows.csv"
-provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"]
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/event_windows.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/provenance.csv"]
 keys = ["event_day"]
 [table.values]
 net = ["excluded_rain_share", "pct0"]
@@ -574,10 +531,10 @@ where = { eligible = "true" }
 
 [[table]]
 name = "fy4b_event_scores"
-label = "§3.4 text: FY4B on the RQ1 events, scores per event over FY4B's hours"
+label = "§3.4 text: plain and corrected FY4B on the RQ1 events, scores per event"
 step = "rq1_fy4b"
-source = "output/heavy_rain_events_fy4bw3h0_gpmuncal/event_metrics.csv"
-provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"]
+source = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/event_metrics.csv"
+provenance = ["output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/provenance.csv"]
 keys = ["event_day", "product"]
 [table.where]
 window = "fy4b_hours"
@@ -730,138 +687,112 @@ note = "restores the published copy; scripts/clip_dem.R made it from a nationwid
 [[step]]
 id = "rq1_events"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/run_heavy_rain_event_evaluation.jl", "--gpm-gsmap"]
-marker = "output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"
-needs = ["prep_study_area", "prep_gpm_uncal"]
+command = ["julia", "--project=.", "scripts/run_heavy_rain_event_evaluation.jl",
+           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06"]
+marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/provenance.csv"
+needs = ["prep_study_area", "prep_gpm_uncal", "fy4b_rebuild"]
+note = "events selected on the hours the gauges, FY4B, GPM and GSMaP share, from June 2022"
 
 [[step]]
 id = "rq1_cores"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl"]
-marker = "output/heavy_core_diagnostics_gpmuncal/provenance.csv"
-needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
+command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl",
+           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06"]
+marker = "output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/provenance.csv"
+needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal", "fy4b_rebuild"]
+note = "over each event's RQ1 window; the native IMERG Uncal grid summed over the window's half hours"
 
-# FY4B on the RQ1 events, over each day's hours FY4B shares with the gauges, GPM and GSMaP: plain
-# FY4B from the rebuild, corrected FY4B from the FY4B benchmark run's out-of-fold field.
+# Corrected FY4B on RQ1's events (§3.4), from the benchmark run's out-of-fold field, over each
+# event's hours the gauges and all four products share; checked against RQ1's own rows.
 [[step]]
 id = "rq1_fy4b"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/run_heavy_rain_event_fy4b.jl"]
-marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"
-needs = ["rq1_events", "fy4b_rebuild", "fy4b_benchmark", "prep_study_area", "prep_gpm_uncal"]
+command = ["julia", "--project=.", "scripts/run_heavy_rain_event_fy4b.jl",
+           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06"]
+marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/provenance.csv"
+needs = ["rq1_events", "benchmark", "prep_study_area", "prep_gpm_uncal"]
 
 [[step]]
 id = "rq2"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--block-days", "7"]
-marker = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/provenance.csv"
-needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
-note = "intervals over whole 7-met-day blocks; rq2_fy4b's gpm_gsmap_full point estimates equal this run's, its intervals are day blocks"
-
-# The Scope's FY4B scores, on the rebuilt series that §2.5 and §3.4 use.
-[[step]]
-id = "rq2_fy4b"
-kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--with-fy4b",
-           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv"]
-marker = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"
+           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06", "--block-days", "7"]
+marker = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform", "fy4b_rebuild"]
+note = "the paper cites the all_products sample (gauge and all three products finite); intervals over whole 7-met-day blocks from 1 June 2022"
 
-# The benchmark run predates the `command` row, so its command was rebuilt from the run folder
-# name. Checked on 2026-10-21: parsed by run_interpolation_benchmark.jl's own `main` (stopped
-# before the run), it yields the run's folder and benchmark_scope.csv settings, and the settings
-# line it prints is identical to the one the run wrote into
-# output/full_benchmark_fusedanchor_nofy4b_gpmuncal.log.
+# The main comparison: FY4B (the rebuilt 3x3 series), GPM_uncal and GSMaP, with FY4B in the merges
+# and the agreement bands, and corrected FY4B (FY4B_QM) appended last so it moves no other row.
+# Claims, fusion and §3.4 rescore it on one matched sample (`--matched-products`).
 [[step]]
 id = "benchmark"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
+# Run at fe421b3; reviewed at 079ed3f: that diff adds the matched-sample diagnostics, the RQ1/RQ2
+# options and two option helpers in TimeBlockFolds, none of which the benchmark calls.
+reviewed = "079ed3f4df85567daeb3389a6f2db3783e0ecf5f"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
-           "--fused-anchor"]
-marker = "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/benchmark_scope.csv"
-needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep_ndvi"]
+           "--fused-anchor", "--with-fy4b", "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv",
+           "--fy4b-qm", "--fy4b-qm-adaptive"]
+marker = "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv"
+needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep_ndvi", "fy4b_rebuild"]
+note = "about 2 h with 4 threads; plain FY4B in the merges and agreement bands, FY4B_QM appended last; reads the rebuild's fy4b_offset_grid.nc beside the FY4B file"
 
 [[step]]
 id = "claims"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
-           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal",
-           "--block-days", "7"]
-marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal_block7d/claim_provenance.csv"
+           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
+           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--matched-products", "--block-days", "7"]
+marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/claim_provenance.csv"
 needs = ["benchmark", "prep_study_area", "prep_gpm_uncal"]
 
 [[step]]
 id = "fusion"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
 command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
-           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal",
-           "--block-days", "7"]
-marker = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/source_provenance.csv"
+           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
+           "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--matched-products", "--block-days", "7"]
+marker = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv"
 needs = ["claims"]
 
-# FY4B (§3.4): the rebuild from the raw 15-min files, the benchmark with FY4B and its corrected
-# FY4B_QM, the comparison the paper cites, and the cloud-type pilot.
+# FY4B (§3.4): the rebuild from the raw 15-min files, the comparison of corrected FY4B the paper
+# cites, the check with time held out, and the cloud-type pilot, all on the main run's matched sample.
 [[step]]
 id = "fy4b_rebuild"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
+reviewed = "079ed3f4df85567daeb3389a6f2db3783e0ecf5f"
 command = ["julia", "--project=.", "scripts/prepare_fy4b_rebuild.jl"]
 marker = "output/fy4b_rebuild_2022_2024/provenance.csv"
 needs = ["raw_fy4b", "prep_study_area"]
 
 [[step]]
-id = "fy4b_benchmark"
-kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
-           "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
-           "--fused-anchor", "--with-fy4b", "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv",
-           "--fy4b-qm", "--fy4b-qm-adaptive", "--fy4b-qm-fusion"]
-marker = "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv"
-needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep_ndvi", "fy4b_rebuild"]
-note = "about 2 h with 4 threads; reads the rebuild's fy4b_offset_grid.nc beside the FY4B file"
-
-[[step]]
-id = "fy4b_quality"
-kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl"]
-marker = "output/fy4b_quality/provenance.csv"
-needs = ["fy4b_benchmark"]
-note = "day-block intervals; kept as the input fy4b_time_holdout's guard reads. The paper cites fy4b_quality_week"
-
-[[step]]
 id = "fy4b_quality_week"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl", "--block-days", "7"]
-marker = "output/fy4b_quality_block7d/provenance.csv"
-needs = ["fy4b_benchmark"]
+command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl",
+           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
+           "--matched-products", "--block-days", "7"]
+marker = "output/fy4b_quality_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/provenance.csv"
+needs = ["benchmark"]
 
 [[step]]
 id = "fy4b_time_holdout"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/check_fy4b_qm_time_holdout.jl"]
-marker = "output/fy4b_qm_time_holdout/provenance.csv"
-needs = ["fy4b_benchmark", "fy4b_quality"]
-note = "about 3 min; refits FY4B_QM per gauge fold and per gauge fold x 7-day time fold (TimeBlockFolds)"
+command = ["julia", "--project=.", "scripts/check_fy4b_qm_time_holdout.jl",
+           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
+           "--matched-products"]
+marker = "output/fy4b_qm_time_holdout_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/provenance.csv"
+needs = ["benchmark", "fy4b_quality_week"]
+note = "refits FY4B_QM per gauge fold and per gauge fold x 7-day time fold (TimeBlockFolds); the gauges-only fit must reproduce the run's oof_raw.csv and fy4b_quality_week's raw row"
 
 [[step]]
 id = "fy4b_clt"
 kind = "analysis"
-reviewed = "423b2f44a171c93b9b1568c7b74676256b21a28b"
-command = ["julia", "--project=.", "scripts/screen_fy4b_clt.jl"]
-marker = "output/fy4b_clt_screen/provenance.csv"
-needs = ["fy4b_benchmark", "fy4b_rebuild", "raw_fy4b", "raw_fy4b_clt"]
+command = ["julia", "--project=.", "scripts/screen_fy4b_clt.jl",
+           "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
+           "--matched-products"]
+marker = "output/fy4b_clt_screen_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched/provenance.csv"
+needs = ["benchmark", "fy4b_rebuild", "raw_fy4b", "raw_fy4b_clt"]
 
 [[step]]
 id = "fig_study_area"
@@ -874,21 +805,20 @@ needs = ["dem_1km", "prep_study_area", "prep_landform"]
 [[step]]
 id = "fig_rq1"
 kind = "figure"
-reviewed = "d8b3e97bd2dbf5d4cbbe73c78be44257c4aff79f"
-command = ["python", "scripts/plot_heavy_rain_events.py", "output/heavy_rain_events_gpm_gsmap_gpmuncal"]
-marker = "output/heavy_rain_events_gpm_gsmap_gpmuncal/figures/plot_provenance.csv"
+command = ["python", "scripts/plot_heavy_rain_events.py", "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206"]
+marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/figures/plot_provenance.csv"
 needs = ["rq1_events"]
 
 [[step]]
 id = "fig_rq2"
 kind = "figure"
-command = ["python", "scripts/plot_satellite_temporal_evaluation.py", "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d"]
-marker = "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/figures/plot_provenance.csv"
+command = ["python", "scripts/plot_satellite_temporal_evaluation.py", "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d"]
+marker = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/figures/plot_provenance.csv"
 needs = ["rq2"]
 
 [[step]]
 id = "fig_fusion"
 kind = "figure"
-command = ["python", "scripts/plot_gauge_satellite_fusion.py", "--gpm-gsmap", "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d"]
-marker = "output/gauge_satellite_fusion_nofy4b_gpmuncal_block7d/figures_gpm_gsmap/plot_provenance.csv"
+command = ["python", "scripts/plot_gauge_satellite_fusion.py", "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d"]
+marker = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/figures/plot_provenance.csv"
 needs = ["fusion"]

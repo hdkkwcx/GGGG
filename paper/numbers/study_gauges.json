@@ -1,6 +1,6 @@
 {
- "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/station_correlation_summary.csv",
- "source_sha256": "0d70905a282df06bdbd57a79479049e0b55cdf88677f1ecdeaff9abd76f6db14",
+ "source": "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/station_correlation_summary.csv",
+ "source_sha256": "88767a1ead28fcd0a572fd6d2536a36a826cdf25adf62430dfab6eb04ec64b00",
  "rows": [
   {
    "region": "all",

@@ -19,6 +19,10 @@
 # are drawn from those by `"$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py <that directory>`.
 # `--block-days N` makes the bootstrap intervals resample whole blocks of N consecutive met-days
 # instead of single days (`bootstrap_blocks`), and adds `_block<N>d`; no point estimate moves.
+# `--from YYYY-MM` starts the record at that month's first 08-08 day instead of 2022-01-01, and adds
+# `_from<yyyymm>` before `_block<N>d`. The `all_products` sample already starts with FY4B's record
+# (June 2022); starting there too puts the blocks, the event-retention denominators and
+# `gpm_gsmap_full` on the same months.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -29,7 +33,7 @@ include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("MGERPipeline")
 load_standalone_modules("TableIO", "RunProvenance", "HeavyRainEvents", "LandformClassification", "SatelliteTemporalEvaluation",
     "TimeBlockFolds")
-using Main.TimeBlockFolds: block_days_option
+using Main.TimeBlockFolds: block_days_option, from_option, from_suffix
 using Main.TableIO: write_csv_atomic
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.HeavyRainEvents: align_to_reference
@@ -62,14 +66,16 @@ end
 const FY4B_FILE = parse_fy4b_file(ARGS)
 """`--block-days N`, or `nothing` without it (day blocks, and no suffix)."""
 const BLOCK_DAYS = first(block_days_option(ARGS))
+"""`--from YYYY-MM`, the first month of the record, or `nothing` (January 2022, and no suffix)."""
+const FROM = first(from_option(ARGS))
 # The benchmark's order: a rebuilt series named after its variant (`fy4b_w3_h0.csv` ->
-# `_fy4bw3h0`), then `_nofy4b`, then `_gpmuncal`; `_block<N>d` last.
+# `_fy4bw3h0`), then `_nofy4b`, then `_gpmuncal`; `_from<yyyymm>`, then `_block<N>d` last.
 const OUTDIR = joinpath(ROOT, "output", "satellite_temporal_evaluation" *
     (FY4B_FILE === nothing ? "" : "_" * replace(splitext(basename(FY4B_FILE))[1], "_" => "")) *
-    (WITH_FY4B ? "" : "_nofy4b") * (GPM_CAL ? "" : "_gpmuncal") *
+    (WITH_FY4B ? "" : "_nofy4b") * (GPM_CAL ? "" : "_gpmuncal") * from_suffix(FROM) *
     (BLOCK_DAYS === nothing ? "" : "_block$(BLOCK_DAYS)d"))
-# The first and last hour-ending labels of the 08-08 BJT days 2022-01-01 .. 2024-12-31.
-const ANALYSIS_START = DateTime(2022, 1, 1, 9)
+# The first and last hour-ending labels of the 08-08 BJT days 2022-01-01 (or `--from`) .. 2024-12-31.
+const ANALYSIS_START = FROM === nothing ? DateTime(2022, 1, 1, 9) : DateTime(FROM) + Hour(9)
 const ANALYSIS_END = DateTime(2025, 1, 1, 8)
 const PRODUCT_FILES = [
     (WITH_FY4B ? ["FY4B" => something(FY4B_FILE,

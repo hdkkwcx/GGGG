@@ -67,6 +67,8 @@ PRODUCTS = _products()
 # The run's IMERG product: `GPM_uncal` when it scored uncalibrated IMERG, otherwise `GPM`.
 GPM = "GPM_uncal" if "GPM_uncal" in PRODUCTS else "GPM"
 HAS_FY4B = "FY4B" in PRODUCTS
+# A report written with `--matched-products` scores every anchor on the same cells.
+MATCHED = (RUN_DIR / "matched_sample.csv").is_file()
 
 SURFACE = "#fcfcfb"
 INK = "#0b0b0b"
@@ -81,10 +83,11 @@ DIVERGING = LinearSegmentedColormap.from_list(
 
 SCHEME = "balanced_spatial"
 ANCHORS = [anchor for anchor in ([GPM, "GSMaP", "MERGED_OLS"] if GPM_GSMAP_ONLY else
-                                  ["FY4B", GPM, "GSMaP", "MERGED_MEAN", "MERGED_OLS"]) if anchor in PRODUCTS]
+                                  ["FY4B", GPM, "GSMaP", "MERGED_MEAN", "MERGED_OLS", "FY4B_QM"])
+           if anchor in PRODUCTS]
 ANCHOR_LABELS = {"FY4B": "FY4B", "GPM": "GPM", "GPM_uncal": "GPM\n(uncal)", "GSMaP": "GSMaP",
                  "MERGED_MEAN": "Merged\n(equal)",
-                 "MERGED_OLS": "Merged\n(OLS)"}
+                 "MERGED_OLS": "Merged\n(OLS)", "FY4B_QM": "FY4B\n(corrected)"}
 FUSION_METHODS = ["residual_gwr", "mixed_gwr", "mgwr", "blend_residual_gwr", "blend_mixed_gwr", "blend_mgwr",
                   "blend_agrenv_residual_gwr", "blend_agrenv_mixed_gwr", "blend_agrenv_mgwr"]
 FUSION_GROUPS = [("Direct correction", ["residual_gwr", "mixed_gwr", "mgwr"]),
@@ -230,8 +233,11 @@ def fig1_benefit(summary: list[dict]) -> None:
         ax.set_xticklabels([ANCHOR_LABELS[a] for a in ANCHORS], fontsize=6)
         ax.set_title(label, loc="left", pad=3)
     title(fig, "Combining gauges with satellite rainfall: skill at gauges held out of the fit",
-          "Balanced spatial 5-fold cross-validation, 237 gauges, 13,471 hours (2022–2024). Each anchor is scored on "
-          "its own evaluation mask; the dashed line is gauge-only ADW on that mask.", top=0.97)
+          "Balanced spatial 5-fold cross-validation, 237 gauges. " + (
+              "Every anchor is scored on the same matched cells; the dashed line is gauge-only ADW on them."
+              if MATCHED else
+              "Each anchor is scored on its own evaluation mask; the dashed line is gauge-only ADW on that mask."),
+          top=0.97)
     ladder_legend(fig, loc="lower center", bbox_to_anchor=(0.5, 0.0))
     save(fig, "fusion_fig1_benefit")
 
@@ -287,7 +293,8 @@ def fig2_interpolators(ranking: list[dict], summary: list[dict]) -> None:
     fig.legend(handles=handles, frameon=False, fontsize=6.4, ncol=4, loc="lower right", bbox_to_anchor=(0.99, 0.0))
     title(fig, "Gauge-only interpolation: ADW and IDW lead, TPS and GWR trail",
           f"Held-out gauges, balanced spatial CV. Whiskers: 95% {BLOCK_LABEL} bootstrap interval of the RMSE difference "
-          "against ADW. Interpolators ignore the satellite, so GPM's evaluation mask is used.", top=0.97)
+          "against ADW. Interpolators ignore the satellite, so " +
+          ("the matched cells are used." if MATCHED else "GPM's evaluation mask is used."), top=0.97)
     save(fig, "fusion_fig2_interpolators")
 
 
@@ -333,7 +340,9 @@ def fig3_heatmap(fusion: list[dict]) -> None:
         ax.set_ylim(rows[-1][0] + 0.5, 0.0)
         ax.xaxis.tick_top()
         ax.set_xticks(range(len(ANCHORS)))
-        ax.set_xticklabels([ANCHOR_LABELS[a].replace("\n", " ") for a in ANCHORS], fontsize=6.4, color=INK)
+        # On one line for three anchors; more need the two-line labels to fit their columns.
+        ax.set_xticklabels([ANCHOR_LABELS[a] if len(ANCHORS) > 3 else ANCHOR_LABELS[a].replace("\n", " ")
+                            for a in ANCHORS], fontsize=6.4, color=INK)
         ax.set_yticks([y for y, _, _ in rows])
         base = {m: METHOD_LABELS[m] for m in ("residual_gwr", "mixed_gwr", "mgwr")}
         ax.set_yticklabels([base[m.removeprefix("blend_agrenv_").removeprefix("blend_")] for _, m, _ in rows]
@@ -379,7 +388,9 @@ def fig4_where(stratified: list[dict], detection: list[dict]) -> None:
                                     level=level)) for level, _ in levels]
                 ax.scatter(x + offsets[method], values, s=22, color=color, edgecolors=SURFACE, linewidths=0.8, zorder=3)
             ax.set_xticks(x)
-            ax.set_xticklabels([label for _, label in levels], fontsize=5.6)
+            # More than three anchors leave too little room for the class names: the ranges alone.
+            ax.set_xticklabels([label if len(ANCHORS) <= 3 or group != "rain_intensity" else label.split("\n")[-1]
+                                for _, label in levels], fontsize=5.6)
             if column == 0:
                 ax.set_ylabel("RMSE change vs ADW (%)", fontsize=6)
             if row_index == 0:

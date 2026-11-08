@@ -363,8 +363,9 @@ end
 Spatial agreement per phase of an event and over the whole window, one row per phase x product.
 
 `hour_idx` is split into `n_phases` consecutive, equal-length phases (`phase = "all"` is the
-whole window). Each row holds the phase's `obs_share` of the gauge rain, `spatial_metrics`'s `r`
-and `Bias`, and the correlation of the gauge and product totals with longitude and latitude
+whole window), or into the given `phases` (hour indices each, none empty) when a window with gaps
+has no equal split. Each row holds the phase's `obs_share` of the gauge rain, `spatial_metrics`'s
+`r` and `Bias`, and the correlation of the gauge and product totals with longitude and latitude
 (`obs_r_lon`, `obs_r_lat`, `est_r_lon`, `est_r_lat`).
 
 A day can score near zero overall while every phase scores well: when successive rain systems
@@ -374,11 +375,16 @@ differ by phase is then left with a gradient the gauges do not have.
 function phase_spatial_metrics(
     Y_obs::AbstractMatrix{<:Real}, products::AbstractDict{<:AbstractString,<:AbstractMatrix},
     lonlat::AbstractMatrix{<:Real}, hour_idx::AbstractVector{<:Integer}; n_phases::Int=3,
+    phases::Union{Nothing,AbstractVector{<:AbstractVector{<:Integer}}}=nothing,
 )
-    length(hour_idx) % n_phases == 0 ||
-        throw(ArgumentError("$(length(hour_idx)) hours do not split into $n_phases equal phases"))
-    len = length(hour_idx) ÷ n_phases
-    windows = vcat([string(k) => hour_idx[(k - 1) * len + 1:k * len] for k in 1:n_phases], ["all" => hour_idx])
+    if phases === nothing
+        length(hour_idx) % n_phases == 0 ||
+            throw(ArgumentError("$(length(hour_idx)) hours do not split into $n_phases equal phases"))
+        len = length(hour_idx) ÷ n_phases
+        phases = [hour_idx[(k - 1) * len + 1:k * len] for k in 1:n_phases]
+    end
+    any(isempty, phases) && throw(ArgumentError("a phase has no hours"))
+    windows = vcat([string(k) => phase for (k, phase) in enumerate(phases)], ["all" => hour_idx])
     whole = event_station_totals(Y_obs, products, hour_idx)
     gradient(values, axis) = (k = findall(isfinite, values); cor(values[k], lonlat[k, axis]))
     rows = NamedTuple[]

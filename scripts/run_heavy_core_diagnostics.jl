@@ -14,6 +14,17 @@
 # here whose neighbourhood can be searched off the gauge pixels. The phase decomposition scores the
 # run's primary GPM product (IMERG Uncal, or IMERG Final with `--gpm-cal`) and GSMaP. Writes CSVs to
 # output/heavy_core_diagnostics[_gpmuncal]/.
+#
+#   julia --project=. scripts/run_heavy_core_diagnostics.jl \
+#     --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --from 2022-06
+#
+# With RQ1's `--fy4b-file` (and `--from`), the events are those of RQ1's run with the same flags,
+# FY4B is a fourth product, and everything is scored over each event's RQ1 window: the hours where
+# the gauges, FY4B, the primary GPM product and GSMaP each have at least 90% of the gauges
+# (`event_hours`), at the gauges RQ1 keeps. FY4B never has the hour ending 23 BJT, so that window is
+# never the whole day. The native IMERG Uncal grid then sums only the window's half hours, the phases
+# are the day's three 8 h clock phases within the window, and the hourly diagnostics use the window
+# alone (no padding, so their lag and padded columns are trivial). The folder adds RQ1's suffixes.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -22,30 +33,56 @@ using CSV, DataFrames, Dates, Statistics, NCDatasets
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("MGERPipeline")
-load_standalone_modules("TableIO", "RunProvenance", "HeavyRainEvents", "HeavyCoreDiagnostics")
+load_standalone_modules("TableIO", "RunProvenance", "HeavyRainEvents", "HeavyCoreDiagnostics",
+    "TimeBlockFolds")
 using Main.TableIO: write_csv_atomic
 using Main.RunProvenance: start_provenance, finish_provenance!
-using Main.HeavyRainEvents: met_day, align_to_reference, phase_spatial_metrics, small_scale_variance_share
+using Main.HeavyRainEvents: met_day, align_to_reference, phase_spatial_metrics, small_scale_variance_share,
+    event_hours
+using Main.TimeBlockFolds: from_option, from_suffix
 using Main.HeavyCoreDiagnostics
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
 const GPM_CAL = "--gpm-cal" in ARGS
 # The GPM product the phase decomposition scores, as in `run_heavy_rain_event_evaluation.jl`.
 const PRIMARY_GPM = GPM_CAL ? "GPM" : "GPM_uncal"
+
+"""
+Parse `--fy4b-file <path>` as `run_heavy_rain_event_evaluation.jl` does; a relative path is read
+from the repository root.
+"""
+function parse_fy4b_file(args)
+    index = findfirst(==("--fy4b-file"), args)
+    index === nothing && return nothing
+    text = get(args, index + 1, "")
+    isempty(text) && throw(ArgumentError("--fy4b-file expects a path"))
+    path = isabspath(text) ? text : joinpath(ROOT, text)
+    isfile(path) || throw(ArgumentError("--fy4b-file: no such file $path"))
+    return normpath(path)
+end
+const FY4B_FILE = parse_fy4b_file(ARGS)
+const WITH_FY4B = FY4B_FILE !== nothing
+const FROM = first(from_option(ARGS))
+# RQ1's folder suffixes, in its order: the FY4B series, `_gpmuncal`, `_from<yyyymm>`.
+const RUN_SUFFIX = (WITH_FY4B ? "_" * replace(splitext(basename(FY4B_FILE))[1], "_" => "") : "") *
+    (GPM_CAL ? "" : "_gpmuncal") * from_suffix(FROM)
 const EVENTS_FILE = joinpath(ROOT, "output",
-    "heavy_rain_events_gpm_gsmap" * (GPM_CAL ? "" : "_gpmuncal"), "selected_events.csv")
+    (WITH_FY4B ? "heavy_rain_events" : "heavy_rain_events_gpm_gsmap") * RUN_SUFFIX, "selected_events.csv")
 const UNCAL_GRID_DIR = joinpath(ROOT, "data", "raw", "gpm_imerg_v07_uncal_hubei_2022_2024")
-const OUTDIR = joinpath(ROOT, "output", "heavy_core_diagnostics" * (GPM_CAL ? "" : "_gpmuncal"))
-const ANALYSIS_START = DateTime(2022, 1, 1, 9)
+const OUTDIR = joinpath(ROOT, "output", "heavy_core_diagnostics" * RUN_SUFFIX)
+const ANALYSIS_START = FROM === nothing ? DateTime(2022, 1, 1, 9) : DateTime(FROM) + Hour(9)
 const ANALYSIS_END = DateTime(2025, 1, 1, 8)
+# The products whose hours define RQ1's window when RQ1 selected with FY4B.
+const WINDOW_PRODUCTS = ["FY4B", PRIMARY_GPM, "GSMaP"]
 const PRODUCT_FILES = [
+    (WITH_FY4B ? ["FY4B" => FY4B_FILE] : Pair{String,String}[])...,
     "GPM" => "hubei_gpm_hourly_2022_2024_full_aligned.csv",
     "GSMaP" => "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
     # The station series of IMERG Uncal, built from the same monthly extraction with the same +9 h
     # shift as the calibrated file (`prepare_gpm_uncal_inputs.jl`).
     "GPM_uncal" => "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv",
 ]
-const PRODUCTS = ["GPM", "GSMaP", "GPM_uncal"]
+const PRODUCTS = vcat(WITH_FY4B ? ["FY4B"] : String[], ["GPM", "GSMaP", "GPM_uncal"])
 const CORE_MM = Dict("localized" => 50.0, "widespread" => 100.0)
 const AREAL_RADII_KM = (5.0, 10.0, 15.0)
 const NEARBY_RADII_KM = (10.0, 25.0, 50.0)
@@ -72,14 +109,21 @@ end
 
 """
 The native IMERG Uncal 08-08 BJT total for `day` (= UTC day `day`), `(lon, lat, total[lat, lon])`.
+With `labels` (hour-ending BJT labels), only the half hours of those hours: a half hour starting at
+UTC `S` belongs to the label `floor(S, Hour) + 9 h`, the station series' +9 h shift.
 
 Times come from the file names: the files' `time` variable declares a Julian calendar, which
 decodes 13 days late.
 """
-function uncal_grid_total(day::Date)
+function uncal_grid_total(day::Date; labels=nothing)
     lon = lat = total = nothing
     for path in uncal_grid_files(day)
         file = basename(path)
+        if labels !== nothing
+            stamp = match(r"(\d{8})-S(\d{6})", file)
+            start = DateTime(stamp[1] * stamp[2], dateformat"yyyymmddHHMMSS")
+            floor(start, Hour) + Hour(9) in labels || continue
+        end
         NCDataset(path) do ds
             dimnames(ds["precipitationUncal"]) == ("lat", "lon", "time") || error("unexpected dimensions in $file")
             rate = Float64.(coalesce.(ds["precipitationUncal"][:, :, 1], NaN))
@@ -121,14 +165,32 @@ function main()
     phase_tables = DataFrame[]
     for event in eachrow(events)
         day = event.day
-        hour_idx = findall(t -> met_day(t) == day, obs_times)
+        hour_idx = WITH_FY4B ?
+            event_hours(obs_times, Y_obs, Dict(p => products[p] for p in WINDOW_PRODUCTS), day).hour_idx :
+            findall(t -> met_day(t) == day, obs_times)
+        length(hour_idx) == event.common_hours || !WITH_FY4B ||
+            error("$day: $(length(hour_idx)) window hours here, $(event.common_hours) in RQ1")
         padded_idx = (first(hour_idx) - PAD_H):(last(hour_idx) + PAD_H)
         total(Y) = [all(isfinite, @view Y[i, hour_idx]) ? sum(@view Y[i, hour_idx]) : NaN for i in axes(Y, 1)]
         obs = total(Y_obs)
         sat = Dict(p => total(products[p]) for p in PRODUCTS)
+        # RQ1's gauges: those every window product has over the whole window.
+        if WITH_FY4B
+            dropped = [!(isfinite(obs[i]) && all(p -> isfinite(sat[p][i]), WINDOW_PRODUCTS))
+                       for i in eachindex(obs)]
+            obs[dropped] .= NaN
+            for p in PRODUCTS
+                sat[p][dropped] .= NaN
+            end
+        end
 
-        # Phase decomposition: does a poor day-total pattern hide well-captured phases?
-        phases = phase_spatial_metrics(Y_obs, Dict(p => products[p] for p in (PRIMARY_GPM, "GSMaP")), lonlat, hour_idx; n_phases=N_PHASES)
+        # Phase decomposition: does a poor day-total pattern hide well-captured phases? On RQ1's
+        # window the phases are the day's 8 h clock phases (09-16, 17-00, 01-08 BJT) within it.
+        phase_products = Dict(p => products[p] for p in (WITH_FY4B ? WINDOW_PRODUCTS : [PRIMARY_GPM, "GSMaP"]))
+        clock_phases = [filter(j -> mod(hour(obs_times[j]) - 9, 24) ÷ 8 == k, hour_idx) for k in 0:(N_PHASES - 1)]
+        phases = WITH_FY4B ?
+            phase_spatial_metrics(Y_obs, phase_products, lonlat, hour_idx; phases=clock_phases) :
+            phase_spatial_metrics(Y_obs, phase_products, lonlat, hour_idx; n_phases=N_PHASES)
         insertcols!(phases, 1, :event_day => day, :event_type => event.event_type,
             :obs_small_scale_share => small_scale_variance_share(lonlat, obs))
         phases.first_hour = obs_times[phases.first_hour]
@@ -137,7 +199,8 @@ function main()
             && all(p -> isfinite(sat[p][i]), PRODUCTS), eachindex(obs)); by=i -> -obs[i])
         println("$(day) $(event.event_type): $(length(core)) core gauges (>= $(CORE_MM[event.event_type]) mm)")
 
-        grid_lon, grid_lat, grid_total = uncal_grid_total(day)
+        grid_lon, grid_lat, grid_total = uncal_grid_total(day;
+            labels=WITH_FY4B ? Set(obs_times[hour_idx]) : nothing)
         grid_points = [grid_lon[c] for r in eachindex(grid_lat), c in eachindex(grid_lon)]
         grid_lonlat = hcat(vec(grid_points), vec([grid_lat[r] for r in eachindex(grid_lat), c in eachindex(grid_lon)]))
         grid_values = vec(grid_total)
@@ -184,7 +247,9 @@ function main()
                     product=p, obs_mm=obs[i], sat_mm=sat[p][i], areal_mm=pick(areal, AREAL_KM).mean,
                     nearby_mm=nearby, nearby_source=haskey(nearby_by_source, "native_grid") ? "native_grid" : "gauge_pixels"),
                     parts))
-                hourly = core_hourly_diagnostics(Y_obs[i, padded_idx], products[p][i, padded_idx]; pad=PAD_H)
+                hourly = WITH_FY4B ?
+                    core_hourly_diagnostics(Y_obs[i, hour_idx], products[p][i, hour_idx]; pad=0) :
+                    core_hourly_diagnostics(Y_obs[i, padded_idx], products[p][i, padded_idx]; pad=PAD_H)
                 push!(hourly_rows, merge((; event_day=day, event_type=event.event_type, station_id=obs_ids[i], product=p), hourly))
             end
         end
@@ -230,6 +295,9 @@ function main()
     println("\nNative grid vs gauge-sampled IMERG Uncal, daily totals: max |diff| = ",
         round(maximum(abs, interior.diff_mm); digits=4), " mm over $(nrow(interior)) interior gauge-days ",
         "($(count(checks.on_cell_edge)) gauge-days on a cell edge not compared)")
+    # On a window the grid sums only its half hours, so this also checks the half-hour-to-label mapping.
+    WITH_FY4B && maximum(abs, interior.diff_mm) > 1e-3 &&
+        error("the native grid's window totals differ from the station series by more than 0.001 mm")
     println("\nCore-deficit attribution (areal truth = $(AREAL_KM) km disc, displacement search = $(NEARBY_KM) km):")
     show(summary; allrows=true, allcols=true)
     println("

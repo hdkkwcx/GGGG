@@ -194,6 +194,13 @@ end
     @test table.obs_r_lat[1] > 0.9 && table.obs_r_lat[2] < -0.9
     @test table.est_r_lat[3] ≈ 1.0                             # the product keeps a gradient the gauges lack
     @test_throws ArgumentError HRE.phase_spatial_metrics(Y_obs, Dict("SAT" => sat), lonlat, [1, 2]; n_phases=3)
+    # Given phases: the equal split again, then phases of unequal length on a window with a gap.
+    @test isequal(HRE.phase_spatial_metrics(Y_obs, Dict("SAT" => sat), lonlat, [1, 2]; phases=[[1], [2]]), table)
+    Y3, sat3 = hcat(Y_obs, Y_obs[:, 2]), hcat(sat, sat[:, 2])
+    uneven = HRE.phase_spatial_metrics(Y3, Dict("SAT" => sat3), lonlat, [1, 2, 3]; phases=[[1], [2, 3]])
+    @test uneven.phase == ["1", "2", "all"] && uneven.hours == [1, 2, 3]
+    @test isapprox(uneven.obs_share[1:2], [1 / 3, 2 / 3]; atol=0.02)
+    @test_throws ArgumentError HRE.phase_spatial_metrics(Y3, Dict("SAT" => sat3), lonlat, [1, 2, 3]; phases=[[1, 2, 3], Int[]])
 end
 
 @testset "small_scale_variance_share separates a smooth field from a noisy one" begin
