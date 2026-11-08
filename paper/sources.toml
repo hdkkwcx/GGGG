@@ -730,7 +730,7 @@ note = "restores the published copy; scripts/clip_dem.R made it from a nationwid
 [[step]]
 id = "rq1_events"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/run_heavy_rain_event_evaluation.jl", "--gpm-gsmap"]
 marker = "output/heavy_rain_events_gpm_gsmap_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal"]
@@ -738,7 +738,7 @@ needs = ["prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "rq1_cores"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl"]
 marker = "output/heavy_core_diagnostics_gpmuncal/provenance.csv"
 needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
@@ -748,7 +748,7 @@ needs = ["rq1_events", "prep_study_area", "prep_gpm_uncal", "raw_imerg_uncal"]
 [[step]]
 id = "rq1_fy4b"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/run_heavy_rain_event_fy4b.jl"]
 marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal/provenance.csv"
 needs = ["rq1_events", "fy4b_rebuild", "fy4b_benchmark", "prep_study_area", "prep_gpm_uncal"]
@@ -756,7 +756,7 @@ needs = ["rq1_events", "fy4b_rebuild", "fy4b_benchmark", "prep_study_area", "pre
 [[step]]
 id = "rq2"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl"]
 marker = "output/satellite_temporal_evaluation_nofy4b_gpmuncal/provenance.csv"
 needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform"]
@@ -766,7 +766,7 @@ note = "reviewed 8c5709b: --fy4b-file is opt-in; that run's gpm_gsmap_full rows 
 [[step]]
 id = "rq2_fy4b"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--with-fy4b",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv"]
 marker = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal/provenance.csv"
@@ -780,7 +780,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_landform", "fy4b_rebuild"]
 [[step]]
 id = "benchmark"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
            "--fused-anchor"]
@@ -790,7 +790,7 @@ needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep
 [[step]]
 id = "claims"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal"]
 marker = "output/benchmark_diagnostics/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal/claim_provenance.csv"
@@ -799,7 +799,7 @@ needs = ["benchmark", "prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "fusion"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_nofy4b_gpmuncal"]
 marker = "output/gauge_satellite_fusion_nofy4b_gpmuncal/source_provenance.csv"
@@ -810,7 +810,7 @@ needs = ["claims"]
 [[step]]
 id = "fy4b_rebuild"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/prepare_fy4b_rebuild.jl"]
 marker = "output/fy4b_rebuild_2022_2024/provenance.csv"
 needs = ["raw_fy4b", "prep_study_area"]
@@ -818,7 +818,7 @@ needs = ["raw_fy4b", "prep_study_area"]
 [[step]]
 id = "fy4b_benchmark"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
            "--fused-anchor", "--with-fy4b", "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv",
@@ -830,7 +830,7 @@ note = "about 2 h with 4 threads; reads the rebuild's fy4b_offset_grid.nc beside
 [[step]]
 id = "fy4b_quality"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl"]
 marker = "output/fy4b_quality/provenance.csv"
 needs = ["fy4b_benchmark"]
@@ -838,6 +838,7 @@ needs = ["fy4b_benchmark"]
 [[step]]
 id = "fy4b_time_holdout"
 kind = "analysis"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/check_fy4b_qm_time_holdout.jl"]
 marker = "output/fy4b_qm_time_holdout/provenance.csv"
 needs = ["fy4b_benchmark", "fy4b_quality"]
@@ -846,7 +847,7 @@ note = "about 3 min; refits FY4B_QM per gauge fold and per gauge fold x 7-day ti
 [[step]]
 id = "fy4b_clt"
 kind = "analysis"
-reviewed = "27f227836815294448f86a8208d9bc15409e81af"
+reviewed = "21cfc46c3f7641ea7e8d096e37714e2039efc866"
 command = ["julia", "--project=.", "scripts/screen_fy4b_clt.jl"]
 marker = "output/fy4b_clt_screen/provenance.csv"
 needs = ["fy4b_benchmark", "fy4b_rebuild", "raw_fy4b", "raw_fy4b_clt"]
