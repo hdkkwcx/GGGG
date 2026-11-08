@@ -208,10 +208,18 @@ The user downloaded the four scans (85–103 MB each), and all six now sit in `/
   held 83% of the false alarms and 88% of the hits.
 - **Limits:** six scans from six episodes, and only three infrared features. Visible and near-infrared channels
   (daytime only) were not looked at.
-- **So:** no L1 sample download. `FY4B_QM` stays the quality step. The budget, the time-holdout check and this
-  result answer "how far can FY4B's quality be raised": FY4B's own infrared does not tell this false rain from real
-  rain. Separating them needs information FY4B does not have, such as microwave, which the fusion tests already
-  cover.
+  - The 1,150 gauge comparisons are not 1,150 cases. Gauges in one hour sit under the same cloud, so this is
+    about six cases.
+  - The stop rule was easy to trigger: the partly clear false scan widened the range real rain only had to fall
+    inside.
+- **So, a weak "no" from a small pilot, not a proven one.** The evidence leans no: false rain looked even more
+  rain-like than real rain. No L1 sample download for now, and `FY4B_QM` stays the quality step.
+  - Call it a small pilot when telling the tutor.
+  - If a firmer answer is wanted, a few dozen more scans (about 100 MB each), spread over episodes and seasons,
+    would give one.
+  - The budget, the time-holdout check and this pilot suggest that FY4B's own infrared does not tell this false
+    rain from real rain. Separating them would need information FY4B does not have, such as microwave, which the
+    fusion tests already cover.
 
 ## Previous (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
 
