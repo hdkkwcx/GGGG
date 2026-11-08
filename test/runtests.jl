@@ -39,6 +39,7 @@ try
   include("test-satellite-calibration.jl")
   include("test-satellite-two-stage.jl")
   include("test-time-block-folds.jl")
+  include("test-humidity-gate.jl")
   include("test-run-provenance.jl")
   include("test-imerg-uncal-stations.jl")
 finally
