@@ -14,8 +14,9 @@ where FY4B's error sits, and a near-surface humidity gate passes its screen with
 held out as well as gauges, FY4B_QM's raw gain shrinks materially (Newest; branch `fy4b/time-holdout` holds
 all three, unmerged). The first two AGRI L1 scans show the worst false rain as thick, cold, high ice cloud
 (Newest, last subsection). Four contrast scans show real rain's cloud tops inside the false rain's range, so
-by the reading fixed before looking the channel pilot stops · **Next step:** the user decides what §3.4 says,
-whether to merge and whether the gate gets a benchmark run
+by the reading fixed before looking the channel pilot stops. All of it is merged (`be63c2e`), and §3.4 now
+carries the time-held-out figures · **Next step:** the user decides whether the humidity gate gets a benchmark
+run
 
 ---
 
@@ -92,6 +93,14 @@ meaning a new flag and about 3.6 h. FY4B_QM vs GSMaP after MGWR (−6.8%) rests 
 **Recommendation (the user's call):** keep §3.4's numbers, and add that the calibration sees the same weeks, with
 the time-held-out figures beside them (needs a `[[step]]` and `[[table]]`). Drop any wording that r improved as a
 lasting property of the product. Run the crossed benchmark only if the tutor or a reviewer needs the blend number.
+
+**Done (2026-11-07, at the user's request):** branch `paper/fy4b-time-holdout`.
+- §3.4 keeps every number. After raw r's rise, it now says the correction is fitted in the same weeks as the
+  gauges it is scored at, and gives −9.5% (−15.4 to −3.5%) against −16.9% (−27.6 to −7.0%), both with whole-week
+  intervals. It says raw r no longer rises (−0.004, −0.021 to +0.015), that a few false-rain episodes carry the
+  difference, and that MGWR and the blend hold for the same weeks only.
+- `paper/sources.toml` gains step `fy4b_time_holdout` and table `fy4b_time_holdout`. The header comment names both
+  scripts.
 
 **For improving FY4B:** the map is partly absorbing a few false-rain episodes, at a cost to real heavy rain. A way
 to flag those episodes would help more than a better map, which is the channel pilot's target.

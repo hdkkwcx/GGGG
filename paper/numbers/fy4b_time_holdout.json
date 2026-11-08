@@ -1,0 +1,50 @@
+{
+ "source": "output/fy4b_qm_time_holdout/paired.csv",
+ "source_sha256": "dc740f44638f6b28e3f91fd78b0823d5a11a17c7fb05c3e78d8c4ba68e37eb93",
+ "rows": [
+  {
+   "scheme": "balanced_spatial",
+   "candidate": "FY4B_QM_gauges",
+   "baseline": "FY4B",
+   "change": "-16.9",
+   "lo": "-27.6",
+   "hi": "-7.0",
+   "dr": "+0.023",
+   "dr_lo": "0.000",
+   "dr_hi": "+0.043"
+  },
+  {
+   "scheme": "balanced_spatial",
+   "candidate": "FY4B_QM_crossed",
+   "baseline": "FY4B",
+   "change": "-9.5",
+   "lo": "-15.4",
+   "hi": "-3.5",
+   "dr": "-0.004",
+   "dr_lo": "-0.021",
+   "dr_hi": "+0.015"
+  },
+  {
+   "scheme": "random",
+   "candidate": "FY4B_QM_gauges",
+   "baseline": "FY4B",
+   "change": "-17.3",
+   "lo": "-28.2",
+   "hi": "-7.3",
+   "dr": "+0.027",
+   "dr_lo": "+0.005",
+   "dr_hi": "+0.046"
+  },
+  {
+   "scheme": "random",
+   "candidate": "FY4B_QM_crossed",
+   "baseline": "FY4B",
+   "change": "-9.2",
+   "lo": "-15.2",
+   "hi": "-3.0",
+   "dr": "-0.001",
+   "dr_lo": "-0.019",
+   "dr_hi": "+0.017"
+  }
+ ]
+}
