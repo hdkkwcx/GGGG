@@ -37,7 +37,7 @@ using MixedGWR: tied_ranks
 using Main.HeavyRainEvents: met_day
 
 export WET_MM, GAUGE_RESOLUTION_MM, INTENSITY_BOUNDS, INTENSITY_CLASSES, SEASONS, FALSE_ALARM_BINS
-export intensity_class, season_of, evaluation_context, sample_mask, day_block_bootstrap
+export intensity_class, season_of, evaluation_context, sample_mask, day_block_bootstrap, bootstrap_blocks
 export intensity_class_table, false_alarm_table, sample_coverage_table
 export station_rain_events, score_event, best_lag, event_tables, event_summary
 export harmonic_phase, circular_hour_difference, diurnal_cycle_table, diurnal_summary
@@ -63,11 +63,15 @@ within the met-day, and each station's region index.
 
 `regions` fixes the region order (index 1, 2, ...); index 0 means "all" everywhere below, as does
 season index 0. The axis must be contiguous hourly, which events, lags and 3-h blocks depend on.
+`block_days` is how many consecutive met-days the bootstraps resample as one block
+(`bootstrap_blocks`); 1 resamples days.
 """
 function evaluation_context(
     times::AbstractVector{DateTime}, station_region::AbstractVector{<:AbstractString};
     regions::AbstractVector{<:AbstractString}=sort(unique(station_region)), day_start_hour::Int=8,
+    block_days::Int=1,
 )
+    block_days >= 1 || throw(ArgumentError("block_days must be at least 1"))
     length(times) >= 2 && all(==(Hour(1)), diff(times)) ||
         throw(ArgumentError("times must be a contiguous hourly axis"))
     unknown = setdiff(unique(station_region), regions)
@@ -83,8 +87,16 @@ function evaluation_context(
         column_season=day_season[column_day], column_hour,
         column_offset=mod.(column_hour .- (day_start_hour + 1), 24),
         regions=String.(regions), station_region_index=[findfirst(==(r), regions) for r in station_region],
+        block_days,
     )
 end
+
+"""
+The unit the bootstraps resample for met-day indices `day`: the days themselves, or with
+`ctx.block_days > 1` whole blocks of that many consecutive met-days, counted from the first. Only the
+bootstraps use it; every count and table keeps the days.
+"""
+bootstrap_blocks(ctx, day) = ctx.block_days == 1 ? day : (day .- 1) .÷ ctx.block_days .+ 1
 
 _region_labels(ctx) = ["all"; ctx.regions]
 
