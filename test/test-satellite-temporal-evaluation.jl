@@ -35,6 +35,11 @@ end
     @test ctx.column_offset[1] == 0 && ctx.column_offset[24] == 23
     @test ctx.column_hour[1] == 9
     @test ctx.station_region_index == [2, 1, 2]
+    @test ctx.block_days == 1 && STE.bootstrap_blocks(ctx, ctx.column_day) == ctx.column_day
+    week = STE.evaluation_context(hourly_axis(Date(2023, 2, 28), 24 * 15), ["a"]; block_days=7)
+    @test STE.bootstrap_blocks(week, week.column_day) == vcat(fill(1, 24 * 7), fill(2, 24 * 7), fill(3, 24))
+    @test week.column_day == STE.evaluation_context(hourly_axis(Date(2023, 2, 28), 24 * 15), ["a"]).column_day
+    @test_throws ArgumentError STE.evaluation_context(times, ["a", "b", "a"]; block_days=0)
     @test_throws ArgumentError STE.evaluation_context(times[[1, 3, 4]], ["a"])
     @test_throws ArgumentError STE.evaluation_context(times, ["c"]; regions=["a", "b"])
 end

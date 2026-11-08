@@ -20,7 +20,8 @@ function sample_coverage_table(ctx, Y_obs::AbstractMatrix, mask::AbstractMatrix;
 end
 
 """Metrics of one stratum of gauge-wet cells; see `intensity_class_table`."""
-function _wet_metrics(obs, sat, obs_class, sat_class, day, station; with_r::Bool, reps::Int, rng::AbstractRNG)
+function _wet_metrics(obs, sat, obs_class, sat_class, day, station; with_r::Bool, reps::Int, rng::AbstractRNG,
+                      block=day)
     n = length(obs)
     err = sat .- obs
     base = (;
@@ -34,7 +35,7 @@ function _wet_metrics(obs, sat, obs_class, sat_class, day, station; with_r::Bool
         low_sample=n < 100 || length(unique(day)) < 10,
     )
     sums = [ones(n) obs sat abs2.(err) (sat .>= WET_MM) (sat_class .== obs_class)]
-    ci = day_block_bootstrap(day, sums, t -> (
+    ci = day_block_bootstrap(block, sums, t -> (
         (t[3] - t[2]) / t[1], 100 * (t[3] - t[2]) / t[2], sqrt(t[4] / t[1]), t[5] / t[1], t[6] / t[1],
     ); reps, rng)
     names = (:Bias, :RB_pct, :RMSE, :POD_rain, :class_hit)
@@ -51,7 +52,8 @@ Per sample x product x season x region x gauge class (`all_wet` pools the five c
 days, means, Bias, RB_pct, MAE, RMSE, `POD_rain` (satellite >= 0.1; `_res` at 0.5), `class_hit` /
 `under_class` / `over_class` (satellite class equal / lower / higher, "lower" including no rain), the
 median satellite/gauge ratio, and r on `all_wet` only - within one class the gauge range is truncated,
-so r would mostly measure that truncation. `_lo`/`_hi` are 95% day-block bootstrap bounds;
+so r would mostly measure that truncation. `_lo`/`_hi` are 95% day-block bootstrap bounds (whole
+blocks of `ctx.block_days` met-days when that is above 1);
 `low_sample` flags n < 100 or fewer than 10 days.
 """
 function intensity_class_table(
@@ -66,6 +68,7 @@ function intensity_class_table(
     obs, sat = Float64[Y_obs[k] for k in cells], Float64[Y_sat[k] for k in cells]
     obs_class, sat_class = intensity_class.(obs), intensity_class.(sat)
     day, season = ctx.column_day[column], ctx.column_season[column]
+    block = bootstrap_blocks(ctx, day)
     region = ctx.station_region_index[station]
 
     metrics, confusion = NamedTuple[], NamedTuple[]
@@ -76,7 +79,8 @@ function intensity_class_table(
             selected = c == 0 ? base : filter(i -> obs_class[i] == c, base)
             stratum += 1
             scores = _wet_metrics(obs[selected], sat[selected], obs_class[selected], sat_class[selected],
-                day[selected], station[selected]; with_r=c == 0, reps, rng=MersenneTwister(seed + stratum))
+                day[selected], station[selected]; with_r=c == 0, reps, rng=MersenneTwister(seed + stratum),
+                block=block[selected])
             label = c == 0 ? "all_wet" : INTENSITY_CLASSES[c + 1]
             push!(metrics, merge((; sample, product, season=season_label, region=region_label, gauge_class=label), scores))
         end

@@ -15,8 +15,10 @@
 #     --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv
 # GPM is uncalibrated IMERG V07 (`GPM_uncal`) by default, the paper's primary GPM product;
 # `--gpm-cal` scores gauge-calibrated IMERG Final (`GPM`) instead. Writes CSVs to
-# output/satellite_temporal_evaluation[_fy4b<variant>][_nofy4b][_gpmuncal]/; the figures are drawn
-# from those by `"$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py <that directory>`.
+# output/satellite_temporal_evaluation[_fy4b<variant>][_nofy4b][_gpmuncal][_block<N>d]/; the figures
+# are drawn from those by `"$MIXEDGWR_PYTHON" scripts/plot_satellite_temporal_evaluation.py <that directory>`.
+# `--block-days N` makes the bootstrap intervals resample whole blocks of N consecutive met-days
+# instead of single days (`bootstrap_blocks`), and adds `_block<N>d`; no point estimate moves.
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -25,7 +27,9 @@ using CSV, DataFrames, Dates, Statistics
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("MGERPipeline")
-load_standalone_modules("TableIO", "RunProvenance", "HeavyRainEvents", "LandformClassification", "SatelliteTemporalEvaluation")
+load_standalone_modules("TableIO", "RunProvenance", "HeavyRainEvents", "LandformClassification", "SatelliteTemporalEvaluation",
+    "TimeBlockFolds")
+using Main.TimeBlockFolds: block_days_option
 using Main.TableIO: write_csv_atomic
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.HeavyRainEvents: align_to_reference
@@ -56,11 +60,14 @@ function parse_fy4b_file(args)
     return normpath(path)
 end
 const FY4B_FILE = parse_fy4b_file(ARGS)
+"""`--block-days N`, or `nothing` without it (day blocks, and no suffix)."""
+const BLOCK_DAYS = first(block_days_option(ARGS))
 # The benchmark's order: a rebuilt series named after its variant (`fy4b_w3_h0.csv` ->
-# `_fy4bw3h0`), then `_nofy4b`, then `_gpmuncal`.
+# `_fy4bw3h0`), then `_nofy4b`, then `_gpmuncal`; `_block<N>d` last.
 const OUTDIR = joinpath(ROOT, "output", "satellite_temporal_evaluation" *
     (FY4B_FILE === nothing ? "" : "_" * replace(splitext(basename(FY4B_FILE))[1], "_" => "")) *
-    (WITH_FY4B ? "" : "_nofy4b") * (GPM_CAL ? "" : "_gpmuncal"))
+    (WITH_FY4B ? "" : "_nofy4b") * (GPM_CAL ? "" : "_gpmuncal") *
+    (BLOCK_DAYS === nothing ? "" : "_block$(BLOCK_DAYS)d"))
 # The first and last hour-ending labels of the 08-08 BJT days 2022-01-01 .. 2024-12-31.
 const ANALYSIS_START = DateTime(2022, 1, 1, 9)
 const ANALYSIS_END = DateTime(2025, 1, 1, 8)
@@ -163,7 +170,8 @@ function main()
         last.(PRODUCT_FILES)..., LANDFORM_FILE])
     println("Reading hourly tables and landform regions ...")
     obs_times, obs_ids, Y_obs, products, landform = load_inputs()
-    ctx = evaluation_context(obs_times, landform.relief_region; regions=RELIEF_REGIONS)
+    ctx = evaluation_context(obs_times, landform.relief_region; regions=RELIEF_REGIONS,
+        block_days=something(BLOCK_DAYS, 1))
     insufficient = Dict(String(r.relief_region) => r.insufficient_gauges for r in eachrow(landform))
     println("  $(length(obs_ids)) gauges x $(length(obs_times)) hours; regions: ",
         join(["$r ($(count(==(r), landform.relief_region)))" for r in RELIEF_REGIONS], ", "))

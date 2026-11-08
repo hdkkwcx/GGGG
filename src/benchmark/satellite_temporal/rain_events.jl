@@ -158,7 +158,8 @@ gauge resolution); medians of peak, centroid, onset and end errors over detected
 error's IQR and `peak_within_1h` share; median duration ratio, volume bias, peak ratio and event r;
 the pooled volume bias (sum over events); the shares of best lags that are early, zero or late.
 `_lo`/`_hi` are 95% day-block bootstrap bounds for `POD_event`, `peak_within_1h` and
-`pooled_volume_rel_bias` (additive statistics; medians get none). `low_sample` flags < 30 events.
+`pooled_volume_rel_bias` (additive statistics; medians get none), over whole blocks of
+`ctx.block_days` met-days when that is above 1. `low_sample` flags < 30 events.
 """
 function event_summary(
     ctx, events::DataFrame, scores::DataFrame, samples::AbstractVector{<:Pair};
@@ -210,7 +211,8 @@ function event_summary(
             if bootstrap && n > 0
                 within = detected .& (abs.(scores.peak_error_h[sel]) .<= 1)
                 sums = [ones(n) detected within scores.obs_total_mm[sel] scores.sat_total_mm[sel]]
-                ci = day_block_bootstrap(scores.day[sel], sums, t -> (t[2] / t[1], t[3] / t[2], (t[5] - t[4]) / t[4]);
+                ci = day_block_bootstrap(bootstrap_blocks(ctx, scores.day[sel]), sums,
+                    t -> (t[2] / t[1], t[3] / t[2], (t[5] - t[4]) / t[4]);
                     reps, rng=MersenneTwister(seed + stratum))
             end
             bounds = ci === nothing ? fill(NaN, 6) : [ci.lo[1], ci.hi[1], ci.lo[2], ci.hi[2], ci.lo[3], ci.hi[3]]

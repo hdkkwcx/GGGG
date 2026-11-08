@@ -112,6 +112,24 @@ end
         @test tbf_table_accuracy(class, wet, splits) < 0.65
     end
 
+    @testset "block_times groups whole blocks of dates, and one day changes nothing" begin
+        gappy = vcat(times[1:240], times[(24 * 100 + 1):end])
+        @test Date.(TBF.block_times(gappy; block_days=1)) == Date.(gappy)
+        weekly = TBF.block_times(gappy; block_days=7)
+        for (t, start) in zip(gappy, weekly)
+            @test Date(start) <= Date(t) < Date(start) + Day(7)
+            @test Dates.value(Date(start) - Date(minimum(gappy))) % 7 == 0
+        end
+        @test issorted(weekly)
+        @test_throws ArgumentError TBF.block_times(gappy; block_days=0)
+        @test TBF.block_days_option(["run_dir"]) == (nothing, ["run_dir"])
+        @test TBF.block_days_option(["--block-days", "1"]) == (1, String[])
+        @test TBF.block_days_option(["--block-days", "7", "run_dir"]) == (7, ["run_dir"])
+        @test TBF.block_days_option(["run_dir", "--block-days", "14"]) == (14, ["run_dir"])
+        @test_throws ArgumentError TBF.block_days_option(["--block-days"])
+        @test_throws ArgumentError TBF.block_days_option(["--block-days", "0"])
+    end
+
     @testset "a signal that generalises survives both" begin
         rng = MersenneTwister(12)
         class = rand(rng, 1:2, n_station, n_hour)

@@ -11,16 +11,88 @@ to be better, and the 2023 software-update gain is not shown (merged as `1dc0262
 `0982a32`), and its Scope scores the same rebuilt FY4B series as §2.5 and §3.4. A same-hours,
 same-seeds test of FY4B in the fusion gives "keep FY4B out" (merged as `b5499c7`). An error budget shows
 where FY4B's error sits, and a near-surface humidity gate passes its screen with a small gain. With time
-held out as well as gauges, FY4B_QM's raw gain shrinks materially (Newest; branch `fy4b/time-holdout` holds
-all three, unmerged). The first two AGRI L1 scans show the worst false rain as thick, cold, high ice cloud
-(Newest, last subsection). Four contrast scans show real rain's cloud tops inside the false rain's range, so
-by the reading fixed before looking the channel pilot stops. All of it is merged (`be63c2e`), and §3.4 now
-carries the time-held-out figures · **Next step:** the user decides whether the humidity gate gets a benchmark
-run
+held out as well as gauges, FY4B_QM's raw gain shrinks materially (Previous). Six AGRI L1 scans give a weak
+"no" to the channel pilot. All of it is merged (`be63c2e`), and §3.4 now carries the time-held-out figures. The
+paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states, and the
+paper now uses 7-day blocks (Newest, branch `paper/week-block-intervals`, which holds `stats/week-block-intervals`;
+unmerged) · **Next step:** the user decides whether to merge, and whether the humidity gate gets a benchmark run
 
 ---
 
-## Newest (2026-11-07): FY4B_QM's raw gain depends on having seen the same weeks
+## Newest (2026-11-07): the paper's intervals with week blocks
+
+A side agent noted that most of the paper's 95% intervals resample single days, but FY4B's errors come in
+multi-day episodes. On §3.4's raw −16.9%, week blocks had widened the interval about 40%. No paper number changes.
+- **Code** (branch `stats/week-block-intervals`):
+  - `TimeBlockFolds.block_times` and `block_days_option`, with tests (`21cfc46`);
+  - an opt-in `--block-days N` in `run_claim_reassessment.jl`, `run_gauge_satellite_fusion.jl` and
+    `compare_fy4b_quality.jl`. It changes only the times the bootstrap groups by, and writes to `_block{N}d`
+    folders beside the published ones;
+  - review bump `763ea8d`;
+  - `scripts/compare_interval_blocks.jl` (`1ceb0fe`), its reading committed before the runs. `c5a172a` loosened
+    one check: `fy4b_quality`'s point estimates differ across block lengths by summation order alone (≤ 1.3e-12
+    relative).
+- **Runs:** all clean, about 2 min each for N = 1, 7, 14. Logs: `output/interval_block_runs.log`, `output/*_block{N}d.log`,
+  `output/compare_interval_blocks.log`. Output: `output/interval_block_check/` (`verdicts.csv`, `summary.csv`).
+- **Guard passed:** every `--block-days 1` file is byte-identical to the published one, across
+  `paired_comparisons_by_method.csv`, the four fusion tables and `fy4b_quality/paired.csv`.
+
+### Result: every verdict the text states holds; one Fig. 6 cell changes
+
+| Family | Rows | Median widening, 7 d / 14 d | Flips at 7 d / 14 d |
+|---|---|---|---|
+| RQ3 fusion vs ADW (Holm) | 120 | 1.07× / 1.14× | 4 / 11 |
+| RQ3 interpolation ranking | 15 | 0.99× / 1.06× | 0 / 1 |
+| RQ3 anchors vs GPM | 15 | 1.15× / 1.09× | 1 / 1 |
+| RQ3 detection skill | 480 | 1.09× / 1.11× | 15 / 18 |
+| §3.4 FY4B quality | 18 | 1.13× / 1.17× | 2 / 3 |
+
+**Every verdict the text prints survives both block lengths:**
+- RQ3: the blend beats ADW on GPM and on MERGED_OLS (Holm p 0.000 at 1, 7 and 14 days), but not on GSMaP (0.090 →
+  0.248 → 0.392). On heavy hours, MGWR and the blend beat ADW on GPM and GSMaP (all 0.000).
+- §3.4: the intervals keep their verdicts. FY4B_QM against plain FY4B at raw, MGWR and blend still excludes 0; against
+  GPM after MGWR and against GSMaP after the blend it still spans 0. The FY4B intervals widen most, by up to 1.39× at
+  raw and MGWR, which fits its episodes.
+
+**What does change at 7 days:**
+- **Draft Fig. 6, one cell:** MERGED_OLS with MGWR alone, all hours, +2.2%. Holm p goes 0.033 → 0.165 (0.143 at 14 days),
+  so the cell turns hollow. The text never cites this cell.
+- **Not in the text:**
+  - three MERGED_MEAN blends at 2.5–8 mm/h;
+  - GSMaP's agreement blend against GPM's in the anchor comparison;
+  - 15 of 480 detection-skill rows, all borderline (p 0.01–0.05);
+  - in `fy4b_quality`, FY4B_QM against GSMaP raw (−12%), and the random split's blend against plain FY4B.
+- **At 14 days only (sensitivity):** four more Fig. 6 cells turn hollow. These are GPM's residual and agreement-residual
+  methods on heavy hours, and MERGED_MEAN's mixed and residual methods on all hours.
+
+**The user's call:**
+1. Keep the day-block intervals and add one methods sentence: week blocks were checked and change no stated verdict,
+   with one Fig. 6 cell turning hollow.
+2. Or switch the paper's RQ3 and §3.4 intervals to 7-day blocks. This is cheap: about 2 min per run, a Fig. 6 redraw,
+   and re-exported numbers. RQ2's whiskers would then need the same option for consistency.
+
+I recommend 2: the evidence for multi-day dependence is direct, and no text verdict moves.
+
+**Done (2026-11-07, at the user's request), on branch `paper/week-block-intervals`:**
+- **Wording:** RQ3's "only fused GPM beats ADW significantly" now reads "of the two [products] only fused GPM…",
+  so it no longer contradicts the merged anchor's significant gain. A side agent's note.
+- **RQ2 option:** `--block-days` added to RQ2 (`SatelliteTemporalEvaluation.bootstrap_blocks`). Only the two
+  bootstraps resample 7-met-day blocks; counts and tables keep days. `--block-days 1` reproduced every RQ2 CSV byte
+  for byte.
+- **Plot labels:** the fusion and RQ2 plots name the block length from a `_block<N>d` folder.
+- **Reruns:** claims, fusion, RQ2, §3.4's FY4B comparison (new step `fy4b_quality_week`) and both plots, clean at
+  `a725000`. The paper reads the `_block7d` folders. `fy4b_quality` (day blocks) stays as the time-holdout check's
+  input.
+- **What moved:** only intervals and p-values.
+  - GSMaP's p is 0.25.
+  - Draft Fig. 6's MERGED_OLS + MGWR all-hours cell is hollow.
+  - §3.4's raw interval is −27.6 to −7.0%.
+- **Methods text:** says intervals resample whole 7-day blocks, and that they resample time only, with the gauges
+  and five folds fixed (another side-agent note). The one-month cloud-type pilot keeps day blocks, as §3.4 says.
+- **Checks:** provenance OK, `make_paper.jl` with nothing flagged, typst clean, `Pkg.test()` passes. The branch is
+  unmerged.
+
+## Previous (2026-11-07): FY4B_QM's raw gain depends on having seen the same weeks
 
 A side agent warned that the channel pilot held out gauges but not days. False rain covers the network at
 once, so a held-out gauge is not new weather. That holds, and it reaches a number the paper cites. No paper
@@ -208,10 +280,18 @@ The user downloaded the four scans (85–103 MB each), and all six now sit in `/
   held 83% of the false alarms and 88% of the hits.
 - **Limits:** six scans from six episodes, and only three infrared features. Visible and near-infrared channels
   (daytime only) were not looked at.
-- **So:** no L1 sample download. `FY4B_QM` stays the quality step. The budget, the time-holdout check and this
-  result answer "how far can FY4B's quality be raised": FY4B's own infrared does not tell this false rain from real
-  rain. Separating them needs information FY4B does not have, such as microwave, which the fusion tests already
-  cover.
+  - The 1,150 gauge comparisons are not 1,150 cases. Gauges in one hour sit under the same cloud, so this is
+    about six cases.
+  - The stop rule was easy to trigger: the partly clear false scan widened the range real rain only had to fall
+    inside.
+- **So, a weak "no" from a small pilot, not a proven one.** The evidence leans no: false rain looked even more
+  rain-like than real rain. No L1 sample download for now, and `FY4B_QM` stays the quality step.
+  - Call it a small pilot when telling the tutor.
+  - If a firmer answer is wanted, a few dozen more scans (about 100 MB each), spread over episodes and seasons,
+    would give one.
+  - The budget, the time-holdout check and this pilot suggest that FY4B's own infrared does not tell this false
+    rain from real rain. Separating them would need information FY4B does not have, such as microwave, which the
+    fusion tests already cover.
 
 ## Previous (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
 

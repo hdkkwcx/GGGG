@@ -29,6 +29,7 @@ ordered classes, and a blue/red diverging ramp with a grey centre for signed err
 from __future__ import annotations
 
 import csv
+import re
 import sys
 from pathlib import Path
 
@@ -47,6 +48,9 @@ ROOT = Path(__file__).resolve().parents[1]
 ARGS = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
 RUN_DIR = Path(ARGS[0]) if ARGS else ROOT / "output" / "satellite_temporal_evaluation"
 FIG_DIR = RUN_DIR / ("figures_gpm_gsmap" if "--gpm-gsmap" in sys.argv[1:] else "figures")
+# A run written with `--block-days N` (folder suffix `_block<N>d`) resamples blocks of N met-days.
+_BLOCK = re.search(r"_block(\d+)d$", RUN_DIR.name)
+BLOCK_LABEL = f"{_BLOCK.group(1)}-day-block" if _BLOCK else "day-block"
 
 
 def _scored() -> tuple[set[str], set[str]]:
@@ -302,7 +306,7 @@ def fig2_intensity(metrics: list[dict], sample: str, by: str = "season") -> None
     product_legend(fig, products, loc="upper right", bbox_to_anchor=(0.99, 0.975))
     fig.suptitle(f"Hourly performance by gauge intensity class — {SAMPLE_TITLES[sample]}", x=0.085, ha="left", fontsize=9, y=0.975)
     fig.text(0.085, 0.925, "Gauge-wet hours only (no-rain hours excluded), " +
-             ("all gauges" if by == "season" else "all seasons, gauges grouped by local relief") + ". Whiskers: 95% day-block bootstrap. "
+             ("all gauges" if by == "season" else "all seasons, gauges grouped by local relief") + f". Whiskers: 95% {BLOCK_LABEL} bootstrap. "
              "Grey line: perfect score.", ha="left", fontsize=6.3, color=INK_SECONDARY)
     fig.text(0.085, 0.905, CAVEAT, ha="left", va="top", fontsize=6.0, color=MUTED, linespacing=1.4)
     save(fig, f"fig2_intensity_classes_{sample}" if by == "season" else f"fig2_intensity_classes_region_{sample}")
@@ -461,7 +465,7 @@ def fig5_events(summary: list[dict]) -> None:
     fig.text(0.55, 0.18 / height, "Event class = the gauge's peak hourly intensity", ha="center", fontsize=6.5, color=INK_SECONDARY)
     product_legend(fig, SAMPLE_PRODUCTS[SAMPLES[0]], loc="upper right", bbox_to_anchor=(0.99, y(0.13)))
     fig.suptitle("Station rain events: detection, timing and volume", x=0.08, ha="left", fontsize=9, y=y(0.13))
-    fig.text(0.08, y(0.364), "Events end after 3 dry hours; scored over the event ± 3 h. Whiskers: 95% day-block bootstrap. "
+    fig.text(0.08, y(0.364), f"Events end after 3 dry hours; scored over the event ± 3 h. Whiskers: 95% {BLOCK_LABEL} bootstrap. "
              "Timing panels over detected events: median difference of rain-weighted mean hours, and the balance of best "
              "lags within ± 3 h.", ha="left", fontsize=6.3, color=INK_SECONDARY)
     fig.text(0.08, y(0.546), "Peak hours are hourly and 0.5 mm ties are common, so the peak-hour median is 0 h almost "

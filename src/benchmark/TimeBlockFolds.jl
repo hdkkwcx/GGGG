@@ -13,12 +13,15 @@ model that can learn one episode's signature is then "confirmed" by that episode
   held-out hours, so each gauge-hour is scored once, by a model that saw neither.
 
 Hour labels are hour ends, so an hour's day is the day of `label - 1 h`.
+
+- `block_times` / `block_days_option`: for the day-block bootstraps, which group hours by `Date(t)`.
+  Handed `block_times` in place of the hours, they resample whole blocks of days instead.
 """
 module TimeBlockFolds
 
 using Dates, Random
 
-export label_day, time_block_folds, training_hours, crossed_splits
+export label_day, time_block_folds, training_hours, crossed_splits, block_times, block_days_option
 
 """The calendar day of an hour labelled by its end."""
 label_day(time::DateTime) = Date(time - Hour(1))
@@ -76,6 +79,36 @@ function crossed_splits(fold_of_station::AbstractVector{<:Integer},
         train_hours=findall(training_hours(fold_of_time, times, time_fold; guard_days)),
         test_hours=findall(==(time_fold), fold_of_time))
         for gauge_fold in sort(unique(fold_of_station)) for time_fold in sort(unique(fold_of_time))]
+end
+
+"""
+Each hour as the start of its `block_days`-day block, for the code that groups hours by `Date(t)`:
+`_daily_bootstrap_delta`, `daily_bootstrap_event_delta` and `DayBlockBootstrap.day_groups`. Handed
+these in place of the hours, that code resamples whole blocks instead of days.
+
+Blocks count `Date(t)` from the first hour's date, as that code does, not `label_day`. With
+`block_days = 1` every hour maps to the start of its own date, so the grouping is unchanged.
+"""
+function block_times(times::AbstractVector{DateTime}; block_days::Integer=7)
+    block_days >= 1 || throw(ArgumentError("block_days must be at least 1"))
+    first_day = minimum(Date.(times))
+    return [DateTime(first_day + Day(fld(Dates.value(Date(t) - first_day), block_days) * block_days))
+        for t in times]
+end
+
+"""
+`--block-days N` read out of command-line `args`, as `(N, the other args)`. `N` is `nothing` without
+the flag, so a script can keep its default path then, and still run `--block-days 1` through
+`block_times` as a check that it reproduces that default.
+"""
+function block_days_option(args)
+    rest = collect(String, args)
+    index = findfirst(==("--block-days"), rest)
+    index === nothing && return nothing, rest
+    index < length(rest) || throw(ArgumentError("--block-days needs a number of days"))
+    block_days = parse(Int, rest[index + 1])
+    block_days >= 1 || throw(ArgumentError("--block-days must be at least 1"))
+    return block_days, deleteat!(rest, index:(index + 1))
 end
 
 end # module

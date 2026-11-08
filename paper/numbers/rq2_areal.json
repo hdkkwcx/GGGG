@@ -1,5 +1,5 @@
 {
- "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal/regional_series_metrics.csv",
+ "source": "output/satellite_temporal_evaluation_nofy4b_gpmuncal_block7d/regional_series_metrics.csv",
  "source_sha256": "af27dbbc7ab4436e2ac6c4c94660fce155800e5e7f012508891c0cf08b25c2c2",
  "rows": [
   {

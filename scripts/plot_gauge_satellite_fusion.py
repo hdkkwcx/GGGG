@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -50,6 +51,9 @@ GPM_GSMAP_ONLY = "--gpm-gsmap" in sys.argv[1:]
 ARGS = [arg for arg in sys.argv[1:] if arg != "--gpm-gsmap"]
 RUN_DIR = Path(ARGS[0]) if len(ARGS) > 0 else ROOT / "output" / "gauge_satellite_fusion"
 FIG_DIR = RUN_DIR / ("figures_gpm_gsmap" if GPM_GSMAP_ONLY else "figures")
+# A report written with `--block-days N` (folder suffix `_block<N>d`) resamples N-day blocks.
+_BLOCK = re.search(r"_block(\d+)d$", RUN_DIR.name)
+BLOCK_LABEL = f"{_BLOCK.group(1)}-day-block" if _BLOCK else "day-block"
 REPORT_DIR = Path(ARGS[1]) if len(ARGS) > 1 else ROOT / "Interim_results"
 
 
@@ -282,7 +286,7 @@ def fig2_interpolators(ranking: list[dict], summary: list[dict]) -> None:
                       markeredgecolor=SURFACE, label=METHOD_LABELS[m]) for i, m in enumerate(interpolators)]
     fig.legend(handles=handles, frameon=False, fontsize=6.4, ncol=4, loc="lower right", bbox_to_anchor=(0.99, 0.0))
     title(fig, "Gauge-only interpolation: ADW and IDW lead, TPS and GWR trail",
-          "Held-out gauges, balanced spatial CV. Whiskers: 95% day-block bootstrap interval of the RMSE difference "
+          f"Held-out gauges, balanced spatial CV. Whiskers: 95% {BLOCK_LABEL} bootstrap interval of the RMSE difference "
           "against ADW. Interpolators ignore the satellite, so GPM's evaluation mask is used.", top=0.97)
     save(fig, "fusion_fig2_interpolators")
 
