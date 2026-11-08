@@ -9,6 +9,13 @@
 # `--gpm-gsmap` leaves FY4B out: events are then selected on the hours GPM and GSMaP cover, and the
 # results go to output/heavy_rain_events_gpm_gsmap/ instead.
 #
+# `--fy4b-file <path>` scores a FY4B series rebuilt by `scripts/prepare_fy4b_rebuild.jl` instead of the
+# shipped one, as the benchmark's option does (folder `_fy4bw3h0` for `fy4b_w3_h0.csv`); events are
+# then selected on the hours the gauges and all three products share. `--from YYYY-MM` starts the
+# screen at that month's first 08-08 day instead of 2022-01-01 (suffix `_from<yyyymm>`, last):
+#   julia --project=. scripts/run_heavy_rain_event_evaluation.jl \
+#     --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --from 2022-06
+#
 # GPM is uncalibrated IMERG V07 (`GPM_uncal`) by default, the paper's primary GPM product, and the
 # output directory gets a `_gpmuncal` suffix; `--gpm-cal` scores gauge-calibrated IMERG Final
 # (`GPM`) instead, as `run_interpolation_benchmark.jl` does.
@@ -25,24 +32,47 @@ using CSV, DataFrames, Dates, Statistics
 
 include(joinpath(ROOT, "src", "load_modules.jl"))
 load_pipeline("MGERPipeline")
-load_standalone_modules("TableIO", "RunProvenance", "StudyArea", "HeavyRainEvents")
+load_standalone_modules("TableIO", "RunProvenance", "StudyArea", "HeavyRainEvents", "TimeBlockFolds")
 using Main.TableIO: write_csv_atomic
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.StudyArea: STUDY_BOUNDS
 using Main.HeavyRainEvents
+using Main.TimeBlockFolds: from_option, from_suffix
 
 const STUDY_DATA = joinpath(ROOT, "data", "processed", "study_area")
 const GPM_GSMAP_ONLY = "--gpm-gsmap" in ARGS
 const GPM_CAL = "--gpm-cal" in ARGS
 # The run's IMERG product, as named in every output table.
 const GPM = GPM_CAL ? "GPM" : "GPM_uncal"
+
+"""
+Parse `--fy4b-file <path>`, a series written by `prepare_fy4b_rebuild.jl`, as
+`run_satellite_temporal_evaluation.jl` does; a relative path is read from the repository root.
+Absent means the shipped study-area FY4B file.
+"""
+function parse_fy4b_file(args)
+    index = findfirst(==("--fy4b-file"), args)
+    index === nothing && return nothing
+    GPM_GSMAP_ONLY && throw(ArgumentError("--fy4b-file scores FY4B, which --gpm-gsmap leaves out"))
+    text = get(args, index + 1, "")
+    isempty(text) && throw(ArgumentError("--fy4b-file expects a path"))
+    path = isabspath(text) ? text : joinpath(ROOT, text)
+    isfile(path) || throw(ArgumentError("--fy4b-file: no such file $path"))
+    return normpath(path)
+end
+const FY4B_FILE = parse_fy4b_file(ARGS)
+"""`--from YYYY-MM`, the first month screened, or `nothing` (January 2022, and no suffix)."""
+const FROM = first(from_option(ARGS))
 const OUTDIR = joinpath(ROOT, "output",
-    (GPM_GSMAP_ONLY ? "heavy_rain_events_gpm_gsmap" : "heavy_rain_events") * (GPM_CAL ? "" : "_gpmuncal"))
+    (GPM_GSMAP_ONLY ? "heavy_rain_events_gpm_gsmap" : "heavy_rain_events") *
+    (FY4B_FILE === nothing ? "" : "_" * replace(splitext(basename(FY4B_FILE))[1], "_" => "")) *
+    (GPM_CAL ? "" : "_gpmuncal") * from_suffix(FROM))
 # The full benchmark window: the first and last hour-ending labels of the 08-08 BJT days.
-const ANALYSIS_START = DateTime(2022, 1, 1, 9)
+const ANALYSIS_START = FROM === nothing ? DateTime(2022, 1, 1, 9) : DateTime(FROM) + Hour(9)
 const ANALYSIS_END = DateTime(2025, 1, 1, 8)
 const ALL_PRODUCT_FILES = [
-    "FY4B" => "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv",
+    # `joinpath(STUDY_DATA, file)` keeps an absolute `--fy4b-file` as it is.
+    "FY4B" => something(FY4B_FILE, "hubei_fy4b_hourly_2022_2024_full_strict_navcorrected.csv"),
     GPM => GPM_CAL ? "hubei_gpm_hourly_2022_2024_full_aligned.csv" : "hubei_gpm_uncal_hourly_2022_2024_full_aligned.csv",
     "GSMaP" => "hubei_gsmap_hourly_2022_2024_full_aligned.csv",
 ]
@@ -97,6 +127,10 @@ function summarize_metrics(metrics::DataFrame, stations::DataFrame, lonlat_by_id
 end
 
 function main()
+    # `run_heavy_rain_event_fy4b.jl` writes `heavy_rain_events_fy4bw3h0_gpmuncal/`, the folder this
+    # script names for `--fy4b-file` without `--from`; its `event_windows.csv` marks it.
+    isfile(joinpath(OUTDIR, "event_windows.csv")) &&
+        error("$OUTDIR holds run_heavy_rain_event_fy4b.jl's output; add --from to write elsewhere")
     # Before any work, so it records the code that runs: see `RunProvenance`. The inputs are every
     # file `load_inputs` reads.
     provenance = start_provenance(ROOT, OUTDIR; inputs=[joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv"),

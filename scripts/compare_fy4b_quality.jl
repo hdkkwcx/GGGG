@@ -5,10 +5,18 @@
 #
 #   julia --project=. scripts/compare_fy4b_quality.jl
 #   julia --project=. scripts/compare_fy4b_quality.jl --block-days 7
+#   julia --project=. scripts/compare_fy4b_quality.jl <run dir> --matched-products --block-days 7
 #
 # `--block-days N` resamples whole N-day blocks instead of days and writes to
 # output/fy4b_quality_block{N}d/. `--block-days 1` must reproduce the default file; without the flag
 # nothing changes (`TimeBlockFolds.block_times`).
+#
+# A run folder reads another run of the same products instead: the one without `--fy4b-qm-fusion`
+# (`..._fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal`, where plain FY4B is in the fusion), whose name must
+# again be what `benchmark_config` gives. Its output folder adds the run's options from
+# `_fusedanchor` on. `--matched-products` scores every pair on the cells every product of the run is
+# scored on (`BenchmarkDiagnostics.matched_evaluation_mask`, as `run_claim_reassessment.jl` does)
+# instead of the pair's own shared cells, and adds `_matched` before `_block{N}d`.
 #
 # The run (2026-10-31, the paper's `fy4b_benchmark` step):
 #     julia -t 4 --project=. scripts/run_interpolation_benchmark.jl full --nested-covariates \
@@ -27,9 +35,11 @@
 # Writes output/fy4b_quality/: paired.csv, provenance.csv.
 
 include(joinpath(@__DIR__, "run_interpolation_benchmark.jl"))
-load_standalone_modules("RunProvenance", "TableIO", "DayBlockBootstrap", "TimeBlockFolds")
+load_standalone_modules("RunProvenance", "TableIO", "DayBlockBootstrap", "TimeBlockFolds",
+    "BenchmarkDiagnostics")
 
 using CSV, Printf
+using Main.BenchmarkDiagnostics: matched_evaluation_mask, matched_fold_failures
 using Main.DayBlockBootstrap: read_wide_values, read_wide_mask, day_groups, group_sums,
     compare_days
 using Main.RunProvenance: start_provenance, finish_provenance!
@@ -48,12 +58,18 @@ const METHODS = ["raw", "mgwr", _blend_method("mgwr", :agreement_envelope)]
 
 """
 The run's configuration, and a copy of its `MGERConfig` that writes to `outdir`: loading the grid
-writes `global_common_time_qc.csv`, which must not land in the run.
+writes `global_common_time_qc.csv`, which must not land in the run. `run_dir` picks the run with
+or without `--fy4b-qm-fusion` (by its `_qmfusion` suffix) and must be the folder that configuration
+names; without it, the `--fy4b-qm-fusion` run.
 """
-function run_config(outdir=OUTDIR)
+function run_config(outdir=OUTDIR; run_dir=nothing)
+    qm_fusion = run_dir === nothing || occursin("_qmfusion", basename(rstrip(run_dir, '/')))
     config = benchmark_config(:full; nested_covariates=true, satellite_wet_blend=true,
         fused_anchor=true, gpm_uncal=true, blend_axes=[:constant, :agreement_envelope],
-        fy4b=true, fy4b_file=FY4B_FILE, fy4b_qm=true, fy4b_qm_adaptive=true, fy4b_qm_fusion=true)
+        fy4b=true, fy4b_file=FY4B_FILE, fy4b_qm=true, fy4b_qm_adaptive=true,
+        fy4b_qm_fusion=qm_fusion)
+    run_dir === nothing || rstrip(abspath(run_dir), '/') == rstrip(config.mger.outdir, '/') ||
+        error("$run_dir is not a run this comparison reads; the matching one is $(config.mger.outdir)")
     fields = fieldnames(MGERConfig)
     mger = MGERConfig(; merge(
         NamedTuple{fields}(Tuple(getfield(config.mger, field) for field in fields)),
@@ -61,22 +77,34 @@ function run_config(outdir=OUTDIR)
     return config, mger
 end
 
+"""The run's options from `_fusedanchor` on, which an output folder for that run carries."""
+run_tag(run_dir) = last(split(basename(rstrip(run_dir, '/')), "_fusedanchor"; limit=2))
+
 function quality_main(args=ARGS)
-    block_days, _ = block_days_option(args)
-    outdir = block_days === nothing ? OUTDIR : OUTDIR * "_block$(block_days)d"
+    block_days, args = block_days_option(args)
+    matched = "--matched-products" in args
+    positional = filter(!startswith("--"), args)
+    run_dir = isempty(positional) ? nothing : abspath(only(positional))
+    outdir = OUTDIR * (run_dir === nothing ? "" : run_tag(run_dir)) * (matched ? "_matched" : "") *
+        (block_days === nothing ? "" : "_block$(block_days)d")
     mkpath(outdir)
-    config, mger = run_config(outdir)
+    config, mger = run_config(outdir; run_dir)
     dir = config.mger.outdir
     isfile(joinpath(dir, "metrics_pooled.csv")) || error("the run is not finished: $dir")
     schemes = string.(config.cv_schemes)
     products = vcat(CORRECTED, BASELINES)
+    # Matched: every product the run scored defines the sample, as in run_claim_reassessment.jl.
+    run_products = sort(unique(String.(CSV.read(joinpath(dir, "metrics_pooled.csv"), DataFrame;
+        select=[:product]).product)))
     path(scheme, product, file) = joinpath(dir, scheme, lowercase(product), file)
     inputs = vcat(mger.station_meta_path, mger.obs_hourly_wide_path,
         collect(values(mger.sat_paths)),
         [joinpath(dir, scheme, "split_common.csv") for scheme in schemes],
         [path(s, p, file) for s in schemes for p in products
-            for file in vcat(["oof_$m.csv" for m in METHODS], "common_evaluation_mask.csv")])
+            for file in vcat(["oof_$m.csv" for m in METHODS], "common_evaluation_mask.csv")],
+        matched ? [joinpath(dir, "run_status.csv")] : String[])
     provenance = start_provenance(ROOT, outdir; inputs)
+    status = matched ? CSV.read(joinpath(dir, "run_status.csv"), DataFrame) : nothing
 
     _, ids, data = load_global_common_product_data(mger)
     times = data["GPM_uncal"].times
@@ -90,11 +118,20 @@ function quality_main(args=ARGS)
     for scheme in schemes
         masks = Dict(p => read_wide_mask(path(scheme, p, "common_evaluation_mask.csv"), ids, times)
             for p in products)
+        sample = nothing
+        if matched
+            failures = matched_fold_failures(status; scheme, products=run_products)
+            isempty(failures) || error("--matched-products: $scheme folds failed:\n" *
+                sprint(show, select(failures, :product, :fold, :method, :status)))
+            sample = matched_evaluation_mask(joinpath(dir, scheme), run_products, ids, times).matched
+            @printf("  %s: matched sample %d cells\n", scheme, count(sample))
+        end
         for baseline in BASELINES, method in METHODS
             candidate = read_wide_values(path(scheme, CORRECTED, "oof_$method.csv"), ids, times)
             reference = read_wide_values(path(scheme, baseline, "oof_$method.csv"), ids, times)
             shared = masks[CORRECTED] .& masks[baseline] .& .!isnan.(y) .&
                 .!isnan.(candidate) .& .!isnan.(reference)
+            sample === nothing || (shared .&= sample)
             push!(rows, merge((; scheme, product=CORRECTED, baseline, method),
                 compare_days(day_sums(candidate, shared), day_sums(reference, shared), THRESHOLDS;
                     ci_stats=CI_STATS, reps=BOOTSTRAP_REPS, seed=BOOTSTRAP_SEED)))

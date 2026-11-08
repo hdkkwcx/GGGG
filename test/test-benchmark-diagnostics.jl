@@ -1,4 +1,4 @@
-using Test, DataFrames
+using Test, CSV, DataFrames, Dates
 
 include(joinpath(@__DIR__, "..", "src", "load_modules.jl"))
 load_standalone_modules("BenchmarkDiagnostics")
@@ -168,4 +168,82 @@ end
         y_obs, predictions; scheme="balanced_spatial", product="GPM",
         excluded="good", methods=["mgwr"],
     )
+end
+
+"""Write a wide `time × station` table, `time` first, as the benchmark writes its OOF files."""
+function write_wide(path, times, ids, matrix)
+    df = DataFrame(time=times)
+    for (index, id) in enumerate(ids)
+        df[!, id] = matrix[index, :]
+    end
+    CSV.write(path, df)
+end
+
+@testset "matched_evaluation_mask: one sample for every product" begin
+    ids = ["s1", "s2", "s3"]
+    times = [DateTime(2022, 6, 1, 9) + Hour(h) for h in 0:3]
+    mktempdir() do scheme_dir
+        own = Dict(
+            "FY4B" => trues(3, 4), "GPM_uncal" => trues(3, 4), "MERGED_OLS" => trues(3, 4),
+        )
+        own["FY4B"][1, 2] = false          # a product-specific gap removes the cell for all
+        own["GPM_uncal"][3, 4] = false
+        blend = ones(3, 4)
+        blend[2, 1] = NaN                  # a non-mask method's gap counts too
+        for (product, mask) in own
+            dir = joinpath(scheme_dir, lowercase(product))
+            mkpath(dir)
+            write_wide(joinpath(dir, "common_evaluation_mask.csv"), times, ids, mask)
+            # `auto` exists for every product; the blend only for GPM_uncal, so an absent file is skipped.
+            write_wide(joinpath(dir, "oof_auto.csv"), times, ids, ones(3, 4))
+            product == "GPM_uncal" && write_wide(joinpath(dir, "oof_blend_agrenv_mgwr.csv"), times, ids, blend)
+            # A mask-defining method's file is not read: its NaN is already in the mask.
+            write_wide(joinpath(dir, "oof_mgwr.csv"), times, ids, fill(NaN, 3, 4))
+        end
+        products = sort(collect(keys(own)))
+        sample = BD.matched_evaluation_mask(scheme_dir, products, ids, times)
+        expected = trues(3, 4)
+        expected[1, 2] = expected[3, 4] = expected[2, 1] = false
+        @test sample.matched == expected
+        @test sample.masks["FY4B"] == own["FY4B"]
+        @test BD.matched_evaluation_mask(scheme_dir, ["MERGED_OLS"], ids, times).matched == trues(3, 4)
+        # Files on another hour grid are refused rather than read by position.
+        @test_throws ErrorException BD.matched_evaluation_mask(scheme_dir, products, ids, times[2:end])
+        @test_throws ArgumentError BD.matched_evaluation_mask(scheme_dir, String[], ids, times)
+
+        table = BD.matched_sample_table(sample.masks, sample.matched, [1, 1, 2]; scheme="balanced_spatial")
+        all_rows = filter(:fold => ==("all"), table)
+        @test all(all_rows.n_matched .== 9)
+        @test only(filter(:product => ==("FY4B"), all_rows)).n_own == 11
+        @test only(filter(row -> row.product == "FY4B" && row.fold == "2", table)).n_matched == 3
+        @test all(all_rows.hours_matched .== 4)
+    end
+end
+
+@testset "matched_fold_failures: only failed or skipped folds of the products and methods" begin
+    status = DataFrame(
+        scheme=["balanced_spatial", "balanced_spatial", "balanced_spatial", "random", "balanced_spatial"],
+        product=["FY4B", "GSMaP", "GSMaP", "FY4B", "OTHER"], fold=[1, 2, 3, 1, 1],
+        method=["mgwr", "blend_mgwr", "mgwr", "mgwr", "mgwr"],
+        status=["partial", "skipped", "failed", "failed", "failed"])
+    failures = BD.matched_fold_failures(status; scheme="balanced_spatial", products=["FY4B", "GSMaP"])
+    @test failures.fold == [2, 3]
+    @test nrow(BD.matched_fold_failures(status; scheme="balanced_spatial", products=["FY4B"])) == 0
+end
+
+@testset "--fy4b-file: parsed, and held to the run name's series" begin
+    mktempdir() do root
+        mkpath(joinpath(root, "output"))
+        touch(joinpath(root, "output", "fy4b_w3_h0.csv"))
+        path, rest = BD.fy4b_file_option(["run", "--fy4b-file", "output/fy4b_w3_h0.csv", "--x"]; root)
+        @test path == joinpath(root, "output", "fy4b_w3_h0.csv") && rest == ["run", "--x"]
+        @test BD.fy4b_file_option(["run"]; root) == (nothing, ["run"])
+        @test_throws ArgumentError BD.fy4b_file_option(["--fy4b-file"]; root)
+        @test_throws ArgumentError BD.fy4b_file_option(["--fy4b-file", "missing.csv"]; root)
+    end
+    @test BD.check_fy4b_tag("x_fusedanchor_fy4bw3h0_fy4bqm_gpmuncal", "/a/fy4b_w3_h0.csv") === nothing
+    @test BD.check_fy4b_tag("x_fusedanchor_nofy4b_gpmuncal", nothing) === nothing
+    @test_throws ErrorException BD.check_fy4b_tag("x_fusedanchor_fy4bw3h0_gpmuncal", nothing)
+    @test_throws ErrorException BD.check_fy4b_tag("x_fusedanchor_fy4bw3h0_gpmuncal", "/a/fy4b_w1_h0.csv")
+    @test_throws ErrorException BD.check_fy4b_tag("x_fusedanchor_gpmuncal", "/a/fy4b_w3_h0.csv")
 end

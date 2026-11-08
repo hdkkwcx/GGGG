@@ -4,6 +4,14 @@
 # scored over the hours FY4B shares with the gauges and the other products.
 #
 #   julia --project=. scripts/run_heavy_rain_event_fy4b.jl
+#   julia --project=. scripts/run_heavy_rain_event_fy4b.jl \
+#     --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --from 2022-06
+#
+# With RQ1's `--fy4b-file` (and `--from`), the events are those RQ1 itself selected with FY4B among
+# its products (`run_heavy_rain_event_evaluation.jl` with the same flags), FY4B_QM comes from the run
+# without `--fy4b-qm-fusion` (plain FY4B in the fusion), and the results go to RQ1's folder plus
+# `_fy4bqm`. Each event's window over the four products must then be RQ1's own, and the FY4B, GPM and
+# GSMaP rows must reproduce RQ1's `common_hours` rows; both are checked before anything is written.
 #
 # The events are the paper's six, read from the RQ1 run (`run_heavy_rain_event_evaluation.jl
 # --gpm-gsmap`), so FY4B never chooses them and RQ1's GPM-vs-GSMaP results stay as they are. For
@@ -30,20 +38,24 @@
 # RQ1's script, for its inputs, analysis window and `summarize_metrics`; its `main` does not run.
 include(joinpath(@__DIR__, "run_heavy_rain_event_evaluation.jl"))
 
-const RQ1_DIR = joinpath(ROOT, "output", "heavy_rain_events_gpm_gsmap_gpmuncal")
-# The FY4B benchmark run of the paper's `fy4b_benchmark` step (paper/sources.toml).
+# RQ1's events: the GPM/GSMaP run's, or with `--fy4b-file` the run that selected them with FY4B.
+const WITH_RQ1_FY4B = FY4B_FILE !== nothing
+const RQ1_DIR = WITH_RQ1_FY4B ? OUTDIR : joinpath(ROOT, "output", "heavy_rain_events_gpm_gsmap_gpmuncal")
+# The FY4B benchmark run: with `--fy4b-file` the one with plain FY4B in the fusion, otherwise the
+# `--fy4b-qm-fusion` run of the earlier `fy4b_benchmark` step.
 const FY4B_BENCHMARK_DIR = joinpath(ROOT, "output",
     "interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_" *
-    "fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal")
+    "fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_" * (WITH_RQ1_FY4B ? "" : "qmfusion_") * "gpmuncal")
 const EVENT_PRODUCT_FILES = [
-    "FY4B" => joinpath(ROOT, "output", "fy4b_rebuild_2022_2024", "fy4b_w3_h0.csv"),
+    "FY4B" => something(FY4B_FILE, joinpath(ROOT, "output", "fy4b_rebuild_2022_2024", "fy4b_w3_h0.csv")),
     "FY4B_QM" => joinpath(FY4B_BENCHMARK_DIR, "balanced_spatial", "fy4b_qm", "oof_raw.csv"),
     [product => joinpath(STUDY_DATA, file) for (product, file) in ALL_PRODUCT_FILES
         if product in FULL_DAY_PRODUCTS]...,
 ]
 const OBS_FILE = joinpath(STUDY_DATA, "hubei_obs_hourly_2022_2025_JunSep.csv")
 const STATION_META_FILE = joinpath(STUDY_DATA, "station_meta.csv")
-const FY4B_EVENT_DIR = joinpath(ROOT, "output", "heavy_rain_events_fy4bw3h0_gpmuncal")
+const FY4B_EVENT_DIR = WITH_RQ1_FY4B ? OUTDIR * "_fy4bqm" :
+    joinpath(ROOT, "output", "heavy_rain_events_fy4bw3h0_gpmuncal")
 # RQ1's metrics a full-day row must reproduce.
 const CHECKED_METRICS = [:n, :r, :Bias, :RMSE, :CSI_50]
 
@@ -59,6 +71,28 @@ function load_event_inputs()
     end
     lonlat = build_X_lonlat(load_station_meta(STATION_META_FILE), obs_ids)
     return obs_times, obs_ids, Y_obs, products, lonlat
+end
+
+"""
+Fail unless each event's window is RQ1's own (`selected_events.csv`'s `common_hours`, when RQ1
+selected with FY4B) and the FY4B, GPM and GSMaP rows over it equal RQ1's `common_hours` rows.
+"""
+function check_common_window(windows::DataFrame, metrics::DataFrame, rq1::DataFrame)
+    for event in eachrow(windows)
+        event.common_hours == event.rq1_common_hours ||
+            error("$(event.day): $(event.common_hours) hours with FY4B_QM, $(event.rq1_common_hours) in RQ1")
+    end
+    for row in eachrow(metrics[(metrics.window .== "fy4b_hours") .& (metrics.product .!= "FY4B_QM"), :])
+        match = rq1[(rq1.window .== "common_hours") .& (rq1.event_day .== row.event_day) .&
+            (rq1.product .== row.product), :]
+        nrow(match) == 1 || error("RQ1 has $(nrow(match)) common-hours rows for $(row.event_day) $(row.product)")
+        for column in CHECKED_METRICS
+            a, b = row[column], match[1, column]
+            isequal(a, b) || isapprox(a, b; rtol=1e-9) ||
+                error("$(row.event_day) $(row.product) $column: $a here, $b in RQ1 (FY4B_QM drops gauges?)")
+        end
+    end
+    return nothing
 end
 
 """Fail unless every full-day row equals RQ1's row for the same event and product."""
@@ -77,13 +111,16 @@ function check_full_day(metrics::DataFrame, rq1::DataFrame)
 end
 
 function fy4b_events_main()
-    isempty(ARGS) || throw(ArgumentError("run_heavy_rain_event_fy4b.jl takes no arguments"))
+    isempty(ARGS) || WITH_RQ1_FY4B || throw(ArgumentError(
+        "run_heavy_rain_event_fy4b.jl takes no arguments, or RQ1's --fy4b-file <path> [--from YYYY-MM]"))
     events_file = joinpath(RQ1_DIR, "selected_events.csv")
     rq1_metrics_file = joinpath(RQ1_DIR, "event_metrics.csv")
     provenance = start_provenance(ROOT, FY4B_EVENT_DIR; inputs=[OBS_FILE, last.(EVENT_PRODUCT_FILES)...,
         STATION_META_FILE, events_file, rq1_metrics_file])
     events = CSV.read(events_file, DataFrame)
     events.day = Date.(string.(events.day))
+    # RQ1's own window, which the four-product window must equal when RQ1 selected with FY4B.
+    rq1_common_hours = Dict(zip(events.day, events.common_hours))
     rq1 = CSV.read(rq1_metrics_file, DataFrame)
     rq1.event_day = Date.(string.(rq1.event_day))
 
@@ -102,6 +139,7 @@ function fy4b_events_main()
     windows.peak_excluded_rain_share = [coverage[day].peak_excluded_rain_share for day in windows.day]
     # RQ1's eligibility rule on FY4B's window. Nothing is picked (n = 0): the events stay RQ1's.
     windows.eligible = select_representative_events(windows; n_widespread=0, n_localized=0).eligible
+    windows.rq1_common_hours = [rq1_common_hours[day] for day in windows.day]
     for event in eachrow(windows)
         println("  $(event.day)  $(rpad(event.event_type, 10))  common hours=$(event.common_hours)  " *
             "excluded rain=$(round(100 * event.excluded_rain_share; digits=1))% " *
@@ -141,6 +179,7 @@ function fy4b_events_main()
     metrics = DataFrame(metric_rows)
     stations = DataFrame(station_rows)
     check_full_day(metrics, rq1)
+    WITH_RQ1_FY4B && check_common_window(windows, metrics, rq1)
     lonlat_by_id = Dict(id => (lonlat[i, 1], lonlat[i, 2]) for (i, id) in enumerate(obs_ids))
     summary = summarize_metrics(metrics, stations, lonlat_by_id)
 

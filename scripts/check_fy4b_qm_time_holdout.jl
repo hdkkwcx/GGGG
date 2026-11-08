@@ -4,6 +4,15 @@
 # no paper text or number changes, and nothing downstream (MGWR, the blend) is refitted.
 #
 #   julia --project=. scripts/check_fy4b_qm_time_holdout.jl
+#   julia --project=. scripts/check_fy4b_qm_time_holdout.jl <run dir> --matched-products
+#
+# A run folder reads the run without `--fy4b-qm-fusion` instead (`..._fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal`,
+# whose name must be what `benchmark_config` gives), and writes to `fy4b_qm_time_holdout` plus that run's
+# options from `_fusedanchor` on. FY4B_QM's raw field does not depend on the fusion, so the guard below
+# holds it to that run's `oof_raw.csv` as well. `--matched-products` scores on the cells every product of
+# the run is scored on (`BenchmarkDiagnostics.matched_evaluation_mask`), adds `_matched`, and checks
+# against the quality comparison written with the same run and flag (`compare_fy4b_quality.jl <run dir>
+# --matched-products --block-days 7`), whose n, RMSE and r do not depend on the block length.
 #
 # Why: FY4B_QM is fitted per fold on training gauges, so a held-out gauge never shapes the anchor it
 # is scored against. But the two gauges share the hour, and false rain often covers the network at
@@ -34,9 +43,10 @@
 
 include(joinpath(@__DIR__, "run_interpolation_benchmark.jl"))
 load_standalone_modules("DayBlockBootstrap", "RunProvenance", "TableIO", "SatelliteCalibration",
-    "SatelliteTemporalEvaluation", "TimeBlockFolds")
+    "SatelliteTemporalEvaluation", "TimeBlockFolds", "BenchmarkDiagnostics")
 
 using CSV, Printf, Statistics
+using Main.BenchmarkDiagnostics: matched_evaluation_mask, matched_fold_failures
 using Main.DayBlockBootstrap: read_wide_values, read_wide_mask, group_sums, sum_stats, compare_days
 using Main.SatelliteCalibration: product_regimes
 using Main.SatelliteTemporalEvaluation: SEASONS, season_of
@@ -62,17 +72,25 @@ const MATERIAL_R = 0.01
 
 """
 The configuration of the run being reproduced, and a copy of its `MGERConfig` that writes to
-`OUTDIR`: loading the grid writes `global_common_time_qc.csv`, which must not land in that run.
+`outdir`: loading the grid writes `global_common_time_qc.csv`, which must not land in that run.
+`run_dir` picks the run with or without `--fy4b-qm-fusion` (by its `_qmfusion` suffix) and must be
+the folder that configuration names; without it, the `--fy4b-qm-fusion` run.
 """
-function check_config()
+function check_config(outdir=OUTDIR; run_dir=nothing)
+    qm_fusion = run_dir === nothing || occursin("_qmfusion", basename(rstrip(run_dir, '/')))
     reference = benchmark_config(:full; nested_covariates=true, satellite_wet_blend=true,
         blend_axes=[:constant, :agreement_envelope], fused_anchor=true, gpm_uncal=true,
         fy4b=true, fy4b_file=FY4B_FILE, fy4b_qm=true, fy4b_qm_adaptive=true,
-        fy4b_qm_fusion=true)
+        fy4b_qm_fusion=qm_fusion)
+    run_dir === nothing || rstrip(abspath(run_dir), '/') == rstrip(reference.mger.outdir, '/') ||
+        error("$run_dir is not a run this check reads; the matching one is $(reference.mger.outdir)")
     fields = fieldnames(MGERConfig)
     values = NamedTuple{fields}(Tuple(getfield(reference.mger, field) for field in fields))
-    return reference, MGERConfig(; merge(values, (; outdir=OUTDIR))...)
+    return reference, MGERConfig(; merge(values, (; outdir))...)
 end
+
+"""The run's options from `_fusedanchor` on, which an output folder for that run carries."""
+run_tag(run_dir) = last(split(basename(rstrip(run_dir, '/')), "_fusedanchor"; limit=2))
 
 """Error unless `held` equals the stored out-of-fold table at `path` in every cell."""
 function check_reproduction(path, held, times, ids)
@@ -82,16 +100,16 @@ function check_reproduction(path, held, times, ids)
     println("  gauges-only FY4B_QM reproduces $(relpath(path, ROOT)) in all $(length(held)) cells")
 end
 
-"""Error unless gauges-only FY4B_QM against plain FY4B reproduces `QUALITY_FILE`'s raw row."""
-function check_quality(scheme, row)
-    quality = CSV.read(QUALITY_FILE, DataFrame)
+"""Error unless gauges-only FY4B_QM against plain FY4B reproduces `quality_file`'s raw row."""
+function check_quality(scheme, row, quality_file=QUALITY_FILE)
+    quality = CSV.read(quality_file, DataFrame)
     expected = only(filter(r -> r.scheme == scheme && r.product == "FY4B_QM" && r.baseline == "FY4B" &&
         r.method == "raw", quality))
     ok = row.candidate_n == expected.candidate_n &&
         isapprox(row.rel_RMSE, expected.rel_RMSE; rtol=1e-9) &&
         isapprox(row.candidate_r, expected.candidate_r; rtol=1e-9) &&
         isapprox(row.baseline_r, expected.baseline_r; rtol=1e-9)
-    ok || error("$scheme: gauges-only FY4B_QM does not reproduce $QUALITY_FILE")
+    ok || error("$scheme: gauges-only FY4B_QM does not reproduce $quality_file")
     @printf("  %s reproduces fy4b_quality: n %d, RMSE %+.2f%%, r %.3f vs %.3f\n", scheme,
         row.candidate_n, 100 * row.rel_RMSE, row.candidate_r, row.baseline_r)
 end
@@ -117,19 +135,31 @@ function agreement_by_month(rows)
     end for key in keys_seen]
 end
 
-function check_main()
-    mkpath(OUTDIR)
-    reference, mger = check_config()
+function check_main(args=ARGS)
+    matched = "--matched-products" in args
+    positional = filter(!startswith("--"), args)
+    chosen = isempty(positional) ? nothing : abspath(only(positional))
+    tag = (chosen === nothing ? "" : run_tag(chosen)) * (matched ? "_matched" : "")
+    outdir = OUTDIR * tag
+    quality_file = isempty(tag) ? QUALITY_FILE :
+        joinpath(ROOT, "output", "fy4b_quality$(tag)_block7d", "paired.csv")
+    mkpath(outdir)
+    reference, mger = check_config(outdir; run_dir=chosen)
     run_dir = reference.mger.outdir
     path(scheme, product, file) = joinpath(run_dir, scheme, lowercase(product), file)
     schemes = string.(reference.cv_schemes)
     grid_path = something(reference.fy4b_qm_grid)
     inputs = vcat(mger.station_meta_path, mger.obs_hourly_wide_path,
         [mger.sat_paths[name] for name in sort(collect(keys(mger.sat_paths)))], grid_path,
-        HOUR_META, QUALITY_FILE,
+        HOUR_META, quality_file,
         [path(s, p, file) for s in schemes for p in (PLAIN, "FY4B_QM")
-            for file in ("oof_raw.csv", "common_evaluation_mask.csv")])
-    provenance = start_provenance(ROOT, OUTDIR; inputs)
+            for file in ("oof_raw.csv", "common_evaluation_mask.csv")],
+        matched ? [joinpath(run_dir, "run_status.csv")] : String[])
+    provenance = start_provenance(ROOT, outdir; inputs)
+    # Matched: every product the run scored defines the sample, as in run_claim_reassessment.jl.
+    run_products = sort(unique(String.(CSV.read(joinpath(run_dir, "metrics_pooled.csv"), DataFrame;
+        select=[:product]).product)))
+    status = matched ? CSV.read(joinpath(run_dir, "run_status.csv"), DataFrame) : nothing
     started = time()
 
     _, ids, product_data = load_global_common_product_data(mger)
@@ -147,7 +177,7 @@ function check_main()
     day = label_day.(times)
     season = season_of.(day)
     blocks = time_block_folds(times, string.(regime, "_", season); seed=TIME_FOLD_SEED)
-    write_csv_atomic(joinpath(OUTDIR, "time_folds.csv"), DataFrame(; time=times,
+    write_csv_atomic(joinpath(outdir, "time_folds.csv"), DataFrame(; time=times,
         block=blocks.block_of_time, time_fold=blocks.fold_of_time))
     n_block = length(blocks.fold_of_block)
     block_group = repeat(permutedims(blocks.block_of_time), length(ids))
@@ -196,6 +226,12 @@ function check_main()
         mask = read_wide_mask(path(scheme, "FY4B_QM", "common_evaluation_mask.csv"), ids, times) .&
             read_wide_mask(path(scheme, PLAIN, "common_evaluation_mask.csv"), ids, times) .&
             isfinite.(y) .& isfinite.(plain) .& isfinite.(gauges) .& isfinite.(crossed)
+        if matched
+            failures = matched_fold_failures(status; scheme, products=run_products)
+            isempty(failures) || error("--matched-products: $scheme folds failed:\n" *
+                sprint(show, select(failures, :product, :fold, :method, :status)))
+            mask .&= matched_evaluation_mask(joinpath(run_dir, scheme), run_products, ids, times).matched
+        end
         sums(x, cells) = group_sums(x, y, cells, block_group, n_block, THRESHOLDS)
         compare(candidate, baseline, cells) = compare_days(sums(series[candidate], cells),
             sums(series[baseline], cells), THRESHOLDS; ci_stats=CI_STATS, reps=BOOTSTRAP_REPS,
@@ -204,7 +240,7 @@ function check_main()
             push!(paired, merge((; scheme, candidate, baseline, n_block), compare(candidate, baseline, mask)))
         end
         check_quality(scheme, only(filter(r -> r.scheme == scheme && r.candidate == GAUGES &&
-            r.baseline == PLAIN, paired)))
+            r.baseline == PLAIN, paired)), quality_file)
         for (unit, label, hours) in vcat([("season", s, season .== s) for s in SEASONS],
                 [("regime", r, regime .== r) for r in ("R1", "R2", "R3")])
             cells = mask .& permutedims(hours)
@@ -241,12 +277,12 @@ function check_main()
         ])
     end
 
-    write_csv_atomic(joinpath(OUTDIR, "paired.csv"), DataFrame(paired))
-    write_csv_atomic(joinpath(OUTDIR, "strata.csv"), DataFrame(strata_rows))
-    write_csv_atomic(joinpath(OUTDIR, "monthly.csv"), DataFrame(monthly))
-    write_csv_atomic(joinpath(OUTDIR, "strengths.csv"), DataFrame(strengths))
-    write_csv_atomic(joinpath(OUTDIR, "reading.csv"), DataFrame(reading))
-    CSV.write(joinpath(OUTDIR, "provenance.csv"), finish_provenance!(provenance, ROOT))
+    write_csv_atomic(joinpath(outdir, "paired.csv"), DataFrame(paired))
+    write_csv_atomic(joinpath(outdir, "strata.csv"), DataFrame(strata_rows))
+    write_csv_atomic(joinpath(outdir, "monthly.csv"), DataFrame(monthly))
+    write_csv_atomic(joinpath(outdir, "strengths.csv"), DataFrame(strengths))
+    write_csv_atomic(joinpath(outdir, "reading.csv"), DataFrame(reading))
+    CSV.write(joinpath(outdir, "provenance.csv"), finish_provenance!(provenance, ROOT))
 
     println("\nPaired (whole 7-day blocks, 95%):")
     for row in paired
@@ -281,7 +317,7 @@ function check_main()
     any(row.material for row in reading if row.judged) ?
         println("Verdict: MATERIAL - the gain §3.4 cites depends on the shared weather; the user decides") :
         println("Verdict: not material - §3.4's raw gain survives holding out time")
-    println("Wrote $(relpath(OUTDIR, ROOT)) in $(round((time() - started) / 60; digits=1)) min")
+    println("Wrote $(relpath(outdir, ROOT)) in $(round((time() - started) / 60; digits=1)) min")
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

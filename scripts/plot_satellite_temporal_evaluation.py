@@ -31,6 +31,7 @@ from __future__ import annotations
 import csv
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import matplotlib as mpl
@@ -79,9 +80,20 @@ PRODUCT_MARKERS = {"FY4B": "s", "GPM": "o", "GPM_uncal": "o", "GSMaP": "^"}
 PRODUCT_LABELS = {"GPM_uncal": "GPM (uncal)"}
 SAMPLE_PRODUCTS = {"all_products": ["FY4B", GPM, "GSMaP"], "gpm_gsmap_full": [GPM, "GSMaP"]}
 SAMPLES = ["gpm_gsmap_full"] if GPM_GSMAP_ONLY else list(SAMPLE_PRODUCTS)
+
+
+def _record_from() -> str:
+    """The record's first month when the run started later than January 2022 (`--from`), else ""."""
+    with open(RUN_DIR / "run_settings.csv", newline="", encoding="utf-8") as handle:
+        start = next(row["value"] for row in csv.DictReader(handle) if row["setting"] == "analysis_start")
+    return "" if start.startswith("2022-01-01") else datetime.fromisoformat(start).strftime("%b %Y")
+
+
+_FROM = _record_from()
 SAMPLE_TITLES = {
-    "all_products": "All three products · hours FY4B covers",
-    "gpm_gsmap_full": "GPM and GSMaP · full 2022–2024 record",
+    "all_products": "Gauge and all three products valid",
+    "gpm_gsmap_full": f"GPM and GSMaP · every hour, {_FROM} – Dec 2024" if _FROM else
+        "GPM and GSMaP · full 2022–2024 record",
 }
 SEASONS = ["all", "MAM", "JJA", "SON", "DJF"]
 CLASSES = ["light", "moderate", "heavy", "rainstorm", "severe_rainstorm"]
