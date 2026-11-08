@@ -33,7 +33,8 @@
 #
 # Checks; the script errors if one fails:
 # - every `_block1d` file is byte-identical to its published file;
-# - every point estimate is identical across block lengths, so only intervals and p-values move.
+# - every point estimate is the same across block lengths, to a relative 1e-9 (summation order), so
+#   only intervals and p-values move.
 #
 # Writes output/interval_block_check/: verdicts.csv (every row, with its intervals, p-values and
 # verdicts per block length, whether the paper cites it, and how much its interval widens),
@@ -144,7 +145,9 @@ function compare_main()
             for n in BLOCKS
                 b = get(blocks[n], key, nothing)
                 b === nothing && error("$(family.file) at $n days has no row $key")
-                (b.point == d.point || (isnan(b.point) && isnan(d.point))) ||
+                # `compare_days` sums per-block totals, so its point estimates differ from the
+                # day-block run's in summation order alone (up to ~1e-12 relative).
+                (isapprox(b.point, d.point; rtol=1e-9) || (isnan(b.point) && isnan(d.point))) ||
                     error("$(family.file) $key: point estimate moved at $n days")
                 width_day, width = d.hi - d.lo, b.hi - b.lo
                 append!(record, [Symbol("lo_$(n)d") => b.lo, Symbol("hi_$(n)d") => b.hi,
