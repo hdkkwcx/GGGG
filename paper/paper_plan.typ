@@ -20,6 +20,9 @@
 // by scripts/compare_fy4b_quality.jl at 9edc185 (output/fy4b_quality), and from the July 2023
 // cloud-type pilot at 73a0906 (output/fy4b_clt_screen). §3.4's RQ1 events and Table 4 come from
 // scripts/run_heavy_rain_event_fy4b.jl at 54134ea (output/heavy_rain_events_fy4bw3h0_gpmuncal).
+// §3.4's check with whole weeks held out comes from scripts/check_fy4b_qm_time_holdout.jl at 456b9cf
+// (output/fy4b_qm_time_holdout); its sentence on false-rain episodes rests on
+// scripts/explain_fy4b_qm_time_holdout.jl at 3e45ae6 (output/fy4b_qm_time_holdout_explained).
 // scripts/make_paper.jl rebuilds every figure and number here in dependency order; the [[step]]
 // graph in paper/sources.toml records each step's command and what it needs.
 // paper/references.bib is the BibTeX export of the Zotero library's items tagged GGGG (local API,
@@ -84,6 +87,7 @@
 #let fw = load("fy4b_event_windows")  // §3.4: each RQ1 event's FY4B window
 #let fv = load("fy4b_event_scores")   // §3.4: scores per RQ1 event over FY4B's hours
 #let fq = load("fy4b_quality")     // §3.4: corrected FY4B against plain FY4B, GPM and GSMaP, FY4B run
+#let ft = load("fy4b_time_holdout") // §3.4: corrected FY4B's raw change with whole weeks held out as well
 #let fc = load("fy4b_clt")         // §3.4: July 2023 cloud-type pilot, hours dominated by ice cloud
 #let fcf = load("fy4b_clt_filter") // §3.4: the cloud-type filter against an amount-matched control
 #let G = "GPM_uncal"              // the primary GPM product
@@ -126,6 +130,18 @@
 #let dq(baseline, method, scheme: "balanced_spatial") = {
   let row = (scheme: scheme, product: "FY4B_QM", baseline: baseline, method: method)
   [#val(fq, "change", ..row)% (#val(fq, "lo", ..row) to #val(fq, "hi", ..row)%)]
+}
+
+/// Raw corrected FY4B against plain FY4B in the check that holds out whole weeks as well as gauges
+/// (balanced spatial), with 95% intervals over whole weeks: its change in RMSE, "−9.5% (−15.4 to
+/// −3.5%)" (`dt`), or in r, "−0.004 (−0.021 to +0.015)" (`dtr`).
+#let dt(candidate) = {
+  let row = (scheme: "balanced_spatial", candidate: candidate, baseline: "FY4B")
+  [#val(ft, "change", ..row)% (#val(ft, "lo", ..row) to #val(ft, "hi", ..row)%)]
+}
+#let dtr(candidate) = {
+  let row = (scheme: "balanced_spatial", candidate: candidate, baseline: "FY4B")
+  [#val(ft, "dr", ..row) (#val(ft, "dr_lo", ..row) to #val(ft, "dr_hi", ..row))]
 }
 
 /// One Table 4 row: a product's means over the RQ1 events, on FY4B's hours (r, MB, RMSE, CSI 50).
@@ -430,7 +446,14 @@ and the map) on the same cells, its RMSE changes by
 agreement blend (95% day-block intervals, balanced spatial CV), and raw r over all gauge-hours rises
 from
 #val(fq, "r0", scheme: "balanced_spatial", baseline: "FY4B", method: "raw") to
-#val(fq, "r", scheme: "balanced_spatial", baseline: "FY4B", method: "raw"). It does not reach GPM:
+#val(fq, "r", scheme: "balanced_spatial", baseline: "FY4B", method: "raw"). These gains come from a
+correction fitted on gauges in the same weeks as the held-out gauges it is scored at: a held-out gauge
+never shapes the map, but it shares those weeks' weather. With whole weeks held out as well (7-day
+blocks, a day either side, crossed with the gauge folds), the raw change is #dt("FY4B_QM_crossed"),
+against #dt("FY4B_QM_gauges") for the same correction, both with 95% intervals over whole weeks, and
+raw r no longer rises: it changes by #dtr("FY4B_QM_crossed"). Most of the difference falls on a few false-rain
+episodes whose largest values the map learns to shrink. MGWR and the blend were not refitted this way,
+so their gains above hold for the same weeks only. Corrected FY4B does not reach GPM:
 against GPM's agreement blend its RMSE differs by #dq(G, B), and after MGWR alone by
 #dq(G, "mgwr"), an interval that spans zero but lies mostly on the worse side. Against GSMaP it does
 better after MGWR alone, #dq("GSMaP", "mgwr"), though its r stays lower

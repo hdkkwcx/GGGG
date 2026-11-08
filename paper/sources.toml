@@ -486,6 +486,26 @@ r = ["candidate_r", "2f"]
 r0 = ["baseline_r", "2f"]
 
 [[table]]
+name = "fy4b_time_holdout"
+label = "§3.4 text: corrected FY4B's raw change against plain FY4B, with whole weeks held out as well as gauges"
+step = "fy4b_time_holdout"
+source = "output/fy4b_qm_time_holdout/paired.csv"
+provenance = [
+    "output/fy4b_qm_time_holdout/provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv",
+]
+keys = ["scheme", "candidate", "baseline"]
+[table.where]
+baseline = "FY4B"
+[table.values]
+change = ["rel_RMSE", "pct1"]
+lo = ["rel_RMSE_lo", "pct1"]
+hi = ["rel_RMSE_hi", "pct1"]
+dr = ["delta_r", "+3f"]
+dr_lo = ["delta_r_lo", "+3f"]
+dr_hi = ["delta_r_hi", "+3f"]
+
+[[table]]
 name = "fy4b_clt"
 label = "§3.4 text: FY4B_QM's false alarms and hits under ice cloud (July 2023 pilot)"
 step = "fy4b_clt"
@@ -814,6 +834,14 @@ reviewed = "27f227836815294448f86a8208d9bc15409e81af"
 command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl"]
 marker = "output/fy4b_quality/provenance.csv"
 needs = ["fy4b_benchmark"]
+
+[[step]]
+id = "fy4b_time_holdout"
+kind = "analysis"
+command = ["julia", "--project=.", "scripts/check_fy4b_qm_time_holdout.jl"]
+marker = "output/fy4b_qm_time_holdout/provenance.csv"
+needs = ["fy4b_benchmark", "fy4b_quality"]
+note = "about 3 min; refits FY4B_QM per gauge fold and per gauge fold x 7-day time fold (TimeBlockFolds)"
 
 [[step]]
 id = "fy4b_clt"
