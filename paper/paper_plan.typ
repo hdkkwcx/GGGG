@@ -397,8 +397,8 @@ FY4B, scored on the #val(fe, "n", product: "FY4B", window: "fy4b_hours") events 
   expected: an average of gauges, or a fit for the lowest mean error, pulls extremes toward typical values.
 - *Best method and product.* Among gauge-only interpolators ADW is best, with IDW indistinguishable
   (#val(mu, "RMSE", product: G, method: "adw") vs #val(mu, "RMSE", product: G, method: "idw") mm h⁻¹). The best fusion is MGWR + blend. GPM is the
-  better anchor, with neither product gauge-calibrated (raw RMSE #val(mu, "RMSE", product: G, method: "raw") vs #val(mu, "RMSE", product: "GSMaP", method: "raw") mm h⁻¹), and only
-  fused GPM beats ADW significantly. Merging the two gives a better raw field (RMSE #val(mu, "RMSE", product: "MERGED_OLS", method: "raw")) but adds
+  better of the two products as an anchor, with neither gauge-calibrated (raw RMSE #val(mu, "RMSE", product: G, method: "raw") vs #val(mu, "RMSE", product: "GSMaP", method: "raw") mm h⁻¹), and of
+  the two only fused GPM beats ADW significantly. Merging the two gives a better raw field (RMSE #val(mu, "RMSE", product: "MERGED_OLS", method: "raw")) but adds
   almost nothing after fusion (#val(mu, "RMSE", product: "MERGED_OLS", method: B) vs #val(mu, "RMSE", product: G, method: B)).
 
 #figure(
