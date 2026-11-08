@@ -15,8 +15,8 @@ held out as well as gauges, FY4B_QM's raw gain shrinks materially (Previous). Si
 "no" to the channel pilot. All of it is merged (`be63c2e`), and §3.4 now carries the time-held-out figures. The
 paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states, and the
 paper now uses 7-day blocks (Previous, merged as `3d41498`). The humidity gate's benchmark run says stop: the gate
-does not survive MGWR and the blend (Newest, branch `fy4b/humidity-gate-benchmark`, unmerged) · **Next step:** the
-user decides whether to merge that branch; no FY4B quality step is pending
+does not survive MGWR and the blend (Newest, merged as `a7fed1b`) · **Next step:** none; no FY4B quality step is
+pending
 
 ---
 
@@ -70,8 +70,8 @@ FY4B_QM_RH against FY4B_QM, balanced spatial, 95% intervals over 7-day blocks:
   (1 of 5, 0 of 5). The other covariates hold: `u10` 10 of 10 in both, `sp_hpa` 9 → 7, `v10` 2 → 1. Once the gate
   has removed the dry-air rain, the residual model no longer needs humidity. FY4B_QM_RH comes last in the product
   list, so its selection seed differs from FY4B_QM's (`run_seed`): strong evidence, not a clean test.
-- **So:** FY4B_QM stays FY4B's quality step, and no humidity gate goes into the paper. Merging the branch keeps the
-  option and the module as the record; that is the user's call.
+- **So:** FY4B_QM stays FY4B's quality step, and no humidity gate goes into the paper. The option and the module stay
+  in the code as the record (merged as `a7fed1b`).
 
 ## Previous (2026-11-07): the paper's intervals with week blocks
 
