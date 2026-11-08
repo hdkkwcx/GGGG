@@ -13,8 +13,9 @@ same-seeds test of FY4B in the fusion gives "keep FY4B out" (merged as `b5499c7`
 where FY4B's error sits, and a near-surface humidity gate passes its screen with a small gain. With time
 held out as well as gauges, FY4B_QM's raw gain shrinks materially (Newest; branch `fy4b/time-holdout` holds
 all three, unmerged). The first two AGRI L1 scans show the worst false rain as thick, cold, high ice cloud
-(Newest, last subsection) · **Next step:** the user decides what §3.4 says, whether to merge and whether the
-gate gets a benchmark run, and supplies four more L1 scans (Newest, last subsection)
+(Newest, last subsection). Four contrast scans show real rain's cloud tops inside the false rain's range, so
+by the reading fixed before looking the channel pilot stops · **Next step:** the user decides what §3.4 says,
+whether to merge and whether the gate gets a benchmark run
 
 ---
 
@@ -165,6 +166,45 @@ four QPE scans exist.
 - **Reading, fixed before looking:** if the real-rain scans' cloud tops at the gauges fall inside the false ones'
   10–90% range on BT10.8, water vapour minus window, and the split window, stop the channel pilot. If they clearly
   differ, go to the ~1,100-scan sample.
+
+### Result of the four contrast scans: stop the channel pilot
+
+The user downloaded the four scans to `/Volumes/T9/A202611080037010072/` (85–103 MB each). They were read in place,
+inline; nothing is committed. Medians at all gauges (10–90%):
+
+| Scan, label (BJT) | Kind | Gauges | QPE | BT10.8 (K) | WV − IR | Split window |
+|---|---|---|---|---|---|---|
+| 2023-03-19 08 | false | 0.00, wet 0% | 16.2, wet 100% | 213.6 (211.9..221.9) | −2.0 (−5.4..−1.4) | 1.18 (0.90..1.46) |
+| 2022-09-23 16 | false | 0.01, wet 1% | 8.6, wet 100% | 226.1 (218.0..239.2) | −6.4 (−15.1..−1.6) | 1.53 (1.18..2.24) |
+| 2023-09-19 05 | false | 0.01, wet 2% | 2.8, wet 51% | 252.6 (222.2..281.6) | −22.5 (−46.4..−5.0) | 1.51 (0.87..2.55) |
+| 2023-09-19 21 | real | 3.37, wet 80% | 11.3, wet 93% | 221.8 (206.1..244.8) | −5.4 (−18.4..−2.2) | 2.01 (1.43..3.05) |
+| 2022-10-06 06 | real | 2.06, wet 98% | 1.4, wet 73% | 239.9 (228.2..251.9) | −12.5 (−19.5..−6.6) | 1.45 (0.85..2.09) |
+| 2023-04-23 07 | real | 2.60, wet 89% | 1.2, wet 79% | 228.7 (223.8..237.6) | −4.7 (−9.4..−3.1) | 1.26 (1.04..1.47) |
+
+- **The reading says stop.** All 9 real-scan medians fall inside the false scans' pooled 10–90% ranges.
+- **The pooled range is wide partly from one scan.** The third false scan is partly clear (FY4B wet at 51% of
+  gauges), which widens it.
+- **The sharper comparison points the same way** (information only). At gauges where QPE is wet, pooled over the six
+  scans, there are 515 hits and 635 false alarms. Single features barely separate them, and false alarms look *more*
+  rain-like:
+
+  | Feature | Hits | False alarms | AUC |
+  |---|---|---|---|
+  | BT10.8 | 227.9 K | 223.6 K (colder) | 0.58 |
+  | WV − IR | −5.4 | −4.5 (higher top) | 0.43 |
+  | Split window | 1.50 | 1.35 | 0.60 |
+  | QPE amount | 2.4 | 9.4 | 0.35 |
+
+  FY4B's false rain sits under its coldest, highest, thickest cloud tops. This fits the CLT pilot, where ice cloud
+  held 83% of the false alarms and 88% of the hits.
+- **Limits:** six scans from six episodes, and only three infrared features. Visible and near-infrared channels
+  (daytime only) were not looked at.
+- **So:** no L1 sample download. `FY4B_QM` stays the quality step. The budget, the time-holdout check and this
+  result answer "how far can FY4B's quality be raised": FY4B's own infrared does not tell this false rain from real
+  rain. Separating them needs information FY4B does not have, such as microwave, which the fusion tests already
+  cover.
+- **Tidying, the user's call:** these four files sit apart from the first two (`/Volumes/T9/FY4B_L1`). Moving them
+  there keeps all six together.
 
 ## Previous (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
 
