@@ -169,8 +169,8 @@ four QPE scans exist.
 
 ### Result of the four contrast scans: stop the channel pilot
 
-The user downloaded the four scans to `/Volumes/T9/A202611080037010072/` (85–103 MB each). They were read in place,
-inline; nothing is committed. Medians at all gauges (10–90%):
+The user downloaded the four scans (85–103 MB each), and all six now sit in `/Volumes/T9/FY4B_L1`, linked as
+`data/FY4B_L1`. They were read inline; nothing is committed. Medians at all gauges (10–90%):
 
 | Scan, label (BJT) | Kind | Gauges | QPE | BT10.8 (K) | WV − IR | Split window |
 |---|---|---|---|---|---|---|
@@ -203,8 +203,6 @@ inline; nothing is committed. Medians at all gauges (10–90%):
   result answer "how far can FY4B's quality be raised": FY4B's own infrared does not tell this false rain from real
   rain. Separating them needs information FY4B does not have, such as microwave, which the fusion tests already
   cover.
-- **Tidying, the user's call:** these four files sit apart from the first two (`/Volumes/T9/FY4B_L1`). Moving them
-  there keeps all six together.
 
 ## Previous (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
 
