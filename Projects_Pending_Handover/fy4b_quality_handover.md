@@ -12,8 +12,9 @@ to be better, and the 2023 software-update gain is not shown (merged as `1dc0262
 same-seeds test of FY4B in the fusion gives "keep FY4B out" (merged as `b5499c7`). An error budget shows
 where FY4B's error sits, and a near-surface humidity gate passes its screen with a small gain. With time
 held out as well as gauges, FY4B_QM's raw gain shrinks materially (Newest; branch `fy4b/time-holdout` holds
-all three, unmerged) · **Next step:** the user decides what §3.4 says, whether to merge and whether the gate
-gets a benchmark run, and supplies two AGRI L1 files for the channel pilot (Previous, last section)
+all three, unmerged). The first two AGRI L1 scans show the worst false rain as thick, cold, high ice cloud
+(Newest, last subsection) · **Next step:** the user decides what §3.4 says, whether to merge and whether the
+gate gets a benchmark run, and supplies four more L1 scans (Newest, last subsection)
 
 ---
 
@@ -109,6 +110,61 @@ to flag those episodes would help more than a better map, which is the channel p
   5. The whole-record screen and any later product are cross-fitted in time as well.
 - **Why the sample is small:** FY4B's 398 gross hours are 90,125 gauge-hours, but 113 days in 81 runs, and 10 days
   hold 73% of their false-rain squared error.
+
+### Later the same day: a first look at two AGRI L1 scans
+
+The user downloaded the two scans named in Previous to `/Volumes/T9/FY4B_L1`, linked as `data/FY4B_L1`. These
+are read-only checks run inline, with nothing committed.
+
+**The files:**
+- 107 and 108 MB each. September 2022 was available, so the archive reaches back at least that far.
+- HDF5, which `NCDatasets` opens. `Data/NOMChannel01`–`15` hold counts on the 2748 × 2748 nominal grid at 133°E.
+  `Calibration/CALChannel01`–`15` are 4096-entry lookups from count to brightness temperature (or reflectance).
+- Infrared channels: 9 is 6.25 µm, 10 is 6.95, 11 is 7.42, 12 is 8.55, 13 is 10.8, 14 is 12.0, 15 is 13.3; 7 and 8
+  are 3.75 µm.
+
+**Aligned with QPE as `[x, y]`:** of QPE's pixels wet at ≥ 1 mm/h, 0.7% and 0.2% are warmer than 250 K as read,
+against 88% and 74% with the axes swapped.
+
+**QPE is a one-channel lookup per region.**
+- Within any 5° × 5° box, BT10.8 alone (0.5 K bins) explains R² 0.93–0.995 of QPE; over the whole disk only
+  0.51–0.64, because the threshold varies by region.
+- Hubei's box (30–35°N, 108–113°E) gives 0.982 and 0.931. At ≤ 220 K, 94–100% of pixels are wet.
+- So the earlier description holds, with "per region" added.
+
+**The two worst false-rain hours are thick, cold, high ice cloud, not thin cirrus.** Medians at the gauges, with
+the same scan's QPE-wet pixels over the whole disk in brackets:
+
+| Scan, gauges | BT10.8 | BT6.25 − BT10.8 | Split window BT10.8 − BT12.0 |
+|---|---|---|---|
+| 2023-03-18 23:30 UTC; gauges dry, QPE 16.2 mm/h | 213.7 K (221.3) | −2.0 (−4.8) | 1.18 (1.59) |
+| 2022-09-23 07:30 UTC; gauges dry, QPE 8.6 mm/h | 226.1 K (220.1) | −6.4 (−4.1) | 1.53 (1.59) |
+
+- Water vapour minus window near 0 means a high cloud top. A small split window means the cloud is optically
+  thick: thin cirrus would show a larger one. So on these channels, these false-rain pixels look at least as
+  rain-like as FY4B's typical rain pixels.
+- Two scans cannot decide this, but they lower the chance that a table over these channels separates the worst
+  episodes.
+
+**Practicality:** the pilot's ~1,100 scans are about 118 GB, which fits on the T9 (786 GB free). The whole record
+at one scan per hour is about 2.1 TB, which does not; it would need a download, extract, delete loop.
+
+**Proposed next, about 430 MB:** four scans to contrast real and false rain in the same seasons and regimes. All
+four QPE scans exist.
+
+| Scan (UTC start) | Label (BJT) | Kind |
+|---|---|---|
+| `20230918203000` | 2023-09-19 05 | False: FY4B 2.5 mm/h, wet at 55% of gauges, gauges 0.01 |
+| `20230919123000` | 2023-09-19 21 | Real, same day: gauges 3.4 mm/h, wet at 80% |
+| `20221005213000` | 2022-10-06 06 | Real, R1 SON: gauges 2.1 mm/h, wet at 98% |
+| `20230422223000` | 2023-04-23 07 | Real, R1 MAM: gauges 2.6 mm/h, wet at 89% |
+
+- File names follow `FY4B-_AGRI--_N_DISK_1330E_L1-_FDI-_MULT_NOM_<start>_<start + 14:59>_4000M_V0001.HDF`.
+- The September 2023 episode's large errors are mostly FY4B far too wet during real rain. At label 2023-09-19 20,
+  FY4B shows 13.0 mm/h against the gauges' 3.1, so its pure false-rain hour is milder.
+- **Reading, fixed before looking:** if the real-rain scans' cloud tops at the gauges fall inside the false ones'
+  10–90% range on BT10.8, water vapour minus window, and the split window, stop the channel pilot. If they clearly
+  differ, go to the ~1,100-scan sample.
 
 ## Previous (2026-11-06): a near-surface humidity gate passes its screen, with a small gain
 
