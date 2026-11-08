@@ -16,8 +16,8 @@ held out as well as gauges, FY4B_QM's raw gain shrinks materially (Previous). Si
 paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states, and the
 paper now uses 7-day blocks (Previous, merged as `3d41498`). The humidity gate's benchmark run says stop: the gate
 does not survive MGWR and the blend (Previous, merged as `a7fed1b`). FY4B is now the third product of RQ1-RQ3,
-every evaluation on one matched sample (Newest, branch `paper/three-product-matched`, not merged) · **Next step:**
-the user reviews the branch, above all RQ1's storm-core finding, which changed; merge only when asked
+every evaluation on one matched sample (Newest, merged as `65c7eaa` and pushed) · **Next step:** none; quote
+RQ3 and §3.4 numbers only from the `_matched` report folders, as the paper does
 
 ---
 
@@ -39,7 +39,7 @@ RQ1's events are re-selected on the matched window; the full-record GPM/GSMaP re
 - **RQ1.** 53 heavy-rain days from June 2022, 42 eligible; the six are the old five plus 2023-07-31 (localized), which
   replaces 2024-07-30. Mean r: GPM 0.52, GSMaP 0.53, FY4B 0.36. **Changed finding:** pixel averaging explains 16-18%
   of the core deficit on 2023-09-10 but 45-65% on 2023-07-31 (before: 16-25% on both localized events). The text now
-  says it depends on the storm; the user should confirm the wording.
+  says it depends on the storm (§3.1, §4.1); the user merged it with that wording.
 - **RQ2.** GPM/GSMaP findings hold (GPM median station r 0.45, GSMaP 0.39, the same as on the full record). FY4B is
   weakest: r 0.23, wet-hour POD 31% vs 60/62%, event POD 56-82% vs 86-96%, areal hourly r 0.41 vs 0.83/0.67. No daily
   areal series: FY4B never has the hour ending 23 BJT.
