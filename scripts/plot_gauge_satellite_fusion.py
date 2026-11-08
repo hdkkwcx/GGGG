@@ -340,7 +340,9 @@ def fig3_heatmap(fusion: list[dict]) -> None:
         ax.set_ylim(rows[-1][0] + 0.5, 0.0)
         ax.xaxis.tick_top()
         ax.set_xticks(range(len(ANCHORS)))
-        ax.set_xticklabels([ANCHOR_LABELS[a].replace("\n", " ") for a in ANCHORS], fontsize=6.4, color=INK)
+        # On one line for three anchors; more need the two-line labels to fit their columns.
+        ax.set_xticklabels([ANCHOR_LABELS[a] if len(ANCHORS) > 3 else ANCHOR_LABELS[a].replace("\n", " ")
+                            for a in ANCHORS], fontsize=6.4, color=INK)
         ax.set_yticks([y for y, _, _ in rows])
         base = {m: METHOD_LABELS[m] for m in ("residual_gwr", "mixed_gwr", "mgwr")}
         ax.set_yticklabels([base[m.removeprefix("blend_agrenv_").removeprefix("blend_")] for _, m, _ in rows]
@@ -386,7 +388,9 @@ def fig4_where(stratified: list[dict], detection: list[dict]) -> None:
                                     level=level)) for level, _ in levels]
                 ax.scatter(x + offsets[method], values, s=22, color=color, edgecolors=SURFACE, linewidths=0.8, zorder=3)
             ax.set_xticks(x)
-            ax.set_xticklabels([label for _, label in levels], fontsize=5.6)
+            # More than three anchors leave too little room for the class names: the ranges alone.
+            ax.set_xticklabels([label if len(ANCHORS) <= 3 or group != "rain_intensity" else label.split("\n")[-1]
+                                for _, label in levels], fontsize=5.6)
             if column == 0:
                 ax.set_ylabel("RMSE change vs ADW (%)", fontsize=6)
             if row_index == 0:

@@ -68,11 +68,14 @@ def _matches(row: dict[str, str], where: dict) -> bool:
 def compute_stat(rows: list[dict[str, str]], name: str, spec: dict) -> str:
     """One `[table.stats.<name>]` entry: a statistic over the matching rows of one column, formatted.
 
-    `stat` is `min`, `max`, `median`, `range` ("min–max") or `maxgap`, the largest |a − b| between
-    levels `a` and `b` of column `key` over rows that agree on the `by` columns. `abs = true` takes
-    the size of each value first. Computed from the unrounded values; a leading `+` is dropped.
+    `stat` is `min`, `max`, `median`, `range` ("min–max"), `count` (the number of matching rows, no
+    `column` needed) or `maxgap`, the largest |a − b| between levels `a` and `b` of column `key` over
+    rows that agree on the `by` columns. `abs = true` takes the size of each value first. Computed
+    from the unrounded values; a leading `+` is dropped.
     """
     keep = [row for row in rows if _matches(row, spec.get("where", {}))]
+    if spec["stat"] == "count":
+        return format_value(str(len(keep)), spec["fmt"])
     column, fmt = spec["column"], spec["fmt"]
 
     def show(value: float) -> str:
