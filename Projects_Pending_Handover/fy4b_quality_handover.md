@@ -13,9 +13,9 @@ same-seeds test of FY4B in the fusion gives "keep FY4B out" (merged as `b5499c7`
 where FY4B's error sits, and a near-surface humidity gate passes its screen with a small gain. With time
 held out as well as gauges, FY4B_QM's raw gain shrinks materially (Previous). Six AGRI L1 scans give a weak
 "no" to the channel pilot. All of it is merged (`be63c2e`), and §3.4 now carries the time-held-out figures. The
-paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states (Newest,
-branch `stats/week-block-intervals`, unmerged) · **Next step:** the user decides whether the paper switches to
-week blocks, whether to merge, and whether the humidity gate gets a benchmark run
+paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states, and the
+paper now uses 7-day blocks (Newest, branch `paper/week-block-intervals`, which holds `stats/week-block-intervals`;
+unmerged) · **Next step:** the user decides whether to merge, and whether the humidity gate gets a benchmark run
 
 ---
 
@@ -72,6 +72,25 @@ multi-day episodes. On §3.4's raw −16.9%, week blocks had widened the interva
    and re-exported numbers. RQ2's whiskers would then need the same option for consistency.
 
 I recommend 2: the evidence for multi-day dependence is direct, and no text verdict moves.
+
+**Done (2026-11-07, at the user's request), on branch `paper/week-block-intervals`:**
+- **Wording:** RQ3's "only fused GPM beats ADW significantly" now reads "of the two [products] only fused GPM…",
+  so it no longer contradicts the merged anchor's significant gain. A side agent's note.
+- **RQ2 option:** `--block-days` added to RQ2 (`SatelliteTemporalEvaluation.bootstrap_blocks`). Only the two
+  bootstraps resample 7-met-day blocks; counts and tables keep days. `--block-days 1` reproduced every RQ2 CSV byte
+  for byte.
+- **Plot labels:** the fusion and RQ2 plots name the block length from a `_block<N>d` folder.
+- **Reruns:** claims, fusion, RQ2, §3.4's FY4B comparison (new step `fy4b_quality_week`) and both plots, clean at
+  `a725000`. The paper reads the `_block7d` folders. `fy4b_quality` (day blocks) stays as the time-holdout check's
+  input.
+- **What moved:** only intervals and p-values.
+  - GSMaP's p is 0.25.
+  - Draft Fig. 6's MERGED_OLS + MGWR all-hours cell is hollow.
+  - §3.4's raw interval is −27.6 to −7.0%.
+- **Methods text:** says intervals resample whole 7-day blocks, and that they resample time only, with the gauges
+  and five folds fixed (another side-agent note). The one-month cloud-type pilot keeps day blocks, as §3.4 says.
+- **Checks:** provenance OK, `make_paper.jl` with nothing flagged, typst clean, `Pkg.test()` passes. The branch is
+  unmerged.
 
 ## Previous (2026-11-07): FY4B_QM's raw gain depends on having seen the same weeks
 
