@@ -552,7 +552,12 @@ on 2022-10-03 the bias goes from #val(fv, "MB", product: "FY4B", event_day: "202
   MB is the mean bias and RMSE the root-mean-square error, both in mm; CSI at 50 mm. GPM is IMERG Uncal.],
 )
 
-Corrected FY4B therefore stays out of the merge and the agreement blend.
+Corrected FY4B stays out of the merge and the agreement bands, for two reasons. It is already fitted
+to the training gauges, so in the merge MGWR and the blend would correct the same error on the same
+gauges a second and a third time, and the merge would no longer combine only products that are not
+adjusted to gauges. And part of its gain holds only for the weeks the training gauges share with the
+held-out ones (above); in the merge or the bands, that would reach every merged row and every
+agreement blend in Table 3.
 
 = Discussion
 
@@ -633,7 +638,7 @@ reports report against these three research contents.
 - RQ2 (time): complete.
 - RQ3 (fusion): complete.
 - FY4B: in RQ1–RQ3 as the third product, on the matched sample; §3.4 complete; corrected FY4B stays
-  out of the merge and the agreement blend.
+  out of the merge and the agreement bands.
 - Literature (§4.2): the citations come from the 18 papers with a PDF in Zotero and the IMERG V07 ATBD.
   Claude checked each cited sentence against the paper's full text; the author has still to read
   them. The other 14 GGGG items without a PDF are unread, among them the MGWR paper of Fotheringham et
