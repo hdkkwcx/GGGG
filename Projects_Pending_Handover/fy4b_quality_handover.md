@@ -1,6 +1,6 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-08 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-09 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
@@ -16,12 +16,52 @@ held out as well as gauges, FY4B_QM's raw gain shrinks materially (Previous). Si
 paper's day-block intervals, rechecked with 7- and 14-day blocks, keep every verdict the text states, and the
 paper now uses 7-day blocks (Previous, merged as `3d41498`). The humidity gate's benchmark run says stop: the gate
 does not survive MGWR and the blend (Previous, merged as `a7fed1b`). FY4B is now the third product of RQ1-RQ3,
-every evaluation on one matched sample (Newest, merged as `65c7eaa` and pushed) · **Next step:** none; quote
-RQ3 and §3.4 numbers only from the `_matched` report folders, as the paper does
+every evaluation on one matched sample (Previous, merged as `65c7eaa` and pushed). Putting FY4B_QM in place of
+plain FY4B in the merges and bands clears the rule for no agreement blend, so plain FY4B stays, and §3.4 now says
+why (Newest, merged as `49ebe75` and pushed) · **Next step:** none; quote RQ3 and §3.4 numbers only from the
+`_matched` report folders, as the paper does
 
 ---
 
-## Newest (2026-11-08): FY4B in the main comparison, one matched sample
+## Newest (2026-11-09): why FY4B_QM stays out of the merges and the bands
+
+The user asked why the merges and the agreement bands take plain FY4B and leave FY4B_QM out, and whether to add it.
+A four-member merge (plain and corrected FY4B both) was not tested: both come from the same images, so the bands
+would count FY4B's wet call twice. The test was of FY4B_QM *in place of* plain FY4B.
+- **Test (scratch, not committed):** `compare_fy4b_fusion_same_hours.jl` with its baseline swapped from the
+  out-of-fusion run to the paper run, so it compares the qmfusion run (`b55a3a9`, FY4B_QM in) against the paper run
+  (`fe421b3`, plain FY4B in). Same product list, hours and seeds, and every guard field (raw, adw, mgwr, blend_mgwr
+  of GPM_uncal, GSMaP, FY4B, FY4B_QM) is identical, so the two differ in the fusion alone. The script, its log,
+  `paired.csv`, `selection.csv` and `fold_status.csv` are in `output/fy4b_qm_vs_plain_in_fusion_scratch/`; the
+  script's diff from the committed one is the baseline config, the output folder and no provenance. It uses day
+  blocks (1,000 reps) and each product's own mask, not the paper's 7-day blocks and matched sample, so its
+  numbers are for the decision, not for the paper.
+- **Result, agreement blend, balanced spatial, FY4B_QM in vs plain in (negative is better):**
+  - GPM_uncal +0.00% (−0.05..+0.06), |FBI8 − 1| +0.008 (sig worse);
+  - GSMaP +0.08% (+0.02..+0.13), sig worse;
+  - MERGED_MEAN −0.42% (−0.68..−0.16), but CSI8 −0.0036 and |FBI8 − 1| +0.014 (both sig worse), and mgwr selects
+    differently in 3 of 5 folds;
+  - MERGED_OLS −0.11% (−0.19..−0.04), under the 0.3% bar; raw −0.07%, mgwr −0.12%.
+  - Random split: every agreement blend within ±0.12%. Verdict by the script's fixed rule: keep plain FY4B.
+- **OLS merge weights** (`fused_anchor_selection.csv`, balanced): plain FY4B about 0.02, FY4B_QM about 0.06, against
+  GPM_uncal about 0.48 and GSMaP about 0.15.
+- **Decided with the user (option A):** keep plain FY4B in the merges and bands, and state the reasons in the paper
+  without citing this test. §3.4's last sentence was only "Corrected FY4B therefore stays out…" after Table 4. It
+  now gives two reasons:
+  - FY4B_QM is already fitted to the training gauges, so in the merge MGWR and the blend would correct the same
+    error a second and a third time, and the merge would no longer be of products not adjusted to gauges;
+  - part of its gain holds only for the same weeks (§3.4's time-held-out check), which would reach every merged
+    row and every agreement blend of Table 3.
+
+  "Agreement blend" became "agreement bands" there and in §5, since FY4B_QM has its own agreement-blend row in
+  Table 3. Text only, no number moved; the paper compiles and the provenance check passes. Branch
+  `paper/fy4b-qm-fusion-reason` (`6a0c507`), merged as `49ebe75` and pushed, branch deleted.
+- **Option B, not taken:** cite the test. It would need the comparison committed with a baseline option, 7-day
+  blocks and the matched mask, plus a step and a table in `paper/sources.toml`; no benchmark rerun.
+
+---
+
+## Previous (2026-11-08): FY4B in the main comparison, one matched sample
 
 The user asked for FY4B in the main comparison of the three products, the record unified to June 2022 on, and every
 comparison on matched samples (the gauge and all three products valid). Decided with the user: plain FY4B (`fy4b_w3_h0`)
