@@ -183,3 +183,48 @@ end
                   for row in adapted_rows)
     end
 end
+
+@testset "a crossed anchor never uses the gauges of its own weeks" begin
+    mktempdir() do dir
+        s = synthetic_calibration(dir)
+        grid = open_offset_grid(s.path, s.ids, s.times)
+        labels, regime_of_time = product_regimes(s.meta, s.times)
+        cells = calibration_cells(s.times, regime_of_time)
+        month_labels, months = strength_cells(s.times, regime_of_time)
+        # Each regime's first half is time fold 1 and its second half fold 2, so that after the
+        # guard days both folds still train on both regimes.
+        fold_of_time = [(h - 1) % 200 < 100 ? 1 : 2 for h in eachindex(s.times)]
+        for fold in 1:2
+            kept = Main.TimeBlockFolds.training_hours(fold_of_time, s.times, fold)
+            @test all(count(kept .& (regime_of_time .== g)) >= 24 for g in 1:2)
+        end
+        train = 1:6
+        crossed(y) = calibrate_crossed(grid,
+            crossed_shift_sums(grid, y, regime_of_time, 2, fold_of_time, s.times), y, train,
+            labels, regime_of_time, cells, fold_of_time, s.times;
+            adaptive=true, choice_of_time=months, choice_labels=month_labels)
+        anchor, shift_rows, map_rows, strength_rows = crossed(s.rain)
+        @test size(anchor) == size(s.rain) && all(isfinite, anchor)
+        @test Set(row.time_fold for row in map_rows) == Set([1, 2])
+        # Each time fold still finds every regime's planted shift, on its own training hours.
+        @test length(shift_rows) == 2 * length(labels)
+        @test all((row.dx, row.dy) == s.true_shift[findfirst(==(row.regime), labels)]
+                  for row in shift_rows)
+        for fold in 1:2
+            kept = Main.TimeBlockFolds.training_hours(fold_of_time, s.times, fold)
+            hours = findall(==(fold), fold_of_time)
+            @test !any(kept[hours])
+            # The monthly strength was chosen on the training hours alone.
+            @test sum(row.n_pairs for row in strength_rows if row.time_fold == fold) ==
+                length(train) * count(kept)
+            # Rain anywhere in a fold's own hours or its guard days cannot move its anchor. It
+            # does move the other fold's, whose training hours they are.
+            noisy = copy(s.rain)
+            noisy[:, .!kept] .= 50.0
+            moved = first(crossed(noisy))
+            @test isequal(moved[:, hours], anchor[:, hours])
+            others = findall(!=(fold), fold_of_time)
+            @test !isequal(moved[:, others], anchor[:, others])
+        end
+    end
+end

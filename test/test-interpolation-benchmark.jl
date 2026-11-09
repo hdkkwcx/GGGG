@@ -2047,6 +2047,10 @@ end
         refuse()                                    # nothing to feed
         @test_throws ArgumentError _validate_benchmark_config(
             InterpolationBenchmarkConfig(mger=base.mger, fy4b_qm_adaptive=true), n_station)
+        # A crossed FY4B_QM is fitted from the grid too. This 8-hour fixture is too short for its
+        # 7-day time folds, so the crossed fit itself is tested in test-satellite-calibration.jl.
+        @test_throws "fy4b_qm_crossed" _validate_benchmark_config(
+            InterpolationBenchmarkConfig(mger=base.mger, fy4b_qm_crossed=true), n_station)
         # It calibrates FY4B, so a run without FY4B must refuse rather than fail mid-run.
         @test_throws ArgumentError InterpolationBenchmarkConfig(
             mger=MGERConfig(station_meta_path=station_path, obs_hourly_wide_path=obs_path,

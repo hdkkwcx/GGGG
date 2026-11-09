@@ -406,6 +406,16 @@ function _write_benchmark_outputs(
             "training squared error; see fy4b_qm_strengths.csv",
         ]))
     end
+    if cfg.fy4b_qm_crossed
+        append!(scope, DataFrame(key=["fy4b_qm_crossed"], value=[
+            "$(FY4B_QM_PRODUCT) fitted out of time as well: the hours of each 7-day time fold (5 " *
+            "folds, balanced within season x regime, seed $(FY4B_QM_CROSSED_TIME_FOLD_SEED)) take " *
+            "the shift, map and strength fitted on the fold's training stations at the other time " *
+            "folds' hours, a day either side left out, so no week's anchor saw that week at any " *
+            "gauge; see fy4b_qm_time_folds.csv and the time_fold column of " *
+            "fy4b_qm_shift_selection.csv, fy4b_qm_maps.csv and fy4b_qm_strengths.csv",
+        ]))
+    end
     if cfg.fy4b_qm_fusion
         append!(scope, DataFrame(key=["fy4b_qm_fusion"], value=[
             "the fused anchors and the blend's non-constant bands take each fold's " *

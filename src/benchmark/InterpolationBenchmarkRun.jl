@@ -54,6 +54,9 @@ Everything `FY4B_QM_PRODUCT` needs that does not depend on the fold, or `nothing
 run does not score it: the offset grid aligned to the run's stations and hours, each hour's
 regime and season-by-regime cell, and the correlation sums from which a fold picks its shift.
 Registers the derived product's data, with an anchor that only a fold can fill.
+
+Under `fy4b_qm_crossed` it also holds the 7-day time folds and, per time fold, the sums over that
+fold's training hours alone (`crossed_shift_sums`); both are `nothing` otherwise.
 """
 function _prepare_fy4b_calibration!(cfg::InterpolationBenchmarkConfig, ids, product_data)
     cfg.fy4b_qm_grid === nothing && return nothing
@@ -65,9 +68,13 @@ function _prepare_fy4b_calibration!(cfg::InterpolationBenchmarkConfig, ids, prod
         source.times, source.ids, source.Y_obs, Y_sat=fill(NaN, size(source.Y_obs)),
     )
     month_labels, month_of_time = strength_cells(source.times, regime_of_time)
-    return (; grid, sums, regimes, regime_of_time,
-        cells=calibration_cells(source.times, regime_of_time), month_labels, month_of_time,
-        cache=Dict{Int,Matrix{Float64}}())
+    cells = calibration_cells(source.times, regime_of_time)
+    time_folds = cfg.fy4b_qm_crossed ?
+        time_block_folds(source.times, cells; seed=FY4B_QM_CROSSED_TIME_FOLD_SEED) : nothing
+    crossed_sums = time_folds === nothing ? nothing : crossed_shift_sums(
+        grid, source.Y_obs, regime_of_time, length(regimes), time_folds.fold_of_time, source.times)
+    return (; grid, sums, regimes, regime_of_time, cells, month_labels, month_of_time,
+        cache=Dict{Int,Matrix{Float64}}(), time_folds, crossed_sums)
 end
 
 """
@@ -101,6 +108,12 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     fusion_products = cfg.fy4b_out_of_fusion ? filter(!=("FY4B"), source_products) : source_products
     _, fused_specifications = _build_fused_products!(cfg, fusion_products, product_data, lonlat)
     fy4b_calibration = _prepare_fy4b_calibration!(cfg, ids, product_data)
+    # Each hour's 7-day block and time fold, for a crossed FY4B_QM.
+    fy4b_calibration === nothing || fy4b_calibration.time_folds === nothing ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_time_folds.csv"), DataFrame(
+            time=Dates.format.(product_data[FY4B_QM_PRODUCT].times, dateformat"yyyy-mm-ddTHH:MM:SS"),
+            block=fy4b_calibration.time_folds.block_of_time,
+            time_fold=fy4b_calibration.time_folds.fold_of_time))
     # The gated product shares FY4B_QM's grid and gauges; its anchor is built per fold below.
     cfg.fy4b_qm_rh_gate && (product_data[FY4B_QM_RH_PRODUCT] = product_data[FY4B_QM_PRODUCT])
     products = benchmark_products(cfg, source_products)
@@ -190,17 +203,30 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
             id_map = Dict(id => index for (index, id) in enumerate(ids))
             # A fold's calibrated FY4B depends only on its training stations, so it is built once
             # per fold here: for FY4B_QM itself and, under `fy4b_qm_fusion`, for the fused anchors
-            # and blend bands it feeds.
+            # and blend bands it feeds. Under `fy4b_qm_crossed` each time fold's hours come from
+            # a fit on the other time folds' hours alone.
             fold_calibration = fy4b_calibration === nothing ? nothing : map(1:cfg.k) do fold
                 _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
-                calibrate_fold(
-                    fy4b_calibration.grid, fy4b_calibration.sums,
-                    product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
-                    fy4b_calibration.regime_of_time, fy4b_calibration.cells;
-                    cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
-                    adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
-                    choice_labels=fy4b_calibration.month_labels,
-                )
+                if cfg.fy4b_qm_crossed
+                    calibrate_crossed(
+                        fy4b_calibration.grid, fy4b_calibration.crossed_sums,
+                        product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                        fy4b_calibration.regime_of_time, fy4b_calibration.cells,
+                        fy4b_calibration.time_folds.fold_of_time, product_data[FY4B_QM_PRODUCT].times;
+                        cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                        adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
+                        choice_labels=fy4b_calibration.month_labels,
+                    )
+                else
+                    calibrate_fold(
+                        fy4b_calibration.grid, fy4b_calibration.sums,
+                        product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                        fy4b_calibration.regime_of_time, fy4b_calibration.cells;
+                        cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                        adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
+                        choice_labels=fy4b_calibration.month_labels,
+                    )
+                end
             end
             # Each fold's gated FY4B_QM: the cut chosen on that fold's training stations, per time
             # fold on the other blocks' hours, and applied at every station.

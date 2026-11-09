@@ -145,12 +145,18 @@ using Main.BenchmarkDiagnostics
   gauge-corrected and never read. Blended methods are scored on the shared mask but
   never join `MASK_METHODS`. The flags themselves are documented where they are parsed in
   `scripts/run_interpolation_benchmark.jl`.
-- Two options of `FY4B_QM` change rows by design and so get their own suffix, as `--fy4b-file`
+- Three options of `FY4B_QM` change rows by design and so get their own suffix, as `--fy4b-file`
   does. `--fy4b-qm-adaptive` (`_fy4bqmadapt`) applies the season-by-regime map, month by month,
-  only as strongly as the fold's training gauges support, and changes only `FY4B_QM`'s rows. `--fy4b-qm-fusion`
+  only as strongly as the fold's training gauges support, and changes only `FY4B_QM`'s rows.
+  `--fy4b-qm-crossed` (`_qmcrossed`) fits `FY4B_QM` out of time as well: each 7-day time fold's
+  hours take the shift, map and strength fitted on the training gauges of the other time folds, a
+  day either side left out (`SatelliteCalibration.calibrate_crossed`). It changes only `FY4B_QM`'s
+  rows. `--fy4b-qm-fusion`
   (`_qmfusion`) feeds each fold's `FY4B_QM` to the fused anchors and the agreement bands instead
   of the plain FY4B, so `MERGED_*` and every blend row move; the real products' raw and
-  unblended rows do not.
+  unblended rows do not. With `--fy4b-qm-crossed` as well, the fusion fits gauge-hours that never
+  shaped the correction at that hour; `scripts/compare_fy4b_fusion_same_hours.jl --crossed`
+  compares that run against the paper run.
 - A product's position in the run's product list sets its covariate-selection seed (`run_seed` in
   `InterpolationBenchmarkFold.jl`), so adding or removing a product moves the other products'
   selection. Runs are only directly comparable on the same product list. `--fy4b-out-of-fusion`

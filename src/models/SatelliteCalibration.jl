@@ -23,14 +23,23 @@ Leakage is the point of the `train` arguments, as in `SatelliteFusion`: the benc
 fold's training stations, applies the result to every station, and so no held-out gauge shapes
 the anchor it is scored against. Fitting on all 237 gauges instead moved r by about 0.001
 (measured 2026-10-30), so the guard costs nothing.
+
+Time is a second way in. A held-out gauge shares its hour with the training gauges, and FY4B's
+false rain covers the network in multi-day episodes, so a map fitted on the same weeks learns
+those episodes: raw RMSE -16.9% against plain FY4B, but -9.5% with the weeks held out as well
+(`scripts/check_fy4b_qm_time_holdout.jl`, 2026-11-07). `calibrate_crossed` fits each time fold's
+hours on the other folds' hours only, a guard of days apart, shift included. A week's anchor then
+never comes from a shift, map or strength that saw that week, so a fusion fitted on the gauges of
+an hour does not reuse the observations that corrected FY4B at that hour.
 """
 module SatelliteCalibration
 
 using CSV, DataFrames, Dates, NCDatasets, Statistics
+using Main.TimeBlockFolds: training_hours
 
 export OffsetGrid, open_offset_grid, read_shift, shift_sums, choose_shift, shift_fold
 export product_regimes, calibration_cells, strength_cells, fit_quantile_map, apply_quantile_map
-export QM_STRENGTHS, choose_strength, calibrate_fold
+export QM_STRENGTHS, choose_strength, calibrate_fold, crossed_shift_sums, calibrate_crossed
 
 """Quantile knots of the map; the outermost 0.5% on each side is left to the tail rules."""
 const QM_PROBABILITIES = collect(0.005:0.005:0.995)
@@ -384,6 +393,65 @@ function calibrate_fold(grid::OffsetGrid, sums, y_obs::AbstractMatrix{<:Real},
             x = shifted[station, time]
             _adjusted_value(x, _map_value(m, x), m.tau, strengths[choice_of_time[time]].candidate)
         end for station in axes(shifted, 1), time in axes(shifted, 2)]
+    return anchor, shift_rows, map_rows, strength_rows
+end
+
+"""`y` with every hour outside `keep` set to NaN."""
+function _hours_only(y::AbstractMatrix{<:Real}, keep::AbstractVector{Bool})
+    masked = fill(NaN, size(y))
+    masked[:, keep] = y[:, keep]
+    return masked
+end
+
+"""
+Per time fold, `shift_sums` over that fold's training hours alone, as `Dict(fold => sums)`.
+
+The gauges outside `training_hours(fold_of_time, times, fold; guard_days)` are set to NaN, so a
+fold's shift is chosen on the hours its map is fitted on. One grid pass per time fold, once per
+run; a gauge fold then adds up its training stations' rows, as with `shift_sums`.
+"""
+function crossed_shift_sums(grid::OffsetGrid, y_obs::AbstractMatrix{<:Real},
+                            regime_of_time::AbstractVector{<:Integer}, n_regime::Integer,
+                            fold_of_time::AbstractVector{<:Integer}, times::AbstractVector{DateTime};
+                            guard_days::Integer=1)
+    return Dict(fold => shift_sums(grid,
+            _hours_only(y_obs, training_hours(fold_of_time, times, fold; guard_days)),
+            regime_of_time, n_regime)
+        for fold in sort(unique(fold_of_time)))
+end
+
+_tag_time_fold(rows, fold) = [merge((; time_fold=fold), row) for row in rows]
+
+"""
+One fold's anchor fitted out of time as well, as `calibrate_fold`'s `(anchor, shift_rows,
+map_rows, strength_rows)`, every row tagged with its `time_fold`.
+
+The hours of time fold `f` (`fold_of_time`, as `TimeBlockFolds.time_block_folds` gives it) take
+what `calibrate_fold` fits on `train` with every gauge outside `training_hours(fold_of_time, times,
+f; guard_days)` set to NaN, its shift chosen on `sums_of_fold[f]` (`crossed_shift_sums`, with the
+same `guard_days`). So no shift, map or strength applied in a week saw that week, or `guard_days`
+either side, at any gauge. `kwargs` go to `calibrate_fold` as they are.
+"""
+function calibrate_crossed(grid::OffsetGrid, sums_of_fold::AbstractDict,
+                           y_obs::AbstractMatrix{<:Real}, train::AbstractVector{<:Integer},
+                           regimes::AbstractVector{<:AbstractString},
+                           regime_of_time::AbstractVector{<:Integer}, cell_of_time,
+                           fold_of_time::AbstractVector{<:Integer}, times::AbstractVector{DateTime};
+                           guard_days::Integer=1, kwargs...)
+    length(fold_of_time) == length(times) == size(y_obs, 2) ||
+        throw(DimensionMismatch("one time fold and one time per hour are needed"))
+    anchor = fill(NaN, size(y_obs))
+    shift_rows, map_rows, strength_rows = NamedTuple[], NamedTuple[], NamedTuple[]
+    for fold in sort(unique(fold_of_time))
+        observed = _hours_only(y_obs, training_hours(fold_of_time, times, fold; guard_days))
+        fitted, shifts, maps, strengths = calibrate_fold(grid, sums_of_fold[fold], observed, train,
+            regimes, regime_of_time, cell_of_time; kwargs...)
+        hours = findall(==(fold), fold_of_time)
+        anchor[:, hours] = fitted[:, hours]
+        append!(shift_rows, _tag_time_fold(shifts, fold))
+        append!(map_rows, _tag_time_fold(maps, fold))
+        append!(strength_rows, _tag_time_fold(strengths, fold))
+    end
     return anchor, shift_rows, map_rows, strength_rows
 end
 
