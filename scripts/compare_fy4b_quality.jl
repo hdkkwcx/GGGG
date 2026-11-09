@@ -12,8 +12,9 @@
 # nothing changes (`TimeBlockFolds.block_times`).
 #
 # A run folder reads another run of the same products instead: the one without `--fy4b-qm-fusion`
-# (`..._fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal`, where plain FY4B is in the fusion), whose name must
-# again be what `benchmark_config` gives. Its output folder adds the run's options from
+# (`..._fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal`, where plain FY4B is in the fusion), or one with
+# `--fy4b-qm-crossed` (`_qmcrossed`, FY4B_QM fitted out of time), whose name must again be what
+# `benchmark_config` gives. Its output folder adds the run's options from
 # `_fusedanchor` on. `--matched-products` scores every pair on the cells every product of the run is
 # scored on (`BenchmarkDiagnostics.matched_evaluation_mask`, as `run_claim_reassessment.jl` does)
 # instead of the pair's own shared cells, and adds `_matched` before `_block{N}d`.
@@ -59,15 +60,17 @@ const METHODS = ["raw", "mgwr", _blend_method("mgwr", :agreement_envelope)]
 """
 The run's configuration, and a copy of its `MGERConfig` that writes to `outdir`: loading the grid
 writes `global_common_time_qc.csv`, which must not land in the run. `run_dir` picks the run with
-or without `--fy4b-qm-fusion` (by its `_qmfusion` suffix) and must be the folder that configuration
-names; without it, the `--fy4b-qm-fusion` run.
+or without `--fy4b-qm-fusion` (by its `_qmfusion` suffix), and with or without `--fy4b-qm-crossed`
+(`_qmcrossed`, FY4B_QM fitted out of time), and must be the folder that configuration names;
+without it, the `--fy4b-qm-fusion` run.
 """
 function run_config(outdir=OUTDIR; run_dir=nothing)
-    qm_fusion = run_dir === nothing || occursin("_qmfusion", basename(rstrip(run_dir, '/')))
+    name = run_dir === nothing ? "" : basename(rstrip(run_dir, '/'))
+    qm_fusion = run_dir === nothing || occursin("_qmfusion", name)
     config = benchmark_config(:full; nested_covariates=true, satellite_wet_blend=true,
         fused_anchor=true, gpm_uncal=true, blend_axes=[:constant, :agreement_envelope],
         fy4b=true, fy4b_file=FY4B_FILE, fy4b_qm=true, fy4b_qm_adaptive=true,
-        fy4b_qm_fusion=qm_fusion)
+        fy4b_qm_fusion=qm_fusion, fy4b_qm_crossed=occursin("_qmcrossed", name))
     run_dir === nothing || rstrip(abspath(run_dir), '/') == rstrip(config.mger.outdir, '/') ||
         error("$run_dir is not a run this comparison reads; the matching one is $(config.mger.outdir)")
     fields = fieldnames(MGERConfig)
