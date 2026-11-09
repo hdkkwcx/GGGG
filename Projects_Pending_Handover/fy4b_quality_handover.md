@@ -18,12 +18,153 @@ paper now uses 7-day blocks (Previous, merged as `3d41498`). The humidity gate's
 does not survive MGWR and the blend (Previous, merged as `a7fed1b`). FY4B is now the third product of RQ1-RQ3,
 every evaluation on one matched sample (Previous, merged as `65c7eaa` and pushed). Putting FY4B_QM in place of
 plain FY4B in the merges and bands clears the rule for no agreement blend, so plain FY4B stays, and §3.4 now says
-why (Newest, merged as `49ebe75` and pushed) · **Next step:** none; quote RQ3 and §3.4 numbers only from the
-`_matched` report folders, as the paper does
+why (Previous, merged as `49ebe75` and pushed). FY4B_QM fitted out of time was then put in place of plain FY4B in
+the merges and bands: each week is fitted on the other weeks' gauges, so no gauge-hour is used both to correct
+FY4B and to fuse it. It is never worse on RMSE, but it fails the user's no-worse rule on heavy rain, so plain FY4B
+still stays (Newest, branch `fy4b/qm-crossed-fusion`, not merged) · **Next step:** the user's call: merge
+`fy4b/qm-crossed-fusion`, and whether §3.4 cites the time-held-out MGWR and blend figures. Quote RQ3 and §3.4
+numbers only from the `_matched` report folders, as the paper does
 
 ---
 
-## Newest (2026-11-09): why FY4B_QM stays out of the merges and the bands
+## Newest (2026-11-09): FY4B_QM fitted out of time, in the merges and the bands
+
+The user asked whether FY4B could be improved some other way, so that an improved series could replace plain FY4B
+in the merges and the agreement bands. A side agent noted that under the usual rule a fix that only ties would
+still stay out. The user then put the problem this way: "how to avoid reusing the same rain-gauge observations in
+both the FY4B correction and subsequent fusion stages, which could lead to overly optimistic performance
+evaluations".
+
+**What reuse does here, as told to the user:**
+- A held-out gauge enters neither stage, so its own score is not inflated.
+- The reuse is in time. FY4B_QM learns each week's false-rain episodes from the training gauges (raw −16.9%, but
+  −9.5% with weeks held out). MGWR, the OLS merge and the blend weights then fit those same gauge-hours again.
+
+**Designs offered:**
+- (a) Fit each week on the other weeks. **Chosen.**
+- (b) No gauges at all: the shift and map fitted against IMERG Uncal, as IMERG and GSMaP calibrate their own
+  infrared rain. Set aside, and never built.
+
+**Rule offered:** "no worse", or the usual "must improve". The user chose **no worse**, fixed before the run.
+
+### Code (branch `fy4b/qm-crossed-fusion`, not merged)
+
+**`7368f66`: the option.**
+- `SatelliteCalibration.crossed_shift_sums` and `calibrate_crossed`. Each 7-day time fold's hours take the shift,
+  map and monthly strength that `calibrate_fold` (unchanged) fits on the training gauges at the other time folds'
+  hours, a day either side left out. The shift is held out too; the 2026-11-07 check left it in.
+- Benchmark option `fy4b_qm_crossed`, CLI `--fy4b-qm-crossed` (suffix `_qmcrossed`). It uses the humidity gate's
+  time folds: seed 20261107, 5 folds, balanced within season × regime.
+- Outputs: it writes `fy4b_qm_time_folds.csv`, and the shift, map and strength tables gain a `time_fold` column.
+  It changes only FY4B_QM's rows.
+- `load_modules.jl` gains the `TimeBlockFolds` dependency.
+- Tests:
+  - a unit test: a week's anchor does not move when its own or guard days' gauges change, though the other
+    fold's does;
+  - a validation test.
+- CLAUDE.md updated.
+
+**`2e9d832`: the comparison, and the rule before the run.**
+- `compare_fy4b_fusion_same_hours.jl --crossed`: the crossed qmfusion run (candidate) against the paper run
+  (baseline).
+- Roles: plain FY4B, GPM_uncal and GSMaP raw/adw/mgwr/blend_mgwr are guards; every FY4B_QM field is information.
+- 7-day blocks, a `no_worse` column and `crossed_verdict`. The default pair's outputs are byte-identical on the
+  smoke runs.
+- `compare_fy4b_quality.jl` now also reads a `_qmcrossed` run.
+
+**`daa5049`: review bump on the 11 steps `make_paper.jl` flagged.**
+- None of them uses the option.
+- Without it, a paper-config smoke run reproduces an earlier-code smoke run byte for byte: FY4B_QM, FY4B, GPM_uncal
+  and GSMaP fields, and the shift, map and strength tables.
+
+**Checks:** `Pkg.test()` passes, `make_paper.jl` flags nothing, and the smoke comparison's guards pass (June 2022).
+
+### Run
+
+Clean at `daa5049`, `-t 4`, 3 h 18 min:
+```sh
+julia -t 4 --project=. scripts/run_interpolation_benchmark.jl full --nested-covariates \
+  --satellite-wet-blend --blend-axis agreement_envelope --fused-anchor --with-fy4b \
+  --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --fy4b-qm --fy4b-qm-adaptive \
+  --fy4b-qm-crossed --fy4b-qm-fusion
+```
+- **The output is on the T9.** The 11 GB folder is at `/Volumes/T9/GGGG_output/<run>`, linked as
+  `output/interpolation_benchmark_full_..._fy4bqmadapt_qmcrossed_qmfusion_gpmuncal`. The Mac had only 14 GB free,
+  and the user chose the T9. Plug the T9 in to reread it.
+- **Logs:** `output/full_benchmark_fy4bw3h0_fy4bqm_fy4bqmadapt_qmcrossed_qmfusion.log`,
+  `output/compare_fy4b_qm_crossed_fusion.log` and `output/compare_fy4b_quality_qmcrossed.log`.
+- **Output:**
+  - `output/fy4b_qm_crossed_fusion_comparison/` (`paired.csv`, `fold_status.csv`, `selection.csv`,
+    `provenance.csv`);
+  - `output/fy4b_quality_fy4bw3h0_fy4bqm_fy4bqmadapt_qmcrossed_qmfusion_gpmuncal_matched_block7d/`.
+- **Guards passed:**
+  - the same 237 stations, 20,087 hours and folds as the paper run;
+  - plain FY4B, GPM_uncal and GSMaP raw, adw, mgwr and blend_mgwr identical in both schemes;
+  - the controls (MERGED adw) unchanged.
+
+### Result: keep plain FY4B
+
+Agreement blends, balanced spatial, crossed FY4B_QM in the fusion against plain FY4B in it, 95% intervals over
+7-day blocks:
+
+| Blend | RMSE | ΔRMSE | FBI_8 | POD_8 | No worse? |
+|---|---|---|---|---|---|
+| GPM_uncal | 0.7239 vs 0.7243 | −0.06% (−0.13..+0.01) | 0.235 vs 0.242, sig | 0.092 vs 0.094 | fails: \|FBI_8 − 1\| |
+| GSMaP | 0.7345 vs 0.7340 | +0.07% (+0.01..+0.13) | 0.327 vs 0.324 | 0.114 vs 0.112 | passes |
+| MERGED_MEAN | 0.7209 vs 0.7234 | −0.34% (−0.70..+0.03) | 0.271 vs 0.295, sig | 0.103 vs 0.108 | fails: \|FBI_8 − 1\| |
+| MERGED_OLS | 0.7186 vs 0.7191 | −0.08% (−0.13..−0.01) | 0.225 vs 0.226 | 0.089 vs 0.089 | passes |
+
+**What the verdict rests on:**
+- **RMSE is never worse:** every upper end is below +0.3%.
+- **Heavy rain gets drier in two blends.** FBI_8 is already about 0.25, so fewer predicted 8 mm/h hours count as
+  worse. MERGED_MEAN's CSI_8 also falls, by −0.0033 (−0.0071..+0.0003).
+- **The usual "must improve" rule:** no blend meets it.
+
+**Other fields (information):**
+- MERGED_MEAN raw −2.02% (−4.22..+0.24) and mgwr −0.72% (−1.50..+0.14). MERGED_OLS is flat at every stage.
+- Random split: every agreement blend is within ±0.12%.
+- FY4B's own agreement blend is +0.27% (+0.10..+0.46), so the crossed FY4B_QM in the bands costs it a little.
+- The OLS merge weight of FY4B is 0.022 → 0.031 (GPM_uncal 0.48, GSMaP 0.15).
+- MERGED_MEAN's mgwr selects differently in 2 of 5 balanced folds and 4 of 5 random. MERGED_OLS selects the same
+  in all folds.
+
+**The correction itself, crossed against plain FY4B** (`compare_fy4b_quality.jl`, matched sample, 7-day blocks;
+§3.4's same-weeks figures in brackets):
+
+| Stage | Crossed against plain FY4B | §3.4, same weeks |
+|---|---|---|
+| raw | −6.0% (−13.8..+2.9); r 0.217 vs 0.223 | −16.8% |
+| MGWR | −2.9% (−6.9..+1.6); CSI_2 +0.019, sig | −5.3% |
+| agreement blend | −0.4% (−1.2..+0.5) | −0.7% |
+
+- None of the crossed gains is significant.
+- Its blend uses bands fed by the crossed FY4B_QM, unlike §3.4's.
+- Against the paper run's FY4B_QM directly: raw +13.0% (+5.0..+22.0), mgwr +2.6% (−0.2..+6.0), blend_mgwr +0.2%
+  (−0.4..+0.8).
+- The raw −6.0% is below the 2026-11-07 check's −9.5%. This run also holds the shift out and uses the gate's time
+  folds.
+
+**The shift is less stable with weeks held out.** It matches the paper run's choice for the same fold and regime
+in only 55 of 150 fits. The direction holds (west and north in R1, east in R3), and the shift wanders 1–2 px.
+
+### How to read it
+
+- The user's suspicion holds: most of FY4B_QM's edge over plain FY4B came from correcting with the same weeks'
+  gauges that the fusion then uses again.
+- Fitted without its own weeks, what is left is too small to help the merges, and it dries their heavy rain. So
+  plain FY4B stays in the fusion.
+- This fits §3.4's same-weeks sentence, and gives MGWR and the blend the time-held-out figures it lacked.
+
+**The user's call:**
+- Merge `fy4b/qm-crossed-fusion` as the record. The option and the comparison stay in the code, as the humidity
+  gate's did.
+- Whether §3.4 cites MGWR −2.9% and blend −0.4% with weeks held out, or this test as a further reason corrected
+  FY4B stays out of the fusion. Either needs a `[[step]]` for the crossed run and a `[[table]]` in
+  `paper/sources.toml`.
+
+---
+
+## Previous (2026-11-09): why FY4B_QM stays out of the merges and the bands
 
 The user asked why the merges and the agreement bands take plain FY4B and leave FY4B_QM out, and whether to add it.
 A four-member merge (plain and corrected FY4B both) was not tested: both come from the same images, so the bands
