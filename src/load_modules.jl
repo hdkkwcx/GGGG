@@ -39,6 +39,7 @@ function standalone_module_dependencies(name::AbstractString)
     name == "LandformClassification" && return ["TerrainFeatures"]
     name == "BenchmarkDiagnostics" && return ["DayBlockBootstrap"]
     name == "SatelliteTwoStage" && return ["SatelliteCalibration"]
+    name == "SatelliteCalibration" && return ["TimeBlockFolds"]
     name == "FY4BCloudType" && return ["FY4BPreprocessing"]
     name == "HumidityGate" && return ["TimeBlockFolds", "ERA5LandProcessing"]
     name == "SatelliteTemporalEvaluation" && return ["HeavyRainEvents"]

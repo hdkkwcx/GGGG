@@ -36,9 +36,12 @@ function benchmark_config(
     fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
     fy4b::Bool=true, fy4b_file::Union{Nothing,String}=nothing, fy4b_qm::Bool=false,
     fy4b_qm_adaptive::Bool=false, fy4b_qm_fusion::Bool=false, fy4b_out_of_fusion::Bool=false,
-    fy4b_qm_rh_gate::Bool=false,
+    fy4b_qm_rh_gate::Bool=false, fy4b_qm_crossed::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
+    fy4b_qm_crossed && !fy4b_qm && throw(ArgumentError(
+        "--fy4b-qm-crossed fits FY4B_QM out of time, which needs --fy4b-qm",
+    ))
     fy4b_qm_rh_gate && !fy4b_qm && throw(ArgumentError(
         "--fy4b-qm-rh-gate gates FY4B_QM, which needs --fy4b-qm",
     ))
@@ -112,6 +115,7 @@ function benchmark_config(
                 "_" * replace(splitext(basename(fy4b_file))[1], "_" => "")) *
             (fy4b_qm ? "_fy4bqm" : "") *
             (fy4b_qm_adaptive ? "_fy4bqmadapt" : "") *
+            (fy4b_qm_crossed ? "_qmcrossed" : "") *
             (fy4b_qm_fusion ? "_qmfusion" : "") *
             (fy4b_out_of_fusion ? "_fy4bnofusion" : "") *
             (fy4b_qm_rh_gate ? "_qmrhgate" : "") *
@@ -290,6 +294,7 @@ function benchmark_config(
         ),
         fy4b_qm_grid=fy4b_qm ? joinpath(dirname(fy4b_file), "fy4b_offset_grid.nc") : nothing,
         fy4b_qm_adaptive=fy4b_qm_adaptive,
+        fy4b_qm_crossed=fy4b_qm_crossed,
         fy4b_qm_fusion=fy4b_qm_fusion,
         fy4b_out_of_fusion=fy4b_out_of_fusion,
         fy4b_qm_rh_gate=fy4b_qm_rh_gate,
@@ -484,6 +489,12 @@ function main(args=ARGS)
     # fold's training gauges support, down to none (`fy4b_qm_strengths.csv`). Changes FY4B_QM's
     # rows.
     fy4b_qm_adaptive = "--fy4b-qm-adaptive" in args
+    # With --fy4b-qm: fit FY4B_QM out of time as well. Each 7-day time fold's hours take the shift,
+    # map and strength fitted on the training stations at the other time folds' hours, a day either
+    # side left out (`SatelliteCalibration.calibrate_crossed`, `fy4b_qm_time_folds.csv`). With
+    # --fy4b-qm-fusion the fusion then fits gauge-hours that never shaped the correction at that
+    # hour (`scripts/compare_fy4b_fusion_same_hours.jl --crossed`). Changes FY4B_QM's rows.
+    fy4b_qm_crossed = "--fy4b-qm-crossed" in args
     # With --fy4b-qm: the fused anchors (MERGED_*) and the agreement-envelope bands take each
     # fold's FY4B_QM in place of the plain FY4B, so the fusion sees the calibrated product. Changes
     # those products' rows and every blend row by design; not with --fused-anchor-lagnbr or
@@ -505,7 +516,7 @@ function main(args=ARGS)
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
         fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm,
-        fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion, fy4b_qm_rh_gate)
+        fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion, fy4b_qm_rh_gate, fy4b_qm_crossed)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -532,6 +543,7 @@ function main(args=ARGS)
         (fy4b_file === nothing ? "" : "fy4b_file=$fy4b_file, ") *
         (fy4b_qm ? "fy4b_qm=true, " : "") *
         (fy4b_qm_adaptive ? "fy4b_qm_adaptive=true, " : "") *
+        (fy4b_qm_crossed ? "fy4b_qm_crossed=true, " : "") *
         (fy4b_qm_fusion ? "fy4b_qm_fusion=true, " : "") *
         (fy4b_out_of_fusion ? "fy4b_out_of_fusion=true, " : "") *
         (fy4b_qm_rh_gate ? "fy4b_qm_rh_gate=true, " : "") *

@@ -51,15 +51,41 @@
 # Writes output/fy4b_same_hours_comparison/ (`_smoke` for the smoke runs): paired.csv,
 # fold_status.csv (each run's joint-method folds that did not succeed), selection.csv (mgwr's
 # covariates and roles per fold in both runs), provenance.csv.
+#
+# `--crossed` compares another pair: corrected FY4B fitted out of time and fed to the fusion
+# (candidate) against the paper run, plain FY4B in the fusion (baseline). Same product list, hours
+# and seeds:
+#     julia --project=. scripts/compare_fy4b_fusion_same_hours.jl --crossed          # full runs
+#     julia --project=. scripts/compare_fy4b_fusion_same_hours.jl smoke --crossed    # smoke runs
+# - the candidate is the paper's `benchmark` step plus --fy4b-qm-crossed --fy4b-qm-fusion. Each
+#   7-day time fold's FY4B_QM is fitted on the other time folds' training gauges, so the gauges the
+#   fusion fits at an hour never shaped the correction it uses at that hour;
+# - the baseline is the paper's `benchmark` step itself.
+# Roles change with the pair. FY4B is plain in both runs, so its `raw`, `adw`, `mgwr` and
+# `blend_mgwr` are guards beside GPM_uncal's and GSMaP's. Every FY4B_QM field is `information`,
+# since its fit is what changes, and its mask check is skipped (scored on shared cells). Treatments
+# and controls are as above. Intervals resample whole 7-day blocks (`CROSSED_BLOCK_DAYS`), as the
+# paper's do.
+#
+# Its rule is not the one above. It was chosen by the user and fixed before the full crossed run:
+# corrected FY4B replaces plain FY4B in the fusion only if it is no worse. A treatment row is
+# `no_worse` on balanced_spatial if all of these hold:
+# - the upper end of its RMSE interval is below +`NONINFERIORITY_MARGIN`;
+# - CSI at 8 mm/h is not lower beyond its interval;
+# - |FBI − 1| at 8 mm/h is not worse beyond its interval;
+# - |bias| grows by at most `BIAS_TOLERANCE` mm/h.
+# `crossed_verdict` needs that of all four agreement blends. `meets_rule` is still reported. Writes
+# output/fy4b_qm_crossed_fusion_comparison/ (`_smoke`), with the same files.
 
 include(joinpath(@__DIR__, "run_interpolation_benchmark.jl"))
-load_standalone_modules("RunProvenance", "TableIO", "DayBlockBootstrap")
+load_standalone_modules("RunProvenance", "TableIO", "DayBlockBootstrap", "TimeBlockFolds")
 
 using CSV, Printf, Statistics
 using Main.DayBlockBootstrap: read_wide_values, read_wide_mask, day_groups, group_sums,
     compare_days
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.TableIO: write_csv_atomic
+using Main.TimeBlockFolds: block_times
 
 const FY4B_FILE = joinpath(ROOT, "output", "fy4b_rebuild_2022_2024", "fy4b_w3_h0.csv")
 const THRESHOLDS = [0.1, 2.0, 8.0]
@@ -74,14 +100,55 @@ const FY4B_PRODUCTS = ["FY4B", "FY4B_QM"]
 const AGREEMENT = _blend_method("mgwr", :agreement_envelope)
 const METHODS = ["raw", "adw", "mgwr", _blend_method("mgwr"), AGREEMENT]
 const JOINT_METHODS = ["residual_gwr", "mixed_gwr", "mgwr"]
+"""`--crossed`: the length of the blocks its intervals resample, in days."""
+const CROSSED_BLOCK_DAYS = 7
+"""`--crossed`'s rule: how much worse RMSE may be at the upper end of its interval."""
+const NONINFERIORITY_MARGIN = 0.003
 
-"""Where the fusion reaches `method`'s field for `product`: see the header."""
-function field_role(product, method)
+"""
+Where the fusion reaches `method`'s field for `product`: see the header. Under `--crossed` every
+FY4B_QM field is `information`, because its fit is what changes.
+"""
+function field_role(product, method; crossed::Bool=false)
     if product in MERGED
         return method == "adw" ? "control" : "treatment"
     end
+    crossed && product == "FY4B_QM" && return "information"
     method == AGREEMENT || return "guard"
     return product in SINGLE ? "treatment" : "information"
+end
+
+"""
+The checks of `--crossed`'s rule that a paired row fails, by name. An empty list means the
+candidate is no worse.
+"""
+failed_checks(row) = [name for (name, ok) in (
+    "RMSE upper end $(@sprintf("%+.2f", 100 * row.rel_RMSE_hi))% not below " *
+        "+$(100 * NONINFERIORITY_MARGIN)%" => row.rel_RMSE_hi < NONINFERIORITY_MARGIN,
+    "CSI_8 lower" => row.delta_CSI_8_hi >= 0,
+    "|FBI_8 - 1| worse" => row.delta_FBI_8_dev_lo <= 0,
+    "|bias| up $(@sprintf("%.4f", row.delta_abs_bias)) mm/h" =>
+        row.delta_abs_bias <= BIAS_TOLERANCE,
+) if !ok]
+
+"""
+`--crossed`'s verdict, chosen by the user and fixed before its full run. It is judged on
+balanced_spatial, over the agreement blends of GPM_uncal, GSMaP, MERGED_MEAN and MERGED_OLS:
+- `confounded` if a control moves RMSE by `MIN_REL_GAIN` or more either way;
+- `use corrected FY4B in the fusion` if every one of them is `no_worse`;
+- `keep plain FY4B` otherwise, naming each blend that is not and the checks it fails.
+"""
+function crossed_verdict(rows)
+    balanced = filter(row -> row.scheme == "balanced_spatial", rows)
+    any(row -> row.role == "control" && abs(row.rel_RMSE) >= MIN_REL_GAIN, balanced) &&
+        return "confounded"
+    blends = filter(row -> row.candidate == AGREEMENT && row.role == "treatment", balanced)
+    sort([row.product for row in blends]) == sort(vcat(SINGLE, MERGED)) ||
+        error("expected one agreement blend for each of $(vcat(SINGLE, MERGED))")
+    failed = filter(row -> !row.no_worse, blends)
+    isempty(failed) && return "use corrected FY4B in the fusion"
+    return "keep plain FY4B: " *
+        join(["$(row.product) ($(join(failed_checks(row), ", ")))" for row in failed], "; ")
 end
 
 """
@@ -106,16 +173,19 @@ function verdict(rows)
 end
 
 """
-The qmfusion run's configuration, the out-of-fusion run's, and a copy of the former's `MGERConfig`
-that writes to `outdir`: loading the data writes `global_common_time_qc.csv`, which must not land in
-either run.
+The candidate run's configuration, the baseline's, and a copy of the former's `MGERConfig` that
+writes to `outdir`: loading the data writes `global_common_time_qc.csv`, which must not land in
+either run. The candidate is the qmfusion run and the baseline the out-of-fusion run, or, under
+`crossed`, the crossed qmfusion run and the paper run.
 """
-function run_configs(mode, outdir)
+function run_configs(mode, outdir; crossed::Bool=false)
     common = (; nested_covariates=true, satellite_wet_blend=true, fused_anchor=true, gpm_uncal=true,
         blend_axes=[:constant, :agreement_envelope], fy4b=true, fy4b_file=FY4B_FILE, fy4b_qm=true,
         fy4b_qm_adaptive=true)
-    with = benchmark_config(mode; common..., fy4b_qm_fusion=true)
-    without = benchmark_config(mode; common..., fy4b_out_of_fusion=true)
+    with = crossed ? benchmark_config(mode; common..., fy4b_qm_crossed=true, fy4b_qm_fusion=true) :
+        benchmark_config(mode; common..., fy4b_qm_fusion=true)
+    without = crossed ? benchmark_config(mode; common...) :
+        benchmark_config(mode; common..., fy4b_out_of_fusion=true)
     fields = fieldnames(MGERConfig)
     mger = MGERConfig(; merge(
         NamedTuple{fields}(Tuple(getfield(with.mger, field) for field in fields)), (; outdir))...)
@@ -154,11 +224,16 @@ function fold_selection(dirs)
 end
 
 function compare_main(args=ARGS)
-    mode = isempty(args) ? :full : Symbol(only(args))
-    outdir = joinpath(ROOT, "output", "fy4b_same_hours_comparison" * (mode == :full ? "" : "_$mode"))
+    crossed = "--crossed" in args
+    positional = filter(!startswith("--"), args)
+    mode = isempty(positional) ? :full : Symbol(only(positional))
+    outdir = joinpath(ROOT, "output",
+        (crossed ? "fy4b_qm_crossed_fusion_comparison" : "fy4b_same_hours_comparison") *
+        (mode == :full ? "" : "_$mode"))
     mkpath(outdir)
-    with, without, mger = run_configs(mode, outdir)
+    with, without, mger = run_configs(mode, outdir; crossed)
     dirs = (; with=with.mger.outdir, without=without.mger.outdir)
+    println("Candidate: $(relpath(dirs.with, ROOT))\nBaseline:  $(relpath(dirs.without, ROOT))")
     for dir in dirs
         isfile(joinpath(dir, "metrics_pooled.csv")) || error("the run is not finished: $dir")
     end
@@ -187,7 +262,9 @@ function compare_main(args=ARGS)
     end
     println("  split_common.csv equal for ", join(schemes, " and "))
 
-    day_group, n_day = day_groups(times, length(ids))
+    # `--crossed` resamples whole 7-day blocks: `block_times` maps each hour to its block's start.
+    day_group, n_day = day_groups(
+        crossed ? block_times(times; block_days=CROSSED_BLOCK_DAYS) : times, length(ids))
     day_sums(x, mask) = group_sums(x, y, mask, day_group, n_day, THRESHOLDS)
     rows = NamedTuple[]
     for scheme in schemes, product in products
@@ -197,11 +274,11 @@ function compare_main(args=ARGS)
             with=read_wide_values(path(:with, scheme, product, "oof_$method.csv"), ids, times),
             without=read_wide_values(path(:without, scheme, product, "oof_$method.csv"), ids, times))
             for method in METHODS)
-        if product ∉ MERGED
+        if product ∉ MERGED && field_role(product, "raw"; crossed) == "guard"
             mask_with == mask_without || error("$scheme $product: the evaluation masks differ")
         end
         for method in METHODS
-            field_role(product, method) == "guard" &&
+            field_role(product, method; crossed) == "guard" &&
                 !isequal(series[method].with, series[method].without) &&
                 error("$scheme $product $method differs between the runs, but the fusion never " *
                     "reaches it")
@@ -210,10 +287,10 @@ function compare_main(args=ARGS)
         for method in METHODS, run in (:with, :without)
             shared .&= .!isnan.(series[method][run])
         end
-        @printf("  %-16s %-11s shared %d cells (qmfusion mask %d, out-of-fusion mask %d)\n", scheme,
+        @printf("  %-16s %-11s shared %d cells (candidate mask %d, baseline mask %d)\n", scheme,
             product, count(shared), count(mask_with), count(mask_without))
         for method in METHODS
-            role = field_role(product, method)
+            role = field_role(product, method; crossed)
             row = merge((; scheme, product, candidate=method, baseline=method, role),
                 compare_days(day_sums(series[method].with, shared),
                     day_sums(series[method].without, shared), THRESHOLDS;
@@ -222,7 +299,9 @@ function compare_main(args=ARGS)
                 row.rel_RMSE <= -MIN_REL_GAIN && row.rel_RMSE_hi < 0 &&
                 row.delta_CSI_8_hi >= 0 && row.delta_FBI_8_dev_lo <= 0 &&
                 row.delta_abs_bias <= BIAS_TOLERANCE
-            push!(rows, merge(row, (; meets_rule)))
+            # `--crossed`'s rule, in its own column so the default pair's paired.csv stays as it was.
+            push!(rows, crossed ? merge(row, (; meets_rule, no_worse=scheme == "balanced_spatial" &&
+                role == "treatment" && isempty(failed_checks(row)))) : merge(row, (; meets_rule)))
         end
     end
     println("  guards: every field the fusion never reaches is identical in both runs")
@@ -234,21 +313,24 @@ function compare_main(args=ARGS)
     write_csv_atomic(joinpath(outdir, "selection.csv"), selection)
     CSV.write(joinpath(outdir, "provenance.csv"), finish_provenance!(provenance, ROOT))
 
-    println("\nWith FY4B_QM in the fusion vs out of it, same field, shared cells (95% day-block interval):")
+    println(crossed ?
+        "\nCrossed FY4B_QM in the fusion vs plain FY4B in it (the paper run), same field, shared cells (95% 7-day-block interval):" :
+        "\nWith FY4B_QM in the fusion vs out of it, same field, shared cells (95% day-block interval):")
     for row in rows
-        @printf("%-17s %-11s %-18s %-11s RMSE %.4f vs %.4f  %+.2f%% (%+.2f..%+.2f)  bias %+.4f vs %+.4f  CSI8 %+.4f (%+.4f..%+.4f)  |FBI8-1| %+.3f (%+.3f..%+.3f)  rule=%s\n",
+        @printf("%-17s %-11s %-18s %-11s RMSE %.4f vs %.4f  %+.2f%% (%+.2f..%+.2f)  bias %+.4f vs %+.4f  CSI8 %+.4f (%+.4f..%+.4f)  |FBI8-1| %+.3f (%+.3f..%+.3f)  rule=%s",
             row.scheme, row.product, row.candidate, row.role, row.candidate_RMSE,
             row.baseline_RMSE, 100 * row.rel_RMSE, 100 * row.rel_RMSE_lo, 100 * row.rel_RMSE_hi,
             row.candidate_bias, row.baseline_bias, row.delta_CSI_8, row.delta_CSI_8_lo,
             row.delta_CSI_8_hi, row.delta_FBI_8_dev, row.delta_FBI_8_dev_lo,
             row.delta_FBI_8_dev_hi, row.meets_rule)
+        println(crossed ? "  no_worse=$(row.no_worse)" : "")
     end
     println("\nJoint-method folds that did not succeed (mgwr; fold_status.csv has the rest):")
     for row in eachrow(statuses)
         row.method == "mgwr" && @printf("  %-8s %-17s %-11s fold %d %s\n", row.run, row.scheme,
             row.product, row.fold, row.status)
     end
-    println("\nmgwr's selection per fold, qmfusion | out-of-fusion, where the runs differ (selection.csv has all):")
+    println("\nmgwr's selection per fold, candidate | baseline, where the runs differ (selection.csv has all):")
     for row in eachrow(selection)
         row.same || @printf("  %-17s %-11s fold %d  %s | %s\n", row.scheme, row.product, row.fold,
             row.with, row.without)
@@ -258,7 +340,15 @@ function compare_main(args=ARGS)
         @printf("  %-17s %-11s %d of %d folds select the same\n", scheme, product,
             count(cells.same), nrow(cells))
     end
-    println("\nVerdict (balanced_spatial, fixed before the run): ", verdict(rows))
+    if crossed
+        passing = [row.product for row in rows if row.meets_rule && row.candidate == AGREEMENT]
+        println("\nUsual must-improve rule (information only): ",
+            isempty(passing) ? "no agreement blend meets it" : "met by " * join(passing, ", "))
+        println("Verdict (balanced_spatial, no-worse rule fixed before the run): ",
+            crossed_verdict(rows))
+    else
+        println("\nVerdict (balanced_spatial, fixed before the run): ", verdict(rows))
+    end
     println("Wrote $(relpath(outdir, ROOT))")
 end
 

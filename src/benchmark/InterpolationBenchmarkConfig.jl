@@ -175,6 +175,8 @@ const FY4B_QM_PRODUCT = "FY4B_QM"
 const FY4B_QM_RH_PRODUCT = "FY4B_QM_RH"
 # The time folds the gate's cut is cross-fitted over (`TimeBlockFolds.time_block_folds`).
 const FY4B_QM_RH_TIME_FOLD_SEED = 20261107
+# The time folds a crossed FY4B_QM is fitted over: the gate's, so both hold out the same weeks.
+const FY4B_QM_CROSSED_TIME_FOLD_SEED = FY4B_QM_RH_TIME_FOLD_SEED
 
 """The rebuild writes each hour's satellite longitude and software beside the offset grid."""
 _fy4b_hour_meta_path(cfg) = joinpath(dirname(something(cfg.fy4b_qm_grid)), "fy4b_hour_meta.csv")
@@ -253,6 +255,13 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # gauges support (`SatelliteCalibration.QM_STRENGTHS`), down to the shifted series alone.
     # Changes `FY4B_QM_PRODUCT`'s rows only. Output directory suffix `_fy4bqmadapt`.
     fy4b_qm_adaptive::Bool = false
+    # Fit each fold's `FY4B_QM_PRODUCT` out of time as well: the hours of each 7-day time fold
+    # (`TimeBlockFolds.time_block_folds`, balanced within season x regime) take the shift, map and
+    # strength fitted on the fold's training stations at the other time folds' hours alone, a day
+    # either side left out (`SatelliteCalibration.calibrate_crossed`). With `fy4b_qm_fusion`, the
+    # fusion then fits gauge-hours that never shaped the correction at that hour. Changes
+    # `FY4B_QM_PRODUCT`'s rows only. Output directory suffix `_qmcrossed`.
+    fy4b_qm_crossed::Bool = false
     # Feed each fold's `FY4B_QM_PRODUCT` anchor, in place of the plain FY4B, to the fused anchors
     # and the blend's non-constant bands. Changes those products' rows and every blend row by
     # design; the products' own raw and unblended rows stay put. Output directory suffix `_qmfusion`.
@@ -507,6 +516,8 @@ function _validate_benchmark_config(cfg::InterpolationBenchmarkConfig, n_station
     end
     (cfg.fy4b_qm_adaptive || cfg.fy4b_qm_fusion) && cfg.fy4b_qm_grid === nothing &&
         throw(ArgumentError("fy4b_qm_adaptive and fy4b_qm_fusion need fy4b_qm_grid"))
+    cfg.fy4b_qm_crossed && cfg.fy4b_qm_grid === nothing && throw(ArgumentError(
+        "fy4b_qm_crossed fits $FY4B_QM_PRODUCT out of time, which needs fy4b_qm_grid"))
     if cfg.fy4b_qm_fusion
         # The grouped variants and the stack build their designs and bands once from the sources,
         # so they cannot take a source that changes with the fold.
