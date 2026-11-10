@@ -549,6 +549,22 @@ column = "r"
 fmt = "2f"
 where = { event_day = "2022-06-26", product = ["FY4B", "GPM_uncal", "GSMaP"] }
 
+# Draft Table S1 (supplementary material): every FY4B fix tried on the benchmark's gauges and hours,
+# in words only, with no result number; `n` counts them for §3.4's sentence. The source is kept by
+# hand (step `fy4b_tries`), so no run records its provenance; the export's SHA-256 still pins it.
+[[table]]
+name = "fy4b_tries"
+label = "Draft Table S1 and §3.4 text: every FY4B fix tried, in the order tried"
+step = "fy4b_tries"
+source = "paper/fy4b_tries.csv"
+provenance = []
+keys = ["date", "fix", "test", "rule_first", "outcome"]
+[table.values]
+n = ["try", "0f"]
+[table.stats.n]
+stat = "count"
+fmt = "0f"
+
 # How each output above is made: the dependency graph `scripts/make_paper.jl` walks. Every entry
 # names its `step`. A step's `command` runs from the repository root ("julia" is the running Julia,
 # "python" the interpreter make_paper.jl resolves). An analysis or figure step is reused while its
@@ -594,6 +610,15 @@ note = """no tracked script downloads them (NSMC's FengYun data service). FY-4B 
 type), full disk, 4 km, every 15 min, July 2023 only, on the external drive at /Volumes/T9/CLT and \
 linked as data/FY4B_CLT. Kept out of data/FY4B, where the QPE reader would take each file for a \
 duplicate of its QPE quarter."""
+
+[[step]]
+id = "fy4b_tries"
+kind = "data"
+command = []
+outputs = ["paper/fy4b_tries.csv"]
+note = """kept by hand, not by a script, and tracked in paper/ (the one CSV .gitignore lets through): \
+the paper's words-only version of Projects_Pending_Handover/fy4b_tries.md, which holds each try's \
+numbers and commits. Add a row to both when a FY4B fix is tried."""
 
 [[step]]
 id = "prep_study_area"

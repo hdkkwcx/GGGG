@@ -1,0 +1,16 @@
+try,date,fix,test,rule_first,outcome
+1,2026-10-30/31,"Rebuild choices: a fixed-height parallax shift, and the mean over 3 × 3 pixels in place of the centre pixel","Raw scores in June 2022 (shift); two full runs (window)",No,"3 × 3 mean kept; the parallax shift dropped, as it scored worse"
+2,2026-10-31,"A pixel shift per regime and a quantile map per season and regime, fitted on the training gauges",Full run,No,"Raw error fell; after MGWR and the blend the change was not significant"
+3,2026-10-31,"The map applied month by month, only as strongly as the training gauges support",Full run,No,"Kept: this is corrected FY4B (§2.5)"
+4,2026-11-01,"Two-stage counting tables: the chance of rain and its amount for each class of FY4B's intensity and context",Screen on held-out FY4B,No,"Stopped: r rose, but no hour reached 8 mm h⁻¹"
+5,2026-11-01,"Blend weights keyed on corrected FY4B: its wet call, its month, the cells no product calls wet, bands on FY4B alone",Screen on out-of-fold values,Yes,No key cleared the rule
+6,2026-11-01,"Blending the cells no product calls wet, toward ADW or toward the anchor",Full run,Yes,Neither variant cleared the rule
+7,2026-11-01,A whole-hour time shift,Screen,Yes,"No gain: the best shift was zero"
+8,2026-11-01,Corrected FY4B added to the merge and the agreement bands,Two existing runs,Yes,"Confounded by different hours and seeds, and no blend cleared the rule even so"
+9,2026-11-02,A filter from FY4B's own cloud-type product,One-month pilot (July 2023),Yes,Failed (§3.4)
+10,2026-11-06,"Corrected FY4B in against out of the merge and the agreement bands, on the same hours and seeds",Full run,Yes,Kept out
+11,2026-11-06/08,A near-surface humidity gate (ERA5-Land) on corrected FY4B,"Screen, then a full run",Yes,"Passed the screen; its gain did not survive MGWR and the blend"
+12,2026-11-07,"The infrared channels of FY4B's imager, to tell false rain from real",Six scans,Yes,"Stopped: false rain looked as rain-like as real rain"
+13,2026-11-09,Corrected FY4B in place of plain FY4B in the merge and the agreement bands,Two existing runs,Yes,No blend cleared the rule
+14,2026-11-09,"The same, with the correction fitted out of time: each week on the other weeks' gauges",Full run,Yes (no worse),"Failed: fewer heavy-rain hours in two blends"
+15,2026-11-09/10,"FY4B kept only where GPM or GSMaP also reports rain: no gauges, nothing fitted",Full run,Yes (stricter),"Failed: the merge's raw gain was gone after MGWR"

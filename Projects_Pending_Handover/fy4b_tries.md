@@ -14,6 +14,10 @@ listed separately, below the table, and are not counted.
 
 Details are in `fy4b_quality_handover.md`, under the section named in the last column.
 
+**In the paper:** Draft Table S1 (`paper_plan.typ`, supplementary material) reads `paper/fy4b_tries.csv`,
+the words-only version of this table; its step and table in `paper/sources.toml` are both `fy4b_tries`.
+When a try is added, add it in both places and re-export with `scripts/export_paper_numbers.py`.
+
 | # | Date | Try | Judged on | Rule fixed first | Verdict | Record |
 |---|---|---|---|---|---|---|
 | 1 | 2026-10-30/31 | Rebuild choices: a fixed-height parallax shift (10 km tops), and a 3×3 mean against the centre pixel | Parallax: June 2022 raw r. Window: two full runs (w3, w1) | No | Parallax worse (r 0.351 → 0.343), dropped. The 3×3 mean kept (raw −0.7%, blend −0.1%) | §0c, §0b; `37e27d7`, `14d70d4` |

@@ -1,0 +1,129 @@
+{
+ "source": "paper/fy4b_tries.csv",
+ "source_sha256": "8cbca80361acafca25fbf5a73cdde7fda296ba6cc833918c38f28ce950eb9dcb",
+ "rows": [
+  {
+   "date": "2026-10-30/31",
+   "fix": "Rebuild choices: a fixed-height parallax shift, and the mean over 3 × 3 pixels in place of the centre pixel",
+   "test": "Raw scores in June 2022 (shift); two full runs (window)",
+   "rule_first": "No",
+   "outcome": "3 × 3 mean kept; the parallax shift dropped, as it scored worse",
+   "n": "1"
+  },
+  {
+   "date": "2026-10-31",
+   "fix": "A pixel shift per regime and a quantile map per season and regime, fitted on the training gauges",
+   "test": "Full run",
+   "rule_first": "No",
+   "outcome": "Raw error fell; after MGWR and the blend the change was not significant",
+   "n": "2"
+  },
+  {
+   "date": "2026-10-31",
+   "fix": "The map applied month by month, only as strongly as the training gauges support",
+   "test": "Full run",
+   "rule_first": "No",
+   "outcome": "Kept: this is corrected FY4B (§2.5)",
+   "n": "3"
+  },
+  {
+   "date": "2026-11-01",
+   "fix": "Two-stage counting tables: the chance of rain and its amount for each class of FY4B's intensity and context",
+   "test": "Screen on held-out FY4B",
+   "rule_first": "No",
+   "outcome": "Stopped: r rose, but no hour reached 8 mm h⁻¹",
+   "n": "4"
+  },
+  {
+   "date": "2026-11-01",
+   "fix": "Blend weights keyed on corrected FY4B: its wet call, its month, the cells no product calls wet, bands on FY4B alone",
+   "test": "Screen on out-of-fold values",
+   "rule_first": "Yes",
+   "outcome": "No key cleared the rule",
+   "n": "5"
+  },
+  {
+   "date": "2026-11-01",
+   "fix": "Blending the cells no product calls wet, toward ADW or toward the anchor",
+   "test": "Full run",
+   "rule_first": "Yes",
+   "outcome": "Neither variant cleared the rule",
+   "n": "6"
+  },
+  {
+   "date": "2026-11-01",
+   "fix": "A whole-hour time shift",
+   "test": "Screen",
+   "rule_first": "Yes",
+   "outcome": "No gain: the best shift was zero",
+   "n": "7"
+  },
+  {
+   "date": "2026-11-01",
+   "fix": "Corrected FY4B added to the merge and the agreement bands",
+   "test": "Two existing runs",
+   "rule_first": "Yes",
+   "outcome": "Confounded by different hours and seeds, and no blend cleared the rule even so",
+   "n": "8"
+  },
+  {
+   "date": "2026-11-02",
+   "fix": "A filter from FY4B's own cloud-type product",
+   "test": "One-month pilot (July 2023)",
+   "rule_first": "Yes",
+   "outcome": "Failed (§3.4)",
+   "n": "9"
+  },
+  {
+   "date": "2026-11-06",
+   "fix": "Corrected FY4B in against out of the merge and the agreement bands, on the same hours and seeds",
+   "test": "Full run",
+   "rule_first": "Yes",
+   "outcome": "Kept out",
+   "n": "10"
+  },
+  {
+   "date": "2026-11-06/08",
+   "fix": "A near-surface humidity gate (ERA5-Land) on corrected FY4B",
+   "test": "Screen, then a full run",
+   "rule_first": "Yes",
+   "outcome": "Passed the screen; its gain did not survive MGWR and the blend",
+   "n": "11"
+  },
+  {
+   "date": "2026-11-07",
+   "fix": "The infrared channels of FY4B's imager, to tell false rain from real",
+   "test": "Six scans",
+   "rule_first": "Yes",
+   "outcome": "Stopped: false rain looked as rain-like as real rain",
+   "n": "12"
+  },
+  {
+   "date": "2026-11-09",
+   "fix": "Corrected FY4B in place of plain FY4B in the merge and the agreement bands",
+   "test": "Two existing runs",
+   "rule_first": "Yes",
+   "outcome": "No blend cleared the rule",
+   "n": "13"
+  },
+  {
+   "date": "2026-11-09",
+   "fix": "The same, with the correction fitted out of time: each week on the other weeks' gauges",
+   "test": "Full run",
+   "rule_first": "Yes (no worse)",
+   "outcome": "Failed: fewer heavy-rain hours in two blends",
+   "n": "14"
+  },
+  {
+   "date": "2026-11-09/10",
+   "fix": "FY4B kept only where GPM or GSMaP also reports rain: no gauges, nothing fitted",
+   "test": "Full run",
+   "rule_first": "Yes (stricter)",
+   "outcome": "Failed: the merge's raw gain was gone after MGWR",
+   "n": "15"
+  }
+ ],
+ "stats": {
+  "n": "15"
+ }
+}
