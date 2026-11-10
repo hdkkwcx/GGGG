@@ -11,7 +11,7 @@ gauges, balanced spatial folds:
 | product | hourly r |
 |---|---|
 | FY4B (rebuilt, 3×3 mean) | 0.223 |
-| FY4B_QM (per-fold shift + quantile map) | 0.237 |
+| FY4B_QM (per-fold shift + quantile map, monthly strength) | 0.246 (0.220 with weeks held out too) |
 | GSMaP | 0.379 |
 | IMERG Uncal | 0.436 |
 
@@ -28,6 +28,14 @@ decision; `FY4B_QM` stays the FY4B quality step. See the handover's §0.**
     +0.032 of the +0.043 in r. The context adds +0.011, mainly by sorting light rain (CSI at
     0.1 mm/h 0.122 → 0.181).
   - The occurrence rule with the QM amounts changes nothing.
+  - **These numbers held out gauges, not weeks.** Rerun with weeks held out as well (2026-11-10,
+    `screen_fy4b_two_stage.jl --crossed`, as FY4B_QM's 11-07 check), the r gain does not survive:
+    - TS_E against FY4B_QM goes from +0.043 to +0.022 (−0.013..+0.056);
+    - against plain FY4B it is +0.019 (−0.019..+0.056);
+    - TS_E's own r falls 0.290 → 0.243.
+    - The RMSE gain stays (−26.5% against plain FY4B), but it is shrinkage toward a conditional mean, with heavy
+      rain still lost (CSI_8 0).
+    - The context adds +0.009, still small.
 - **Not built:**
   - the 15-minute quarters, the product-quality features, hour of day and elevation;
   - a benchmark run, to score MGWR and the blend downstream.

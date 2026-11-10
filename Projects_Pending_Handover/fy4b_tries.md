@@ -54,7 +54,9 @@ When a try is added, add it in both places and re-export with `scripts/export_pa
 - the 2023 software update;
 - the error budget;
 - the time-held-out check of FY4B_QM;
-- the week-block recheck of the paper's intervals.
+- the week-block recheck of the paper's intervals;
+- try 4's screen rerun with weeks held out (2026-11-10, `screen_fy4b_two_stage.jl --crossed`): TS_E's r gain
+  over FY4B_QM goes from +0.043 to +0.022 (−0.013..+0.056), so try 4's verdict, stop, stands.
 
 **Closed (2026-11-10).** Try 15 was agreed with the user as the last, and it fails, so the line of FY4B fixes
 for the fusion ends here. Plain FY4B stays in the merges and the bands.
