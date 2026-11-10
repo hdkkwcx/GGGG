@@ -74,6 +74,41 @@ so nothing of it was reused.)
 
 No gain is promised: FY4B's own information, an infrared-based estimate, sets the ceiling.
 
+## FY4B: confirmed FY4B in the merges only (exploratory)
+
+**Status (2026-11-09): not built.** The user parked it as an exploratory approach while try 15 ran.
+Try 15 put confirmed FY4B in the merges *and* the agreement bands (`--fy4b-confirm-fusion`; register
+in `Projects_Pending_Handover/fy4b_tries.md`).
+
+**Update (2026-11-10): try 15 failed, so this stays parked unless asked.** This variant would share try
+15's merged anchor. That anchor's raw gain (MERGED_MEAN −0.97%) is gone after MGWR (+0.17%,
+−0.04..+0.39), before any band is involved, so this variant is unlikely to clear the bar. It would keep
+FY4B's own agreement blend whole, though: try 15 cost that blend 2.3%.
+
+**What it is.** Confirmed FY4B is FY4B kept only where GPM_uncal or GSMaP also calls the cell wet, and 0
+where FY4B is wet alone (`SatelliteFusion.confirmed_by_others`). Here it would go into MERGED_MEAN and
+MERGED_OLS only. The agreement bands would keep plain FY4B.
+
+**Why it might be worth a run.**
+- **A cleaner test.** With the bands unchanged, the GPM_uncal, GSMaP, FY4B and FY4B_QM agreement blends
+  are identical by construction, so they become guards. Only the merged rows can move.
+- **FY4B's own Table 3 row stays safe.** In try 15's bands, the cells where FY4B is wet alone go to band
+  0, so FY4B's and FY4B_QM's own agreement blends no longer blend them.
+- **It isolates the anchor.** It tests the merged anchor's gain without the bands' share of it.
+
+**How it would be built.**
+- A scope option on the same flag, so that the bands keep the plain sources while the fused anchors
+  take the confirmed one. `_fusion_source_matrices` in `InterpolationBenchmarkRun.jl` is where the two
+  part.
+- A `compare_fy4b_fusion_same_hours.jl` mode with those guards.
+
+**How to judge it.**
+- It would be try 16, so the primary's interval is 1 − 0.05/16, under try 15's rule otherwise.
+- It is not independent of try 15: it uses the same series, and its merged anchors are the same. So
+  report it as a follow-up of try 15, never as a fresh test.
+- Run it only if try 15's result leaves a reason to: for example, the merges gain but FY4B's own blend
+  pays for it.
+
 ## Later
 
 - **Paper write-up of the FY4B work:**

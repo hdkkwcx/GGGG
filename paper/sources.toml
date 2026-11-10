@@ -687,8 +687,9 @@ note = "restores the published copy; scripts/clip_dem.R made it from a nationwid
 [[step]]
 id = "rq1_events"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, which this step does not use.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, which this step does not use.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/run_heavy_rain_event_evaluation.jl",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06"]
 marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206/provenance.csv"
@@ -698,8 +699,9 @@ note = "events selected on the hours the gauges, FY4B, GPM and GSMaP share, from
 [[step]]
 id = "rq1_cores"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, which this step does not use.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, which this step does not use.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/run_heavy_core_diagnostics.jl",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06"]
 marker = "output/heavy_core_diagnostics_fy4bw3h0_gpmuncal_from202206/provenance.csv"
@@ -711,8 +713,9 @@ note = "over each event's RQ1 window; the native IMERG Uncal grid summed over th
 [[step]]
 id = "rq1_fy4b"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, which this step does not use.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, which this step does not use.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/run_heavy_rain_event_fy4b.jl",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06"]
 marker = "output/heavy_rain_events_fy4bw3h0_gpmuncal_from202206_fy4bqm/provenance.csv"
@@ -721,8 +724,9 @@ needs = ["rq1_events", "benchmark", "prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "rq2"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, which this step does not use.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, which this step does not use.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/run_satellite_temporal_evaluation.jl", "--with-fy4b",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--from", "2022-06", "--block-days", "7"]
 marker = "output/satellite_temporal_evaluation_fy4bw3h0_gpmuncal_from202206_block7d/provenance.csv"
@@ -739,8 +743,11 @@ kind = "analysis"
 # options and two option helpers in TimeBlockFolds, none of which the benchmark calls. Reviewed
 # again at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed (SatelliteCalibration
 # .calibrate_crossed), which this run does not use. Without it, a smoke run reproduces the earlier
-# code's FY4B_QM, FY4B, GPM_uncal and GSMaP fields byte for byte.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# code's FY4B_QM, FY4B, GPM_uncal and GSMaP fields byte for byte. Reviewed again at b044b3f: that
+# diff adds the opt-in --fy4b-confirm-fusion (SatelliteFusion.confirmed_by_others, read through
+# _fusion_source_matrices), which this run does not use. Without it, a paper-config smoke run
+# reproduces the earlier code's run in every file but the git rows of benchmark_scope.csv.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
            "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
            "--fused-anchor", "--with-fy4b", "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv",
@@ -752,8 +759,9 @@ note = "about 2 h with 4 threads; plain FY4B in the merges and agreement bands, 
 [[step]]
 id = "claims"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, which this step does not use.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, which this step does not use.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/run_claim_reassessment.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--matched-products", "--block-days", "7"]
@@ -763,8 +771,9 @@ needs = ["benchmark", "prep_study_area", "prep_gpm_uncal"]
 [[step]]
 id = "fusion"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, which this step does not use.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, which this step does not use.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
            "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv", "--matched-products", "--block-days", "7"]
@@ -776,9 +785,9 @@ needs = ["claims"]
 [[step]]
 id = "fy4b_rebuild"
 kind = "analysis"
-# Reviewed at 2e9d832: since 079ed3f only the opt-in --fy4b-qm-crossed was added, which the
-# rebuild does not call.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f only the opt-ins --fy4b-qm-crossed and --fy4b-confirm-fusion
+# were added, which the rebuild does not call.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/prepare_fy4b_rebuild.jl"]
 marker = "output/fy4b_rebuild_2022_2024/provenance.csv"
 needs = ["raw_fy4b", "prep_study_area"]
@@ -786,9 +795,10 @@ needs = ["raw_fy4b", "prep_study_area"]
 [[step]]
 id = "fy4b_quality_week"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, and lets compare_fy4b_quality.jl
-# read a `_qmcrossed` run. This step's run is not one, so its configuration is unchanged.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, and let compare_fy4b_quality.jl read a `_qmcrossed` run. This step's run
+# uses neither, so its configuration is unchanged.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/compare_fy4b_quality.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
            "--matched-products", "--block-days", "7"]
@@ -798,9 +808,9 @@ needs = ["benchmark"]
 [[step]]
 id = "fy4b_time_holdout"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed and leaves calibrate_fold, which
-# this check calls, unchanged.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, and leave calibrate_fold, which this check calls, unchanged.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/check_fy4b_qm_time_holdout.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
            "--matched-products"]
@@ -811,8 +821,9 @@ note = "refits FY4B_QM per gauge fold and per gauge fold x 7-day time fold (Time
 [[step]]
 id = "fy4b_clt"
 kind = "analysis"
-# Reviewed at 2e9d832: that diff adds the opt-in --fy4b-qm-crossed, which this step does not use.
-reviewed = "2e9d832f3ae4fd64cc478057d0d0825a60f7f453"
+# Reviewed at b044b3f: since 079ed3f the diffs add the opt-ins --fy4b-qm-crossed and
+# --fy4b-confirm-fusion, which this step does not use.
+reviewed = "b044b3fc32c8aa50ec14b9f46ed247a479619f4d"
 command = ["julia", "--project=.", "scripts/screen_fy4b_clt.jl",
            "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal",
            "--matched-products"]

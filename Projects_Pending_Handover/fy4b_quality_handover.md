@@ -1,6 +1,6 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-09 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-10 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
@@ -21,13 +21,137 @@ plain FY4B in the merges and bands clears the rule for no agreement blend, so pl
 why (Previous, merged as `49ebe75` and pushed). FY4B_QM fitted out of time was then put in place of plain FY4B in
 the merges and bands: each week is fitted on the other weeks' gauges, so no gauge-hour is used both to correct
 FY4B and to fuse it. It is never worse on RMSE, but it fails the user's no-worse rule on heavy rain, so plain FY4B
-still stays (Newest, branch `fy4b/qm-crossed-fusion`, not merged) · **Next step:** the user's call: merge
-`fy4b/qm-crossed-fusion`, and whether §3.4 cites the time-held-out MGWR and blend figures. Quote RQ3 and §3.4
-numbers only from the `_matched` report folders, as the paper does
+still stays (Previous, merged as `b3b0a9f`). The last try, agreed as the last: confirmed FY4B (kept only where
+GPM_uncal or GSMaP is also wet) in place of plain FY4B in the merges and bands. It was judged by a stricter rule fixed
+before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Newest, branch
+`fy4b/confirmed-fusion`, not merged) · **Next step:** the user's call: merge `fy4b/confirmed-fusion`, and whether
+the paper lists the tries. Quote RQ3 and §3.4 numbers only from the `_matched` report folders, as the paper does
 
 ---
 
-## Newest (2026-11-09): FY4B_QM fitted out of time, in the merges and the bands
+## Newest (2026-11-10): the last try, confirmed FY4B in the merges and the bands: keep plain FY4B
+
+The user asked once more for a way to improve FY4B so that it could join the three-product merges and the
+agreement bands. A side agent noted that about 14 fixes had been judged on the same gauges and hours, so a late pass
+may be luck. The user then called this "the last time".
+
+**The try (user's choice, of four offered).** Confirmed FY4B, `--fy4b-confirm-fusion`
+(`SatelliteFusion.confirmed_by_others`):
+- FY4B is kept where GPM_uncal or GSMaP calls the cell wet (≥ 0.1 mm/h), and set to 0 where FY4B is wet alone.
+- It replaces plain FY4B in the merges and the agreement bands. It reads no gauge and fits nothing.
+- It was aimed at the two earlier failures. A gauge-fitted map dries heavy rain, and it reuses gauge-hours.
+  Neither applies here: MERGED_MEAN cannot lose an hour ≥ 8 mm/h, and no gauge is read.
+- Offered and parked: the same series in the merges only, now `ROADMAP.md`'s exploratory entry, try 16. Not
+  recommended: calibration to IMERG Uncal, and the crossed map with its top end kept.
+
+**Rule (user's choice, fixed in `b044b3f` before the run).** Stricter, for a late try. Balanced spatial, 7-day
+blocks:
+1. **Primary:** MERGED_MEAN's agreement blend −0.3% or better, with the upper end of its 1 − 0.05/15 = 99.67%
+   interval below 0.
+2. **No worse:** the four agreement blends pass try 14's checks.
+3. **Replication:** MERGED_MEAN's agreement blend lower in each of R1–R3, and not significantly worse in the random
+   split. That check was "lower in random" until a side agent noted the random split never moved more than 0.12%;
+   the user changed it before the run.
+
+**Register.** Every try is now in `Projects_Pending_Handover/fy4b_tries.md`, as the side agent asked.
+
+### Code and checks (branch `fy4b/confirmed-fusion`, not merged)
+
+- `e0b208f`: the option.
+  - `_fusion_source_matrices` is the one place the merges, the bands and the stack read their sources.
+  - Tests: the mask, the bands changing only where FY4B is wet alone, the mean never moving at ≥ 8 mm/h, and an
+    end-to-end block on a GPM dry in a pattern of cells.
+- `b044b3f`: `compare_fy4b_fusion_same_hours.jl --confirmed`, the register, and the ROADMAP entry.
+  - The 99.67% interval reuses `compare_days`' draws: the same seed, 20,000 reps. `DayBlockBootstrap` is unchanged.
+- `15db848`: review bump on the 11 flagged steps.
+  - Without the option, a paper-config smoke run reproduces the earlier smoke run in every file but the git rows of
+    `benchmark_scope.csv`.
+- `Pkg.test()` passes. The smoke comparison's guards pass.
+
+### Run
+
+Clean at `15db848`, `-t 4`, 3 h 53 min, 11 GB:
+```sh
+julia -t 4 --project=. scripts/run_interpolation_benchmark.jl full --nested-covariates \
+  --satellite-wet-blend --blend-axis agreement_envelope --fused-anchor --with-fy4b \
+  --fy4b-file output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv --fy4b-qm --fy4b-qm-adaptive \
+  --fy4b-confirm-fusion
+```
+- **On the T9:** `/Volumes/T9/GGGG_output/<run>`, linked as `output/<run>`.
+- **Logs:** `output/full_benchmark_fy4bw3h0_fy4bqm_fy4bqmadapt_fy4bconfirm.log` and
+  `output/compare_fy4b_confirmed_fusion.log`.
+- **Comparison:** `output/fy4b_confirmed_fusion_comparison/`, holding `paired.csv`, `periods.csv`,
+  `confirmed_raw.csv`, `ols_weights.csv`, `fold_status.csv`, `selection.csv` and `provenance.csv`.
+- **Guards passed:**
+  - the same 237 stations, 20,087 hours and folds as the paper run;
+  - every raw, adw, mgwr and blend_mgwr field of GPM_uncal, GSMaP, FY4B and FY4B_QM identical;
+  - the controls (MERGED adw) unchanged;
+  - covariate selection the same in all 5 folds of both merges in both schemes;
+  - the same fold-4 `partial` statuses in both runs.
+- **One difference:** MERGED_MEAN's evaluation mask is 0.45% smaller in the candidate (4,456,166 cells against
+  4,476,295, balanced). Fold 4's partial joint methods cover slightly fewer cells on the new anchor. Every row is
+  scored on the shared cells.
+
+### Result: keep plain FY4B
+
+Agreement blends, balanced spatial, confirmed FY4B in the fusion against plain FY4B in it. The intervals are 95%,
+with the 99.67% interval in brackets:
+
+| Blend | ΔRMSE | ΔCSI_8 | Δ\|FBI_8 − 1\| | Rule |
+|---|---|---|---|---|
+| GPM_uncal | −0.02% (−0.07..+0.04) | +0.0001 | −0.001 | no worse |
+| GSMaP | +0.14% (+0.08..+0.22) | −0.0005 (−0.0009..−0.0002) | −0.006 | fails: CSI_8 lower |
+| MERGED_MEAN | −0.04% (−0.16..+0.08) [−0.22..+0.14] | −0.0007 | +0.005 (+0.001..+0.010) | fails the primary and \|FBI_8 − 1\| |
+| MERGED_OLS | −0.05% (−0.09..−0.01) | +0.0003 | −0.005 | no worse |
+
+- **Replication also fails.** MERGED_MEAN's agreement blend by period is R1 +0.05%, R2 −0.11%, R3 −0.03%. In the
+  random split it is significantly worse, +0.09% (+0.02..+0.15).
+- **The verdict line:** "keep plain FY4B: MERGED_MEAN gains −0.04%, not −0.3% or more; MERGED_MEAN's 99.67% interval
+  reaches +0.14%; GSMaP worse (CSI_8 lower); MERGED_MEAN worse (|FBI_8 − 1| worse); MERGED_MEAN not lower in R1
+  (+0.05%); MERGED_MEAN significantly worse in the random split (+0.09%, +0.02..+0.15)".
+- **The usual must-improve rule:** no agreement blend meets it.
+
+**Information, in no verdict:**
+- **Confirmed FY4B on its own is a better product.** Raw, balanced:
+  - it sets 36.2% of FY4B's wet cells to 0;
+  - RMSE −5.1% (−7.6..−3.1);
+  - FAR_0.1 0.711 → 0.566, POD_0.1 0.312 → 0.298, CSI_0.1 0.176 → 0.215;
+  - FBI_8 1.99 → 1.74.
+- **The merge gains before correction and loses it after.**
+  - MERGED_MEAN raw −0.97% (−1.50..−0.54), with bias +0.015 → +0.005 mm/h;
+  - its MGWR +0.17% (−0.04..+0.39), and its `blend_mgwr` −0.06%.
+  - MERGED_OLS's FY4B weight goes 0.022 → 0.026, and the merge moves by under 0.1% at every stage.
+- **FY4B's own agreement blends get worse, as expected:** FY4B +2.34% (+1.47..+3.40), FY4B_QM +1.17% (+0.69..+1.80).
+  Their solo-wet cells go to band 0 and are no longer blended.
+- **Random split:** every agreement blend is within ±0.1%.
+
+### How to read it
+
+- **The confirmation works as a product and does nothing in the fusion.** The raw merge gains about 1%. MGWR's
+  residual surface then removes the same solo false rain from MERGED_MEAN, and the blend's bands were already
+  weighting cells by how many products are wet. So the fusion was already doing this confirmation, implicitly.
+- **It is the pattern of every earlier try.** What a fix removes from FY4B, the gauge correction and the other two
+  products already remove in the fusion.
+  - FY4B's own raw gain reached 17% (FY4B_QM), and the merged anchor's 1–5%.
+  - What reached the merged agreement blends was at most 0.45% (MERGED_MEAN in tries 10, 13 and 14), and it never
+    cleared a rule.
+- **Moving the solo cells to band 0 costs blending.** It costs FY4B's own blend 2.3% and GSMaP's 0.14%.
+- **Heavy rain still moved, though not at raw.** The raw merge's hours of 8 mm/h or more are untouched, as designed:
+  Δ|FBI_8 − 1| is 0 there. MERGED_MEAN's agreement blend still worsens it (+0.005). The change comes in after the
+  anchor, through MGWR and the re-chosen band weights.
+- **This was agreed as the last try,** so the line of FY4B-in-the-fusion tries closes here, and plain FY4B stays in
+  the merges and bands. The register holds all 15 tries.
+
+**The user's call:**
+- Merge `fy4b/confirmed-fusion` as the record. The option and the comparison stay in the code, as the earlier
+  tries' did.
+- Whether the paper states the number of tries, for example as a supplementary table from `fy4b_tries.md`.
+- Whether §3.4 says that a gauge-free confirmation was also tried. Citing it needs a `[[step]]` and a `[[table]]`
+  in `paper/sources.toml`.
+
+---
+
+## Previous (2026-11-09): FY4B_QM fitted out of time, in the merges and the bands
 
 The user asked whether FY4B could be improved some other way, so that an improved series could replace plain FY4B
 in the merges and the agreement bands. A side agent noted that under the usual rule a fix that only ties would

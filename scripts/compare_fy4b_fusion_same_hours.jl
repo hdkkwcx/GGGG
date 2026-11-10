@@ -76,13 +76,48 @@
 # - |bias| grows by at most `BIAS_TOLERANCE` mm/h.
 # `crossed_verdict` needs that of all four agreement blends. `meets_rule` is still reported. Writes
 # output/fy4b_qm_crossed_fusion_comparison/ (`_smoke`), with the same files.
+#
+# `--confirmed` compares the last FY4B try: confirmed FY4B in the fusion (candidate) against the
+# paper run, plain FY4B in it (baseline). Same product list, hours and seeds:
+#     julia --project=. scripts/compare_fy4b_fusion_same_hours.jl --confirmed          # full runs
+#     julia --project=. scripts/compare_fy4b_fusion_same_hours.jl smoke --confirmed    # smoke runs
+# - the candidate is the paper's `benchmark` step plus --fy4b-confirm-fusion. The merges and the
+#   agreement bands take FY4B only where GPM_uncal or GSMaP also calls the cell wet, and 0 where
+#   FY4B is wet alone (`SatelliteFusion.confirmed_by_others`). It reads no gauge and fits nothing;
+# - the baseline is the paper's `benchmark` step itself.
+# Roles are the default pair's: neither FY4B's nor FY4B_QM's own fields change, so their `raw`,
+# `adw`, `mgwr` and `blend_mgwr` are guards beside GPM_uncal's and GSMaP's, and their agreement
+# blends are `information`. Intervals resample whole 7-day blocks, with `CONFIRMED_REPS` draws.
+#
+# Its rule was chosen by the user and fixed before the full run. About 14 FY4B fixes had already been
+# judged on these gauges and hours (`Projects_Pending_Handover/fy4b_tries.md`), so a late pass may be
+# luck. The bar is therefore stricter: the usual 5% is shared over `N_TRIES` tries. On
+# balanced_spatial, confirmed FY4B replaces plain FY4B in the merges and the bands only if all of
+# these hold:
+# 1. primary: MERGED_MEAN's agreement blend improves RMSE by `MIN_REL_GAIN` or more, and the upper
+#    end of its `STRICT_LEVEL` interval is below 0. FY4B carries a third of MERGED_MEAN's weight;
+# 2. no worse: each of the four agreement blends (GPM_uncal, GSMaP, MERGED_MEAN, MERGED_OLS) passes
+#    `--crossed`'s checks (`failed_checks`, 95% intervals);
+# 3. replication: MERGED_MEAN's agreement blend has a lower RMSE in each of FY4B's periods (R1, R2,
+#    R3 in time order, one per regime of `fy4b_hour_meta.csv`; point estimates). In the random split
+#    it is not significantly worse: the lower end of its 95% interval is at or below 0. (The user
+#    changed this from "lower in random" before the run. A side agent had noted that the random split
+#    never moved more than 0.12% in the four earlier tests, so a sign check there is close to a coin
+#    toss.)
+# A control (MERGED adw) moving RMSE by `MIN_REL_GAIN` or more makes the verdict `confounded`.
+# Writes output/fy4b_confirmed_fusion_comparison/ (`_smoke`): the same files, with `rel_RMSE_lo_strict`
+# and `rel_RMSE_hi_strict` in paired.csv. It also writes these, information only:
+# - periods.csv: every treatment's RMSE per period;
+# - confirmed_raw.csv: confirmed against plain FY4B as raw fields, with the share of FY4B's wet
+#   cells that confirmation sets to 0;
+# - ols_weights.csv: MERGED_OLS's mean coefficients in both runs.
 
 include(joinpath(@__DIR__, "run_interpolation_benchmark.jl"))
 load_standalone_modules("RunProvenance", "TableIO", "DayBlockBootstrap", "TimeBlockFolds")
 
-using CSV, Printf, Statistics
+using CSV, Printf, Random, Statistics
 using Main.DayBlockBootstrap: read_wide_values, read_wide_mask, day_groups, group_sums,
-    compare_days
+    compare_days, sum_stats
 using Main.RunProvenance: start_provenance, finish_provenance!
 using Main.TableIO: write_csv_atomic
 using Main.TimeBlockFolds: block_times
@@ -104,6 +139,17 @@ const JOINT_METHODS = ["residual_gwr", "mixed_gwr", "mgwr"]
 const CROSSED_BLOCK_DAYS = 7
 """`--crossed`'s rule: how much worse RMSE may be at the upper end of its interval."""
 const NONINFERIORITY_MARGIN = 0.003
+"""
+`--confirmed`: the FY4B fixes judged on these gauges and hours, this one included. They are listed
+in `Projects_Pending_Handover/fy4b_tries.md`.
+"""
+const N_TRIES = 15
+"""`--confirmed`'s level for its primary check: the usual 5% shared over `N_TRIES` tries."""
+const STRICT_LEVEL = 1 - 0.05 / N_TRIES
+"""`--confirmed`'s bootstrap draws, enough for `STRICT_LEVEL`'s tails (about 33 draws in each)."""
+const CONFIRMED_REPS = 20_000
+"""`--confirmed`'s primary product: FY4B carries a third of its weight."""
+const CONFIRMED_PRIMARY = "MERGED_MEAN"
 
 """
 Where the fusion reaches `method`'s field for `product`: see the header. Under `--crossed` every
@@ -152,6 +198,109 @@ function crossed_verdict(rows)
 end
 
 """
+`compare_days`' RMSE interval at `level` instead of 95%. It uses the same seed, draws and
+resampling, so it widens the interval `compare_days` reports rather than drawing a new one.
+"""
+function strict_rmse_interval(candidate, baseline, thresholds; level, reps, seed)
+    keep = findall(>(0), candidate[:, 1])
+    baseline_rmse = sum_stats(vec(sum(baseline; dims=1)), thresholds).RMSE
+    rng = MersenneTwister(seed)
+    draws = Vector{Float64}(undef, reps)
+    for rep in 1:reps
+        sampled = rand(rng, keep, length(keep))
+        draws[rep] = sum_stats(vec(sum(view(candidate, sampled, :); dims=1)), thresholds).RMSE -
+            sum_stats(vec(sum(view(baseline, sampled, :); dims=1)), thresholds).RMSE
+    end
+    tail = (1 - level) / 2
+    return (; rel_RMSE_lo_strict=quantile(draws, tail) / baseline_rmse,
+        rel_RMSE_hi_strict=quantile(draws, 1 - tail) / baseline_rmse)
+end
+
+"""
+FY4B's periods in time order, R1 first, and each cell's period as a stations × hours matrix. There is
+one period per regime of the rebuild's `fy4b_hour_meta.csv` (`product_regimes`), whose labels sort
+by name, not by time.
+"""
+function period_groups(meta_path, times, n_station)
+    labels, regime_of_time = product_regimes(meta_path, times)
+    order = sortperm([minimum(times[regime_of_time .== regime]) for regime in eachindex(labels)])
+    period_of_time = invperm(order)[regime_of_time]
+    return labels[order], repeat(permutedims(period_of_time), n_station)
+end
+
+"""
+The checks of `--confirmed`'s rule that fail, by name; empty means confirmed FY4B passes. `periods`
+holds the treatments' RMSE per period, and `rows` the paired rows of both schemes.
+"""
+function confirmed_failures(rows, periods)
+    balanced = filter(row -> row.scheme == "balanced_spatial", rows)
+    blends = filter(row -> row.candidate == AGREEMENT && row.role == "treatment", balanced)
+    sort([row.product for row in blends]) == sort(vcat(SINGLE, MERGED)) ||
+        error("expected one agreement blend for each of $(vcat(SINGLE, MERGED))")
+    primary = only(filter(row -> row.product == CONFIRMED_PRIMARY, blends))
+    failures = String[]
+    primary.rel_RMSE <= -MIN_REL_GAIN || push!(failures, @sprintf(
+        "%s gains %+.2f%%, not %.1f%% or more", CONFIRMED_PRIMARY, 100 * primary.rel_RMSE,
+        -100 * MIN_REL_GAIN))
+    primary.rel_RMSE_hi_strict < 0 || push!(failures, @sprintf(
+        "%s's %.2f%% interval reaches %+.2f%%", CONFIRMED_PRIMARY, 100 * STRICT_LEVEL,
+        100 * primary.rel_RMSE_hi_strict))
+    for row in blends
+        failed = failed_checks(row)
+        isempty(failed) || push!(failures, "$(row.product) worse ($(join(failed, ", ")))")
+    end
+    primary_periods = filter(row -> row.scheme == "balanced_spatial" &&
+        row.product == CONFIRMED_PRIMARY && row.method == AGREEMENT, periods)
+    isempty(primary_periods) && error("no period rows for $CONFIRMED_PRIMARY's agreement blend")
+    for row in eachrow(primary_periods)
+        row.rel_RMSE < 0 || push!(failures, @sprintf(
+            "%s not lower in %s (%+.2f%%)", CONFIRMED_PRIMARY, row.period, 100 * row.rel_RMSE))
+    end
+    # A run without the random split (the smoke runs) cannot pass: the check is named as missing.
+    random = filter(row -> row.scheme == "random" && row.product == CONFIRMED_PRIMARY &&
+        row.candidate == AGREEMENT, rows)
+    length(random) <= 1 || error("more than one random-split row for $CONFIRMED_PRIMARY's agreement blend")
+    if isempty(random)
+        push!(failures, "no random split in these runs to check $CONFIRMED_PRIMARY in")
+    elseif only(random).rel_RMSE_lo > 0
+        push!(failures, @sprintf(
+            "%s significantly worse in the random split (%+.2f%%, %+.2f..%+.2f)", CONFIRMED_PRIMARY,
+            100 * only(random).rel_RMSE, 100 * only(random).rel_RMSE_lo,
+            100 * only(random).rel_RMSE_hi))
+    end
+    return failures
+end
+
+"""
+`--confirmed`'s verdict, chosen by the user and fixed before its full run (see the header):
+- `confounded` if a control moves RMSE by `MIN_REL_GAIN` or more either way on balanced_spatial;
+- `use confirmed FY4B in the merges and bands` if `confirmed_failures` is empty;
+- `keep plain FY4B` otherwise, naming each check that fails.
+"""
+function confirmed_verdict(rows, periods)
+    any(row -> row.scheme == "balanced_spatial" && row.role == "control" &&
+        abs(row.rel_RMSE) >= MIN_REL_GAIN, rows) && return "confounded"
+    failures = confirmed_failures(rows, periods)
+    isempty(failures) && return "use confirmed FY4B in the merges and bands"
+    return "keep plain FY4B: " * join(failures, "; ")
+end
+
+"""MERGED_OLS's mean coefficients per scheme in each run (`fused_anchor_selection.csv`)."""
+function ols_weights(dirs)
+    rows = NamedTuple[]
+    for run in keys(dirs)
+        table = CSV.read(joinpath(dirs[run], "fused_anchor_selection.csv"), DataFrame)
+        terms = filter(name -> name == "intercept" || startswith(name, "beta_"), names(table))
+        for scheme in sort(unique(table.scheme))
+            ols = filter(row -> row.scheme == scheme && row.variant == "ols", table)
+            push!(rows, merge((; run=String(run), scheme, n_fold=nrow(ols)),
+                (; (Symbol(term) => mean(ols[!, term]) for term in terms)...)))
+        end
+    end
+    return DataFrame(rows)
+end
+
+"""
 Fixed before the full out-of-fusion run. Judged on balanced_spatial, over the agreement blends of
 GPM_uncal, GSMaP, MERGED_MEAN and MERGED_OLS:
 - `confounded` if a control moves RMSE by `MIN_REL_GAIN` or more either way;
@@ -175,16 +324,18 @@ end
 """
 The candidate run's configuration, the baseline's, and a copy of the former's `MGERConfig` that
 writes to `outdir`: loading the data writes `global_common_time_qc.csv`, which must not land in
-either run. The candidate is the qmfusion run and the baseline the out-of-fusion run, or, under
-`crossed`, the crossed qmfusion run and the paper run.
+either run. The candidate is the qmfusion run and the baseline the out-of-fusion run. Under
+`crossed`, they are the crossed qmfusion run and the paper run. Under `confirmed`, they are the
+confirmed-FY4B run and the paper run.
 """
-function run_configs(mode, outdir; crossed::Bool=false)
+function run_configs(mode, outdir; crossed::Bool=false, confirmed::Bool=false)
     common = (; nested_covariates=true, satellite_wet_blend=true, fused_anchor=true, gpm_uncal=true,
         blend_axes=[:constant, :agreement_envelope], fy4b=true, fy4b_file=FY4B_FILE, fy4b_qm=true,
         fy4b_qm_adaptive=true)
     with = crossed ? benchmark_config(mode; common..., fy4b_qm_crossed=true, fy4b_qm_fusion=true) :
+        confirmed ? benchmark_config(mode; common..., fy4b_confirm_fusion=true) :
         benchmark_config(mode; common..., fy4b_qm_fusion=true)
-    without = crossed ? benchmark_config(mode; common...) :
+    without = crossed || confirmed ? benchmark_config(mode; common...) :
         benchmark_config(mode; common..., fy4b_out_of_fusion=true)
     fields = fieldnames(MGERConfig)
     mger = MGERConfig(; merge(
@@ -225,13 +376,16 @@ end
 
 function compare_main(args=ARGS)
     crossed = "--crossed" in args
+    confirmed = "--confirmed" in args
+    crossed && confirmed && error("--crossed and --confirmed compare different pairs: give one")
     positional = filter(!startswith("--"), args)
     mode = isempty(positional) ? :full : Symbol(only(positional))
     outdir = joinpath(ROOT, "output",
-        (crossed ? "fy4b_qm_crossed_fusion_comparison" : "fy4b_same_hours_comparison") *
+        (crossed ? "fy4b_qm_crossed_fusion_comparison" :
+            confirmed ? "fy4b_confirmed_fusion_comparison" : "fy4b_same_hours_comparison") *
         (mode == :full ? "" : "_$mode"))
     mkpath(outdir)
-    with, without, mger = run_configs(mode, outdir; crossed)
+    with, without, mger = run_configs(mode, outdir; crossed, confirmed)
     dirs = (; with=with.mger.outdir, without=without.mger.outdir)
     println("Candidate: $(relpath(dirs.with, ROOT))\nBaseline:  $(relpath(dirs.without, ROOT))")
     for dir in dirs
@@ -247,6 +401,9 @@ function compare_main(args=ARGS)
         [joinpath(dirs[run], scheme, "split_common.csv") for run in keys(dirs) for scheme in schemes],
         [path(run, s, p, file) for run in keys(dirs) for s in schemes for p in products
             for file in vcat(["oof_$m.csv" for m in METHODS], "common_evaluation_mask.csv")])
+    confirmed && append!(inputs,
+        [joinpath(dirs[run], "fused_anchor_selection.csv") for run in keys(dirs)],
+        [_fy4b_hour_meta_path(with)])
     provenance = start_provenance(ROOT, outdir; inputs)
 
     println("Checking that the two runs line up:")
@@ -262,10 +419,18 @@ function compare_main(args=ARGS)
     end
     println("  split_common.csv equal for ", join(schemes, " and "))
 
-    # `--crossed` resamples whole 7-day blocks: `block_times` maps each hour to its block's start.
-    day_group, n_day = day_groups(
-        crossed ? block_times(times; block_days=CROSSED_BLOCK_DAYS) : times, length(ids))
+    # `--crossed` and `--confirmed` resample whole 7-day blocks: `block_times` maps each hour to its
+    # block's start.
+    day_group, n_day = day_groups(crossed || confirmed ?
+        block_times(times; block_days=CROSSED_BLOCK_DAYS) : times, length(ids))
     day_sums(x, mask) = group_sums(x, y, mask, day_group, n_day, THRESHOLDS)
+    reps = confirmed ? CONFIRMED_REPS : BOOTSTRAP_REPS
+    # `--confirmed`'s periods, and what it keeps from the loop below for confirmed_raw.csv.
+    period_labels, period_group = confirmed ?
+        period_groups(_fy4b_hour_meta_path(with), times, length(ids)) : (String[], nothing)
+    period_rows = NamedTuple[]
+    raw_fields = Dict{Tuple{String,String},Matrix{Float64}}()
+    fy4b_shared = Dict{String,BitMatrix}()
     rows = NamedTuple[]
     for scheme in schemes, product in products
         mask(run) = read_wide_mask(path(run, scheme, product, "common_evaluation_mask.csv"), ids, times)
@@ -289,32 +454,82 @@ function compare_main(args=ARGS)
         end
         @printf("  %-16s %-11s shared %d cells (candidate mask %d, baseline mask %d)\n", scheme,
             product, count(shared), count(mask_with), count(mask_without))
+        if confirmed && product in ("FY4B", "GPM_uncal", "GSMaP")
+            raw_fields[(scheme, product)] = series["raw"].with
+            product == "FY4B" && (fy4b_shared[scheme] = shared)
+        end
         for method in METHODS
             role = field_role(product, method; crossed)
+            candidate_sums = day_sums(series[method].with, shared)
+            baseline_sums = day_sums(series[method].without, shared)
             row = merge((; scheme, product, candidate=method, baseline=method, role),
-                compare_days(day_sums(series[method].with, shared),
-                    day_sums(series[method].without, shared), THRESHOLDS;
-                    ci_stats=CI_STATS, reps=BOOTSTRAP_REPS, seed=BOOTSTRAP_SEED))
+                compare_days(candidate_sums, baseline_sums, THRESHOLDS;
+                    ci_stats=CI_STATS, reps, seed=BOOTSTRAP_SEED))
             meets_rule = scheme == "balanced_spatial" && role == "treatment" &&
                 row.rel_RMSE <= -MIN_REL_GAIN && row.rel_RMSE_hi < 0 &&
                 row.delta_CSI_8_hi >= 0 && row.delta_FBI_8_dev_lo <= 0 &&
                 row.delta_abs_bias <= BIAS_TOLERANCE
-            # `--crossed`'s rule, in its own column so the default pair's paired.csv stays as it was.
-            push!(rows, crossed ? merge(row, (; meets_rule, no_worse=scheme == "balanced_spatial" &&
-                role == "treatment" && isempty(failed_checks(row)))) : merge(row, (; meets_rule)))
+            no_worse = scheme == "balanced_spatial" && role == "treatment" &&
+                isempty(failed_checks(row))
+            # `--crossed`'s and `--confirmed`'s rules, in their own columns so the default pair's
+            # paired.csv stays as it was.
+            if confirmed
+                push!(rows, merge(row, strict_rmse_interval(candidate_sums, baseline_sums,
+                    THRESHOLDS; level=STRICT_LEVEL, reps, seed=BOOTSTRAP_SEED),
+                    (; meets_rule, no_worse)))
+                role == "treatment" || continue
+                by_period(x) = group_sums(x, y, shared, period_group, length(period_labels),
+                    THRESHOLDS)
+                with_periods, without_periods = by_period(series[method].with),
+                    by_period(series[method].without)
+                for (index, label) in enumerate(period_labels)
+                    c = sum_stats(with_periods[index, :], THRESHOLDS)
+                    b = sum_stats(without_periods[index, :], THRESHOLDS)
+                    push!(period_rows, (; scheme, product, method, period="R$index",
+                        regime=label, n=Int(c.n), candidate_RMSE=c.RMSE, baseline_RMSE=b.RMSE,
+                        rel_RMSE=(c.RMSE - b.RMSE) / b.RMSE))
+                end
+            else
+                push!(rows, crossed ? merge(row, (; meets_rule, no_worse)) :
+                    merge(row, (; meets_rule)))
+            end
         end
     end
     println("  guards: every field the fusion never reaches is identical in both runs")
+
+    # Information: what confirmation does to FY4B on its own, rebuilt from the raw fields exactly as
+    # the run confirms it, and scored on FY4B's shared cells.
+    confirmed_raw = NamedTuple[]
+    for scheme in (confirmed ? schemes : String[])
+        plain = raw_fields[(scheme, "FY4B")]
+        others = [raw_fields[(scheme, "GPM_uncal")], raw_fields[(scheme, "GSMaP")]]
+        confirmed_fy4b = confirmed_by_others(plain, others, with.mger.rain_threshold)
+        shared = fy4b_shared[scheme]
+        wet = shared .& (plain .>= with.mger.rain_threshold)
+        push!(confirmed_raw, merge(
+            (; scheme, fy4b_wet_cells=count(wet),
+                zeroed_wet_share=count(wet .& (confirmed_fy4b .== 0)) / count(wet)),
+            compare_days(day_sums(confirmed_fy4b, shared), day_sums(plain, shared), THRESHOLDS;
+                ci_stats=CI_STATS, reps, seed=BOOTSTRAP_SEED)))
+    end
+    periods = DataFrame(period_rows)
 
     statuses = fold_status(dirs)
     selection = fold_selection(dirs)
     write_csv_atomic(joinpath(outdir, "paired.csv"), DataFrame(rows))
     write_csv_atomic(joinpath(outdir, "fold_status.csv"), statuses)
     write_csv_atomic(joinpath(outdir, "selection.csv"), selection)
+    if confirmed
+        write_csv_atomic(joinpath(outdir, "periods.csv"), periods)
+        write_csv_atomic(joinpath(outdir, "confirmed_raw.csv"), DataFrame(confirmed_raw))
+        write_csv_atomic(joinpath(outdir, "ols_weights.csv"), ols_weights(dirs))
+    end
     CSV.write(joinpath(outdir, "provenance.csv"), finish_provenance!(provenance, ROOT))
 
     println(crossed ?
         "\nCrossed FY4B_QM in the fusion vs plain FY4B in it (the paper run), same field, shared cells (95% 7-day-block interval):" :
+        confirmed ?
+        "\nConfirmed FY4B in the fusion vs plain FY4B in it (the paper run), same field, shared cells (95% 7-day-block interval; $(round(100 * STRICT_LEVEL; digits=2))% RMSE interval in brackets):" :
         "\nWith FY4B_QM in the fusion vs out of it, same field, shared cells (95% day-block interval):")
     for row in rows
         @printf("%-17s %-11s %-18s %-11s RMSE %.4f vs %.4f  %+.2f%% (%+.2f..%+.2f)  bias %+.4f vs %+.4f  CSI8 %+.4f (%+.4f..%+.4f)  |FBI8-1| %+.3f (%+.3f..%+.3f)  rule=%s",
@@ -323,7 +538,9 @@ function compare_main(args=ARGS)
             row.candidate_bias, row.baseline_bias, row.delta_CSI_8, row.delta_CSI_8_lo,
             row.delta_CSI_8_hi, row.delta_FBI_8_dev, row.delta_FBI_8_dev_lo,
             row.delta_FBI_8_dev_hi, row.meets_rule)
-        println(crossed ? "  no_worse=$(row.no_worse)" : "")
+        println(crossed ? "  no_worse=$(row.no_worse)" :
+            confirmed ? @sprintf("  [%+.2f..%+.2f]  no_worse=%s", 100 * row.rel_RMSE_lo_strict,
+                100 * row.rel_RMSE_hi_strict, row.no_worse) : "")
     end
     println("\nJoint-method folds that did not succeed (mgwr; fold_status.csv has the rest):")
     for row in eachrow(statuses)
@@ -346,6 +563,30 @@ function compare_main(args=ARGS)
             isempty(passing) ? "no agreement blend meets it" : "met by " * join(passing, ", "))
         println("Verdict (balanced_spatial, no-worse rule fixed before the run): ",
             crossed_verdict(rows))
+    elseif confirmed
+        println("\nAgreement blends per FY4B period, candidate vs baseline RMSE (periods.csv has every treatment):")
+        for row in eachrow(periods)
+            row.method == AGREEMENT && @printf("  %-17s %-11s %s %-15s n %8d  %.4f vs %.4f  %+.2f%%\n",
+                row.scheme, row.product, row.period, row.regime, row.n, row.candidate_RMSE,
+                row.baseline_RMSE, 100 * row.rel_RMSE)
+        end
+        println("\nConfirmed vs plain FY4B as raw fields, FY4B's shared cells (information):")
+        for row in confirmed_raw
+            @printf("  %-17s zeroes %.1f%% of FY4B's %d wet cells; RMSE %.4f vs %.4f %+.2f%% (%+.2f..%+.2f); CSI0.1 %.3f vs %.3f; POD0.1 %.3f vs %.3f; FAR0.1 %.3f vs %.3f; FBI8 %.3f vs %.3f\n",
+                row.scheme, 100 * row.zeroed_wet_share, row.fy4b_wet_cells, row.candidate_RMSE,
+                row.baseline_RMSE, 100 * row.rel_RMSE, 100 * row.rel_RMSE_lo, 100 * row.rel_RMSE_hi,
+                row.var"candidate_CSI_0.1", row.var"baseline_CSI_0.1", row.var"candidate_POD_0.1",
+                row.var"baseline_POD_0.1", row.var"candidate_FAR_0.1", row.var"baseline_FAR_0.1",
+                row.candidate_FBI_8, row.baseline_FBI_8)
+        end
+        println("\nMERGED_OLS mean coefficients (ols_weights.csv):")
+        show(stdout, ols_weights(dirs); allrows=true, allcols=true, summary=false, eltypes=false)
+        passing = [row.product for row in rows if row.meets_rule && row.candidate == AGREEMENT]
+        println("\n\nUsual must-improve rule (information only): ",
+            isempty(passing) ? "no agreement blend meets it" : "met by " * join(passing, ", "))
+        println("Verdict (balanced_spatial, the stricter rule fixed before the run; ",
+            "$(round(100 * STRICT_LEVEL; digits=2))% for the primary, $N_TRIES tries): ",
+            confirmed_verdict(rows, periods))
     else
         println("\nVerdict (balanced_spatial, fixed before the run): ", verdict(rows))
     end

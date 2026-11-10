@@ -32,7 +32,7 @@ using Dates: Hour
 using LinearAlgebra
 
 export FUSION_VARIANTS, fit_satellite_fusion, apply_satellite_fusion
-export equal_weight_coefficients, fusion_coefficients
+export equal_weight_coefficients, fusion_coefficients, confirmed_by_others
 export GROUPED_FUSION_VARIANTS, fusion_features, fit_grouped_fusion, apply_grouped_fusion
 
 """The fusion variants a caller may ask for. See the module docstring for why both exist."""
@@ -175,6 +175,49 @@ function apply_satellite_fusion(
             total += coefficients[position + 1] * value
         end
         usable && (out[index] = max(total, 0.0))
+    end
+    return out
+end
+
+"""
+`target` where at least one of `others` calls the cell wet (`>= threshold`), and 0 everywhere else.
+
+Gauge-free, and it fits nothing. It exists for FY4B, whose rain is a lookup from one infrared
+channel: where FY4B is wet and neither IMERG nor GSMaP is, the gauge is mostly dry (P(gauge wet)
+0.07 in the 2026-11-06 error budget, against 0.40 where only IMERG is wet). So this keeps FY4B's
+amount wherever a product with microwave input also sees rain, and drops the rain it reports alone.
+
+What it changes downstream, when it stands in for the target among a fusion's sources:
+- the agreement bands (`blend_band_matrix`) only at cells where the target is the only wet source,
+  and those go to band 0: elsewhere the wet count and the envelope's `max` are as they were;
+- the equal-weight merge only at those same cells. With FY4B's 20 mm/h cap, the mean of three
+  products there is below 7 mm/h whether FY4B is kept or not, so no merged hour of 8 mm/h or more
+  changes.
+
+A NaN target stays NaN, so no evaluation mask moves. A NaN other counts as not wet, as in
+`blend_band_matrix`.
+"""
+function confirmed_by_others(
+    target::AbstractMatrix{Float64}, others::Vector{<:AbstractMatrix{Float64}}, threshold::Real,
+)
+    isempty(others) && throw(ArgumentError("confirming a product needs at least one other product"))
+    for other in others
+        size(other) == size(target) || throw(DimensionMismatch(
+            "every other product must have the target's shape",
+        ))
+    end
+    out = Matrix{Float64}(target)
+    @inbounds for index in eachindex(out)
+        isnan(out[index]) && continue
+        confirmed = false
+        for other in others
+            value = other[index]
+            if !isnan(value) && value >= threshold
+                confirmed = true
+                break
+            end
+        end
+        confirmed || (out[index] = 0.0)
     end
     return out
 end

@@ -168,6 +168,12 @@ using Main.BenchmarkDiagnostics
   gauges and 7-day time folds. Appended last and kept out of the fusion, so no other row moves. It
   needs the joint covariates' ERA5, which the end-to-end test cannot load, so
   `scripts/compare_fy4b_humidity_gate.jl` checks that against the paper run cell by cell instead.
+- `--fy4b-confirm-fusion` (`_fy4bconfirm`, with `--with-fy4b`) feeds the fused anchors and the
+  agreement bands a FY4B kept only where GPM or GSMaP also calls the cell wet, and 0 where FY4B is
+  wet alone (`SatelliteFusion.confirmed_by_others`). It reads no gauge and fits nothing, so only
+  `MERGED_*` and the agreement blends move. `scripts/compare_fy4b_fusion_same_hours.jl --confirmed`
+  judges it against the paper run by the last FY4B try's stricter rule. Every FY4B try is listed in
+  `Projects_Pending_Handover/fy4b_tries.md`.
 - By default the CLI scores uncalibrated IMERG (`GPM_uncal`, output suffix `_gpmuncal`).
   `--gpm-cal` scores calibrated `GPM` instead. `benchmark_config`'s `gpm_uncal` keyword still
   defaults to `false`, so the verify scripts reproduce the calibrated baselines.

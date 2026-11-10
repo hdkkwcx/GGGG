@@ -36,9 +36,16 @@ function benchmark_config(
     fused_anchor_lagnbr::Bool=false, stacked_blend::Bool=false, gpm_uncal::Bool=false,
     fy4b::Bool=true, fy4b_file::Union{Nothing,String}=nothing, fy4b_qm::Bool=false,
     fy4b_qm_adaptive::Bool=false, fy4b_qm_fusion::Bool=false, fy4b_out_of_fusion::Bool=false,
-    fy4b_qm_rh_gate::Bool=false, fy4b_qm_crossed::Bool=false,
+    fy4b_qm_rh_gate::Bool=false, fy4b_qm_crossed::Bool=false, fy4b_confirm_fusion::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
+    fy4b_confirm_fusion && !fy4b && throw(ArgumentError(
+        "--fy4b-confirm-fusion needs --with-fy4b: it changes the FY4B the fusion reads",
+    ))
+    fy4b_confirm_fusion && (fy4b_qm_fusion || fy4b_out_of_fusion) && throw(ArgumentError(
+        "--fy4b-confirm-fusion contradicts --fy4b-qm-fusion and --fy4b-out-of-fusion: each sets " *
+        "what the fusion reads of FY4B",
+    ))
     fy4b_qm_crossed && !fy4b_qm && throw(ArgumentError(
         "--fy4b-qm-crossed fits FY4B_QM out of time, which needs --fy4b-qm",
     ))
@@ -118,6 +125,7 @@ function benchmark_config(
             (fy4b_qm_crossed ? "_qmcrossed" : "") *
             (fy4b_qm_fusion ? "_qmfusion" : "") *
             (fy4b_out_of_fusion ? "_fy4bnofusion" : "") *
+            (fy4b_confirm_fusion ? "_fy4bconfirm" : "") *
             (fy4b_qm_rh_gate ? "_qmrhgate" : "") *
             # Before `_gpmuncal`, which the report scripts detect with `endswith`.
             (fy4b ? "" : "_nofy4b") *
@@ -297,6 +305,7 @@ function benchmark_config(
         fy4b_qm_crossed=fy4b_qm_crossed,
         fy4b_qm_fusion=fy4b_qm_fusion,
         fy4b_out_of_fusion=fy4b_out_of_fusion,
+        fy4b_confirm_fusion=fy4b_confirm_fusion,
         fy4b_qm_rh_gate=fy4b_qm_rh_gate,
         # The joint path without nested selection reads a full-data spec, which the config
         # validator refuses unless the run admits it is exploratory. --no-nested-covariates is
@@ -506,6 +515,13 @@ function main(args=ARGS)
     # (`scripts/compare_fy4b_fusion_same_hours.jl`). Changes MERGED_*'s rows and the agreement
     # blends by design; no real product's raw or unblended row moves.
     fy4b_out_of_fusion = "--fy4b-out-of-fusion" in args
+    # With --with-fy4b: the fused anchors (MERGED_*) and the agreement-envelope bands take FY4B only
+    # where GPM or GSMaP also calls the cell wet, and 0 where FY4B is wet alone
+    # (`SatelliteFusion.confirmed_by_others`). It reads no gauge and fits nothing. The product list,
+    # hours and seeds stay those of the paper run, so `scripts/compare_fy4b_fusion_same_hours.jl
+    # --confirmed` compares the two in the fusion alone. Changes MERGED_*'s rows and the agreement
+    # blends by design; no real product's raw or unblended row moves.
+    fy4b_confirm_fusion = "--fy4b-confirm-fusion" in args
     # With --fy4b-qm: add FY4B_QM_RH, each fold's FY4B_QM set to 0 where ERA5-Land humidity at the
     # gauge is below a cut chosen on training stations and, per 7-day time fold, on the other
     # blocks (`HumidityGate`; values >= 8 mm/h are spared). It stays out of the fusion, so every
@@ -516,7 +532,8 @@ function main(args=ARGS)
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
         fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm,
-        fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion, fy4b_qm_rh_gate, fy4b_qm_crossed)
+        fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion, fy4b_qm_rh_gate, fy4b_qm_crossed,
+        fy4b_confirm_fusion)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -546,6 +563,7 @@ function main(args=ARGS)
         (fy4b_qm_crossed ? "fy4b_qm_crossed=true, " : "") *
         (fy4b_qm_fusion ? "fy4b_qm_fusion=true, " : "") *
         (fy4b_out_of_fusion ? "fy4b_out_of_fusion=true, " : "") *
+        (fy4b_confirm_fusion ? "fy4b_confirm_fusion=true, " : "") *
         (fy4b_qm_rh_gate ? "fy4b_qm_rh_gate=true, " : "") *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
