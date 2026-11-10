@@ -23,9 +23,9 @@ the merges and bands: each week is fitted on the other weeks' gauges, so no gaug
 FY4B and to fuse it. It is never worse on RMSE, but it fails the user's no-worse rule on heavy rain, so plain FY4B
 still stays (Previous, merged as `b3b0a9f`). The last try, agreed as the last: confirmed FY4B (kept only where
 GPM_uncal or GSMaP is also wet) in place of plain FY4B in the merges and bands. It was judged by a stricter rule fixed
-before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Newest, branch
-`fy4b/confirmed-fusion`, not merged) · **Next step:** the user's call: merge `fy4b/confirmed-fusion`, and whether
-the paper lists the tries. Quote RQ3 and §3.4 numbers only from the `_matched` report folders, as the paper does
+before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Newest, merged as
+`934d427` and pushed) · **Next step:** the user's call: whether the paper lists the tries. Quote RQ3 and §3.4
+numbers only from the `_matched` report folders, as the paper does
 
 ---
 
@@ -55,7 +55,7 @@ blocks:
 
 **Register.** Every try is now in `Projects_Pending_Handover/fy4b_tries.md`, as the side agent asked.
 
-### Code and checks (branch `fy4b/confirmed-fusion`, not merged)
+### Code and checks (branch `fy4b/confirmed-fusion`, merged as `934d427` and pushed)
 
 - `e0b208f`: the option.
   - `_fusion_source_matrices` is the one place the merges, the bands and the stack read their sources.
@@ -142,9 +142,12 @@ with the 99.67% interval in brackets:
 - **This was agreed as the last try,** so the line of FY4B-in-the-fusion tries closes here, and plain FY4B stays in
   the merges and bands. The register holds all 15 tries.
 
-**The user's call:**
-- Merge `fy4b/confirmed-fusion` as the record. The option and the comparison stay in the code, as the earlier
-  tries' did.
+**Merged (2026-11-10)** as `934d427` and pushed, at the user's request; the branch is deleted. The option and the
+comparison stay in the code, as the earlier tries' did.
+- The merge was first pushed as `cbafde1` under the previous merge's subject: a stale message file was reused.
+- With the user's OK, it was reworded and pushed with `--force-with-lease`. The tree and parents are unchanged.
+
+**Still the user's call:**
 - Whether the paper states the number of tries, for example as a supplementary table from `fy4b_tries.md`.
 - Whether §3.4 says that a gauge-free confirmation was also tried. Citing it needs a `[[step]]` and a `[[table]]`
   in `paper/sources.toml`.
@@ -171,7 +174,7 @@ evaluations".
 
 **Rule offered:** "no worse", or the usual "must improve". The user chose **no worse**, fixed before the run.
 
-### Code (branch `fy4b/qm-crossed-fusion`, not merged)
+### Code (branch `fy4b/qm-crossed-fusion`, merged as `b3b0a9f` and pushed)
 
 **`7368f66`: the option.**
 - `SatelliteCalibration.crossed_shift_sums` and `calibrate_crossed`. Each 7-day time fold's hours take the shift,
@@ -279,9 +282,10 @@ in only 55 of 150 fits. The direction holds (west and north in R1, east in R3), 
   plain FY4B stays in the fusion.
 - This fits §3.4's same-weeks sentence, and gives MGWR and the blend the time-held-out figures it lacked.
 
-**The user's call:**
-- Merge `fy4b/qm-crossed-fusion` as the record. The option and the comparison stay in the code, as the humidity
-  gate's did.
+**Merged (2026-11-09)** as `b3b0a9f` and pushed, at the user's request; the branch is deleted. The option and the
+comparison stay in the code, as the humidity gate's did.
+
+**Still the user's call:**
 - Whether §3.4 cites MGWR −2.9% and blend −0.4% with weeks held out, or this test as a further reason corrected
   FY4B stays out of the fusion. Either needs a `[[step]]` for the crossed run and a `[[table]]` in
   `paper/sources.toml`.
