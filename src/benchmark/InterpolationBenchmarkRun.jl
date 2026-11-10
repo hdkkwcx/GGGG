@@ -17,7 +17,7 @@ function _build_fused_products!(
 )
     isempty(cfg.fused_anchor_variants) && return String[], Dict{String,Any}()
     source_names = copy(products)
-    sources = [Matrix{Float64}(product_data[name].Y_sat) for name in source_names]
+    sources = _fusion_source_matrices(cfg, source_names, product_data)
     template = product_data[first(source_names)]
     derived = String[]
     specifications = Dict{String,Any}()
@@ -47,6 +47,21 @@ function _build_fused_products!(
         push!(derived, name)
     end
     return derived, specifications
+end
+
+"""
+What the fusion reads of the products `names`, as fresh copies in that order: each product's own
+`Y_sat`, except that under `fy4b_confirm_fusion` FY4B is `confirmed_by_others` the rest of `names`
+at the bands' wet threshold. That reads no gauge, so one matrix serves every fold and scheme, and
+the fused anchors, the blend bands and the stack's bands all see the same FY4B.
+"""
+function _fusion_source_matrices(cfg::InterpolationBenchmarkConfig, names, product_data)
+    sources = [Matrix{Float64}(product_data[name].Y_sat) for name in names]
+    cfg.fy4b_confirm_fusion || return sources
+    position = something(findfirst(==("FY4B"), names))
+    others = sources[setdiff(eachindex(sources), position)]
+    sources[position] = confirmed_by_others(sources[position], others, cfg.mger.rain_threshold)
+    return sources
 end
 
 """
@@ -139,7 +154,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     blend_bands = Dict{Symbol,Matrix{Int}}()
     band_sources = Matrix{Float64}[]
     if cfg.satellite_wet_blend
-        band_sources = [Matrix{Float64}(product_data[name].Y_sat) for name in fusion_products]
+        band_sources = _fusion_source_matrices(cfg, fusion_products, product_data)
         for axis in cfg.blend_axes
             axis === :constant && continue
             blend_bands[axis] = blend_band_matrix(
@@ -149,7 +164,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     end
     # The stack's agreement bands come from the same source products, so they too are built once.
     stack_agreement = if cfg.stacked_blend
-        stack_sources = [Matrix{Float64}(product_data[name].Y_sat) for name in fusion_products]
+        stack_sources = _fusion_source_matrices(cfg, fusion_products, product_data)
         blend_band_matrix(
             :agreement_envelope, first(stack_sources), stack_sources, cfg.mger.rain_threshold,
         )

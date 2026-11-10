@@ -1994,6 +1994,78 @@ end
             fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
         refuse_out()
 
+        # `fy4b_confirm_fusion`: the fused anchors and the agreement bands take FY4B only where GPM
+        # also calls the cell wet. This fixture's GPM is wet everywhere, so FY4B is never wet alone
+        # in it; these runs read a GPM that is dry in a pattern of cells instead. Against a plain
+        # run on the same files, every scored product's raw and unblended rows stay put, and
+        # MERGED_MEAN's anchor is the mean of GPM and the confirmed FY4B in every cell.
+        fy4b_values = max.(obs .+ 0.3 .+ 0.02 .* reshape(1:n_station, :, 1), 0.0)
+        gpm_patchy = [mod(station + 2 * time, 3) == 0 ? 0.0 :
+            max(obs[station, time] - 0.2 + 0.02 * station, 0.0)
+            for station in 1:n_station, time in eachindex(times)]
+        patchy_path = joinpath(temp_dir, "gpm_patchy.csv")
+        _write_benchmark_wide(patchy_path, times, ids, gpm_patchy)
+        patchy_paths = Dict("FY4B" => sat_paths["FY4B"], "GPM" => patchy_path)
+        patchy_cfg(outdir; confirm) = InterpolationBenchmarkConfig(
+            mger=MGERConfig(
+                station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=patchy_paths, outdir=outdir, kernels=[GAUSSIAN],
+                bw_adaptive=[8.0, 16.0], bw_fixed_km=[20.0, 100.0],
+                expected_common_time_count=length(times),
+            ),
+            k=3, seed=11, cv_schemes=[:balanced_spatial],
+            idw_powers=[2.0], neighbor_candidates=Union{Nothing,Int}[8],
+            tps_smooth_candidates=[0.01], min_tuning_coverage=0.8, bootstrap_reps=0,
+            tuning_geometry=:inner_spatial, fy4b_qm_grid=grid_path,
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS), satellite_wet_blend=true,
+            blend_axes=[:constant, :agreement_envelope], fy4b_confirm_fusion=confirm,
+        )
+        confirmed_fy4b = confirmed_by_others(fy4b_values, [gpm_patchy], 0.1)
+        @test any(confirmed_fy4b .!= fy4b_values)   # sentinel: some FY4B rain is unconfirmed
+        # The one place the fusion reads its sources: fresh copies, FY4B confirmed only when asked.
+        stub = Dict("FY4B" => (; Y_sat=fy4b_values), "GPM" => (; Y_sat=gpm_patchy))
+        plain_sources = _fusion_source_matrices(
+            patchy_cfg(temp_dir; confirm=false), ["FY4B", "GPM"], stub)
+        @test plain_sources == [fy4b_values, gpm_patchy] && plain_sources[1] !== fy4b_values
+        @test _fusion_source_matrices(patchy_cfg(temp_dir; confirm=true), ["FY4B", "GPM"], stub) ==
+            [confirmed_fy4b, gpm_patchy]
+        patchy_plain = run_interpolation_benchmark(
+            patchy_cfg(joinpath(temp_dir, "patchy_plain"); confirm=false))
+        outdir_confirm = joinpath(temp_dir, "patchy_confirmed")
+        confirmed_run = run_interpolation_benchmark(patchy_cfg(outdir_confirm; confirm=true))
+        @test Set(confirmed_run.metrics.product) == Set(patchy_plain.metrics.product)
+        confirm_lookup = Dict(rowkey(row) => (row.n, row.RMSE)
+            for row in eachrow(unfused_rows(confirmed_run)))
+        @test nrow(unfused_rows(patchy_plain)) == length(confirm_lookup) > 0
+        @test all(eachrow(unfused_rows(patchy_plain))) do row
+            haskey(confirm_lookup, rowkey(row)) &&
+                isequal(confirm_lookup[rowkey(row)], (row.n, row.RMSE))
+        end
+        expected_mean = apply_satellite_fusion([confirmed_fy4b, gpm_patchy],
+            equal_weight_coefficients(2))
+        stored_mean = CSV.read(
+            joinpath(outdir_confirm, "balanced_spatial", "merged_mean", "oof_raw.csv"), DataFrame)
+        @test all(stored_mean[time, Symbol(ids[station])] ≈ expected_mean[station, time]
+            for station in 1:n_station, time in eachindex(times))
+        @test merged_raw(confirmed_run) != merged_raw(patchy_plain)
+        @test "fy4b_confirm_fusion" in
+            CSV.read(joinpath(outdir_confirm, "benchmark_scope.csv"), DataFrame).key
+        # Refused without FY4B or another product to confirm it with, beside the other two FY4B
+        # fusion options, or with nothing to feed.
+        refuse_confirm(; mger=patchy_cfg(outdir_confirm; confirm=true).mger, kwargs...) =
+            @test_throws "fy4b_confirm_fusion" _validate_benchmark_config(
+                InterpolationBenchmarkConfig(; mger, fy4b_confirm_fusion=true, kwargs...), n_station)
+        refuse_confirm(fy4b_qm_grid=grid_path, fy4b_qm_fusion=true,
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
+        refuse_confirm(fy4b_out_of_fusion=true, fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
+        refuse_confirm(mger=MGERConfig(station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=Dict("GPM" => patchy_path), outdir=outdir_confirm),
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
+        refuse_confirm(mger=MGERConfig(station_meta_path=station_path, obs_hourly_wide_path=obs_path,
+                sat_paths=Dict("FY4B" => sat_paths["FY4B"]), outdir=outdir_confirm),
+            fused_anchor_variants=collect(Symbol, FUSION_VARIANTS))
+        refuse_confirm()
+
         # `fy4b_qm_rh_gate` gates FY4B_QM with the joint covariates' humidity, so it needs both. The
         # run itself needs ERA5 files, so its rows are checked against the paper run instead
         # (`scripts/compare_fy4b_humidity_gate.jl`).

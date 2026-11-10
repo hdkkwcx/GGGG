@@ -441,6 +441,14 @@ function _write_benchmark_outputs(
             "fusion, so the products with files keep that run's raw and unblended rows",
         ]))
     end
+    if cfg.fy4b_confirm_fusion
+        append!(scope, DataFrame(key=["fy4b_confirm_fusion"], value=[
+            "the fused anchors and the blend's non-constant bands take FY4B only where another " *
+            "product calls the cell wet (>= $(cfg.mger.rain_threshold) mm/h), and 0 where FY4B is " *
+            "wet alone; gauge-free and fitted on nothing, so the same in every fold. The products " *
+            "with files keep the raw and unblended rows of a run without this option",
+        ]))
+    end
     grouped = [v for v in sort(cfg.fused_anchor_variants) if v in GROUPED_FUSION_VARIANTS]
     if !isempty(grouped)
         append!(scope, DataFrame(

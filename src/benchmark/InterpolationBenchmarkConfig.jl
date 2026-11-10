@@ -271,6 +271,12 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # fusion, which makes the two runs differ in the fusion alone. Output directory suffix
     # `_fy4bnofusion`.
     fy4b_out_of_fusion::Bool = false
+    # Feed the fused anchors and the blend's non-constant bands a FY4B kept only where another
+    # product calls the cell wet, and 0 where FY4B is wet alone (`SatelliteFusion.confirmed_by_others`,
+    # at the bands' wet threshold). It reads no gauge and fits nothing, so one series serves every
+    # fold and scheme. FY4B and the other products are still scored as they are, so only the fused
+    # products' rows and the non-constant blends move. Output directory suffix `_fy4bconfirm`.
+    fy4b_confirm_fusion::Bool = false
     # Add `FY4B_QM_RH_PRODUCT`: each fold's FY4B_QM gated by near-surface humidity (`HumidityGate`,
     # the screen's gate "B8"). Kept out of the fusion: its blends use FY4B_QM's bands, and every
     # other product keeps its seed and rows. Needs `fy4b_qm_grid` and the joint covariates, whose
@@ -545,6 +551,20 @@ function _validate_benchmark_config(cfg::InterpolationBenchmarkConfig, n_station
             !(cfg.satellite_wet_blend && any(!=(:constant), cfg.blend_axes)) &&
             throw(ArgumentError("fy4b_out_of_fusion needs a fused anchor or a non-constant " *
                 "blend axis to leave FY4B out of"))
+    end
+    if cfg.fy4b_confirm_fusion
+        haskey(cfg.mger.sat_paths, "FY4B") || throw(ArgumentError(
+            "fy4b_confirm_fusion confirms FY4B's rain, but this run does not load FY4B"))
+        length(cfg.mger.sat_paths) >= 2 || throw(ArgumentError(
+            "fy4b_confirm_fusion needs another product to confirm FY4B's rain with"))
+        cfg.fy4b_qm_fusion && throw(ArgumentError(
+            "fy4b_confirm_fusion and fy4b_qm_fusion both replace FY4B in the fusion"))
+        cfg.fy4b_out_of_fusion && throw(ArgumentError(
+            "fy4b_confirm_fusion and fy4b_out_of_fusion contradict each other"))
+        isempty(cfg.fused_anchor_variants) &&
+            !(cfg.satellite_wet_blend && any(!=(:constant), cfg.blend_axes)) &&
+            throw(ArgumentError("fy4b_confirm_fusion needs a fused anchor or a non-constant " *
+                "blend axis to feed"))
     end
     # 0.0 is load-bearing twice over: it is the "do not blend" option, so a fold that cannot be
     # helped is not forced to blend anyway, and it is the reference `unblended_RMSE` that

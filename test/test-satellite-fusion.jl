@@ -291,6 +291,55 @@ end
     end
 end
 
+@testset "Confirmed by other products" begin
+    threshold = 0.1
+
+    @testset "keeps the target only where another product is wet" begin
+        target = [5.0 0.05 3.0 NaN 12.0 0.0 0.4]
+        gpm = [0.0 0.0 0.2 1.0 NaN 0.0 0.05]
+        gsmap = [0.05 0.0 0.0 0.0 0.0 0.3 0.1]
+        # Wet alone -> 0; dry alone -> 0; confirmed by GPM -> kept; a NaN target stays NaN; the
+        # only other that could confirm is NaN, which counts as not wet -> 0; a 0 confirmed stays
+        # 0; confirmed by a value exactly at the threshold -> kept.
+        confirmed = confirmed_by_others(target, [gpm, gsmap], threshold)
+        @test isequal(confirmed, [0.0 0.0 3.0 NaN 0.0 0.0 0.4])
+        @test isequal(target, [5.0 0.05 3.0 NaN 12.0 0.0 0.4])   # the input is not mutated
+        @test_throws ArgumentError confirmed_by_others(target, Matrix{Float64}[], threshold)
+        @test_throws DimensionMismatch confirmed_by_others(target, [zeros(2, 2)], threshold)
+    end
+
+    @testset "the bands and the mean move only where the target is wet alone" begin
+        n_station, n_time = 8, 40
+        wave(a, b, scale) = [mod(a * s + b * t, 9) < 4 ? 0.0 : scale * mod(a * s + b * t, 9) / 9
+                             for s in 1:n_station, t in 1:n_time]
+        target = wave(2, 3, 20.0)
+        others = [wave(1, 2, 9.0), wave(3, 1, 12.0)]
+        others[1][2, 5] = NaN
+        sources = vcat([target], others)
+        confirmed = vcat([confirmed_by_others(target, others, threshold)], others)
+        unconfirmed = [all(other -> isnan(other[index]) || other[index] < threshold, others)
+                       for index in CartesianIndices(target)]
+        alone = unconfirmed .& (target .>= threshold)
+        # Sentinels: the fixture has wet targets both alone and confirmed.
+        @test any(alone) && any(.!alone .& (target .>= threshold))
+
+        plain_band = blend_band_matrix(:agreement_envelope, target, sources, threshold)
+        confirmed_band = blend_band_matrix(:agreement_envelope, target, confirmed, threshold)
+        @test confirmed_band[.!alone] == plain_band[.!alone]
+        @test all(==(0), confirmed_band[alone]) && all(>(0), plain_band[alone])
+
+        # The equal-weight merge moves only where no other product is wet, and never at a merged
+        # value of 8 mm/h or more: there the target's share of the mean is too small to reach it.
+        equal = equal_weight_coefficients(3)
+        plain_mean = apply_satellite_fusion(sources, equal)
+        confirmed_mean = apply_satellite_fusion(confirmed, equal)
+        moved = .!isequal.(plain_mean, confirmed_mean)
+        @test any(moved) && all(unconfirmed[moved])
+        heavy = plain_mean .>= 8
+        @test any(heavy) && isequal(confirmed_mean[heavy], plain_mean[heavy])
+    end
+end
+
 @testset "Stacked blend" begin
     @testset "hour shifts respect grid gaps and skip NaN" begin
         times = [DateTime(2022, 6, 1, h) for h in (0, 1, 2, 5)]
