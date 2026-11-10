@@ -174,7 +174,7 @@ evaluations".
 
 **Rule offered:** "no worse", or the usual "must improve". The user chose **no worse**, fixed before the run.
 
-### Code (branch `fy4b/qm-crossed-fusion`, not merged)
+### Code (branch `fy4b/qm-crossed-fusion`, merged as `b3b0a9f` and pushed)
 
 **`7368f66`: the option.**
 - `SatelliteCalibration.crossed_shift_sums` and `calibrate_crossed`. Each 7-day time fold's hours take the shift,
@@ -282,9 +282,10 @@ in only 55 of 150 fits. The direction holds (west and north in R1, east in R3), 
   plain FY4B stays in the fusion.
 - This fits §3.4's same-weeks sentence, and gives MGWR and the blend the time-held-out figures it lacked.
 
-**The user's call:**
-- Merge `fy4b/qm-crossed-fusion` as the record. The option and the comparison stay in the code, as the humidity
-  gate's did.
+**Merged (2026-11-09)** as `b3b0a9f` and pushed, at the user's request; the branch is deleted. The option and the
+comparison stay in the code, as the humidity gate's did.
+
+**Still the user's call:**
 - Whether §3.4 cites MGWR −2.9% and blend −0.4% with weeks held out, or this test as a further reason corrected
   FY4B stays out of the fusion. Either needs a `[[step]]` for the crossed run and a `[[table]]` in
   `paper/sources.toml`.
