@@ -80,6 +80,11 @@ No gain is promised: FY4B's own information, an infrared-based estimate, sets th
 Try 15 put confirmed FY4B in the merges *and* the agreement bands (`--fy4b-confirm-fusion`; register
 in `Projects_Pending_Handover/fy4b_tries.md`).
 
+**Update (2026-11-10): try 15 failed, so this stays parked unless asked.** This variant would share try
+15's merged anchor. That anchor's raw gain (MERGED_MEAN −0.97%) is gone after MGWR (+0.17%,
+−0.04..+0.39), before any band is involved, so this variant is unlikely to clear the bar. It would keep
+FY4B's own agreement blend whole, though: try 15 cost that blend 2.3%.
+
 **What it is.** Confirmed FY4B is FY4B kept only where GPM_uncal or GSMaP also calls the cell wet, and 0
 where FY4B is wet alone (`SatelliteFusion.confirmed_by_others`). Here it would go into MERGED_MEAN and
 MERGED_OLS only. The agreement bands would keep plain FY4B.

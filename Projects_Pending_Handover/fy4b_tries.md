@@ -30,7 +30,7 @@ Details are in `fy4b_quality_handover.md`, under the section named in the last c
 | 12 | 2026-11-07 | AGRI L1 channels (BT10.8, WV − IR, split window) to tell false rain from real | Six scans, read inline | Yes (the reading) | Stop, a weak "no" from a small pilot | "a first look at two AGRI L1 scans"; nothing committed |
 | 13 | 2026-11-09 | FY4B_QM in place of plain FY4B in the merges and bands | Scratch comparison: qmfusion run against the paper run | Yes (the script's rule) | No agreement blend clears. MERGED_MEAN −0.42%, but CSI_8 and \|FBI_8 − 1\| worse | "why FY4B_QM stays out of the merges and the bands"; scratch in `output/fy4b_qm_vs_plain_in_fusion_scratch/` |
 | 14 | 2026-11-09 | FY4B_QM fitted out of time, in place of plain FY4B (`--fy4b-qm-crossed --fy4b-qm-fusion`) | New full run against the paper run | Yes ("no worse") | Fails \|FBI_8 − 1\| on GPM_uncal and MERGED_MEAN; keep plain FY4B | "FY4B_QM fitted out of time"; `7368f66`, `2e9d832` |
-| 15 | 2026-11-09 | **Confirmed FY4B** in place of plain FY4B in the merges and bands: FY4B kept only where GPM_uncal or GSMaP also calls the cell wet (`--fy4b-confirm-fusion`). Gauge-free, fits nothing | New full run against the paper run | Yes, stricter (below) | Pending | branch `fy4b/confirmed-fusion` |
+| 15 | 2026-11-09 | **Confirmed FY4B** in place of plain FY4B in the merges and bands: FY4B kept only where GPM_uncal or GSMaP also calls the cell wet (`--fy4b-confirm-fusion`). Gauge-free, fits nothing | New full run against the paper run | Yes, stricter (below) | Fails. MERGED_MEAN blend −0.04% (99.67%: −0.22..+0.14); GSMaP's CSI_8 and MERGED_MEAN's \|FBI_8 − 1\| worse; R1 +0.05%; random +0.09% (sig). Keep plain FY4B. Its raw series is better on its own (RMSE −5.1%, FAR 0.71 → 0.57), and the raw merge gains −0.97%, gone after MGWR | "the last try, confirmed FY4B"; `e0b208f`, `b044b3f`, run at `15db848` |
 
 **Try 15's rule**, chosen by the user and fixed before its run. It is judged on balanced_spatial, with
 7-day blocks:
@@ -52,6 +52,9 @@ Details are in `fy4b_quality_handover.md`, under the section named in the last c
 - the time-held-out check of FY4B_QM;
 - the week-block recheck of the paper's intervals.
 
-**Next, if wanted:** confirmed FY4B in the merges only, the bands keeping plain FY4B. It is in
-`ROADMAP.md` as exploratory. It would be try 16, with the bar 1 − 0.05/16, and it is not independent of
-try 15.
+**Closed (2026-11-10).** Try 15 was agreed with the user as the last, and it fails, so the line of FY4B fixes
+for the fusion ends here. Plain FY4B stays in the merges and the bands.
+
+**Parked:** confirmed FY4B in the merges only, the bands keeping plain FY4B. It is in `ROADMAP.md` as
+exploratory. It would be try 16, with the bar 1 − 0.05/16, and it is not independent of try 15: its
+merged anchor is try 15's, whose gain is gone after MGWR.
