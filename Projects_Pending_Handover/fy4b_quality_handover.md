@@ -23,13 +23,91 @@ the merges and bands: each week is fitted on the other weeks' gauges, so no gaug
 FY4B and to fuse it. It is never worse on RMSE, but it fails the user's no-worse rule on heavy rain, so plain FY4B
 still stays (Previous, merged as `b3b0a9f`). The last try, agreed as the last: confirmed FY4B (kept only where
 GPM_uncal or GSMaP is also wet) in place of plain FY4B in the merges and bands. It was judged by a stricter rule fixed
-before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Newest, merged as
-`934d427` and pushed) · **Next step:** the user's call: whether the paper lists the tries. Quote RQ3 and §3.4
-numbers only from the `_matched` report folders, as the paper does
+before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Previous, merged as
+`934d427` and pushed); the paper lists the tries in Draft Table S1 (merged as `1eab051`). The two-stage screen,
+rerun with weeks held out as well as gauges, loses its r gain: TS_E's r against FY4B_QM goes from +0.043 to +0.022,
+with an interval spanning 0, and the RMSE gain is all that survives (Newest, branch
+`fy4b/two-stage-time-holdout`) · **Next step:** none pending for FY4B. Quote RQ3 and §3.4 numbers only from the
+`_matched` report folders, as the paper does
 
 ---
 
-## Newest (2026-11-10): the last try, confirmed FY4B in the merges and the bands: keep plain FY4B
+## Newest (2026-11-10): the two-stage screen with weeks held out: the r gain does not survive
+
+The user asked whether the roadmap's two-stage idea was still worth pursuing. Its screen (§0) held out gauges but
+not weeks, and the 11-07 check had shown FY4B_QM's r gain disappear once weeks were held out. The tables are
+counted on the same weeks, so the screen was rerun crossed. This is a diagnosis of try 4, not a new fix: nothing
+enters the benchmark, and no paper number moves.
+
+### Code and run (branch `fy4b/two-stage-time-holdout`)
+
+- `ef5d7ab`: `scripts/screen_fy4b_two_stage.jl --crossed`.
+  - It uses the time folds of `check_fy4b_qm_time_holdout.jl`: 7-day blocks in 5 time folds, balanced within
+    regime × season, seed 20261107, with a ±1 day guard.
+  - On each of the 25 gauge-fold × time-fold splits it calls `calibrate_fold` and `two_stage_fold` unchanged, with
+    every gauge outside the training hours set to NaN.
+  - Intervals resample whole weeks.
+  - The pixel shift is not held out in time, as in the 11-07 check.
+  - The reading was fixed in the header and committed before the run.
+- **Runs:** clean at `ef5d7ab`.
+  - The default mode first, which reproduces the old `metrics.csv`, `paired.csv` and `context_tables.csv` byte for
+    byte.
+  - Then `--crossed`, which took 3.3 min. Log: `output/fy4b_two_stage_screen_crossed.log`. Output:
+    `output/fy4b_two_stage_screen_crossed/`.
+  - A first `--crossed` run had a dirty tree (an uncommitted ROADMAP edit). Its outputs were identical, and it was
+    rerun clean.
+- **Guards passed:**
+  - gauges-only FY4B_QM equals the run's `oof_raw.csv` in all 4,760,619 cells in both schemes;
+  - the gauges-only point estimates equal the default screen's `paired.csv`;
+  - the crossed series have the gauges-only NaN pattern.
+- **Sanity:** crossed FY4B_QM's r is 0.221, against 0.220 in the 11-07 check (whose mask differs).
+
+### Result
+
+Held-out raw, balanced spatial, n 4,571,414. The intervals are 95% and resample whole weeks:
+
+| Series | r | RMSE | CSI 0.1 / 2 / 8 | FBI 0.1 / 2 / 8 |
+|---|---|---|---|---|
+| FY4B | 0.224 | 1.142 | 0.176 / 0.124 / 0.047 | 1.08 / 0.99 / 2.00 |
+| FY4B_QM, gauges only | 0.247 | 0.949 | 0.175 / 0.123 / 0.055 | 0.99 / 0.87 / 0.65 |
+| FY4B_TS_E, gauges only | 0.290 | 0.825 | 0.181 / 0.051 / 0.000 | 1.92 / 0.16 / 0.00 |
+| FY4B_QM, crossed | 0.221 | 1.033 | 0.170 / 0.118 / 0.048 | 0.99 / 0.91 / 1.18 |
+| FY4B_TS_I, crossed | 0.234 | 0.841 | 0.100 / 0.053 / 0.000 | 3.53 / 0.25 / 0.00 |
+| FY4B_TS_E, crossed | 0.243 | 0.839 | 0.158 / 0.051 / 0.000 | 2.21 / 0.24 / 0.01 |
+| FY4B_TS_O, crossed | 0.210 | 1.036 | 0.162 / 0.111 / 0.046 | 0.95 / 0.94 / 1.13 |
+
+- **TS_E against FY4B_QM:**
+  - gauges only: r +0.043 (+0.018..+0.070), RMSE −13.1%;
+  - crossed: r +0.022 (−0.013..+0.056), RMSE −18.8% (−28.6..−9.1).
+- **Crossed TS_E against plain FY4B:** r +0.019 (−0.019..+0.056), RMSE −26.5% (sig).
+- **Crossed TS_E against gauges-only TS_E:** r −0.047 (−0.068..−0.026), RMSE +1.7% (sig).
+- **What the context adds,** crossed TS_E against TS_I: r +0.009 (+0.004..+0.016). Gauges only it was +0.011.
+- **TS_O crossed:** r −0.011 (−0.022..−0.002) against crossed FY4B_QM.
+- **The random split,** reported only, reads the same: TS_E against FY4B_QM goes from +0.050 to +0.025
+  (−0.009..+0.059).
+
+**Reading (fixed before the run): MATERIAL, and DOES NOT SURVIVE.**
+- TS_E's r gain over FY4B_QM moves by −0.020 (limit 0.01). Its RMSE gain moves by −5.7 points (limit 2), the other
+  way, because crossed FY4B_QM is itself weaker.
+- Crossed, neither r interval is above 0.
+
+### How to read it
+
+- **The r gain is mostly the same weeks again.** With weeks held out, TS_E's r falls by 0.047. It is no longer
+  shown to beat plain FY4B or crossed FY4B_QM. So "a model that re-ranks hours" is not supported even at raw.
+- **The RMSE gain is real, and it is shrinkage.**
+  - The table replaces FY4B's values with a conditional mean, which costs RMSE little when weeks are held out
+    (+1.7%).
+  - It still loses heavy rain entirely: CSI_8 is 0 and FBI_8 is 0.01.
+  - FBI_0.1 is 2.2, so it spreads drizzle.
+  - That is not raising FY4B's quality.
+- **The context survives but stays small:** +0.009 in r, as before.
+- **This confirms the 11-01 decision to stop.** Nothing here argues for the quarters or the other features in
+  ROADMAP.md.
+
+---
+
+## Previous (2026-11-10): the last try, confirmed FY4B in the merges and the bands: keep plain FY4B
 
 The user asked once more for a way to improve FY4B so that it could join the three-product merges and the
 agreement bands. A side agent noted that about 14 fixes had been judged on the same gauges and hours, so a late pass
