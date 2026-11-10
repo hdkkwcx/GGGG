@@ -23,9 +23,9 @@ the merges and bands: each week is fitted on the other weeks' gauges, so no gaug
 FY4B and to fuse it. It is never worse on RMSE, but it fails the user's no-worse rule on heavy rain, so plain FY4B
 still stays (Previous, merged as `b3b0a9f`). The last try, agreed as the last: confirmed FY4B (kept only where
 GPM_uncal or GSMaP is also wet) in place of plain FY4B in the merges and bands. It was judged by a stricter rule fixed
-before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Newest, branch
-`fy4b/confirmed-fusion`, not merged) · **Next step:** the user's call: merge `fy4b/confirmed-fusion`, and whether
-the paper lists the tries. Quote RQ3 and §3.4 numbers only from the `_matched` report folders, as the paper does
+before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Newest, merged as
+`934d427` and pushed) · **Next step:** the user's call: whether the paper lists the tries. Quote RQ3 and §3.4
+numbers only from the `_matched` report folders, as the paper does
 
 ---
 
@@ -55,7 +55,7 @@ blocks:
 
 **Register.** Every try is now in `Projects_Pending_Handover/fy4b_tries.md`, as the side agent asked.
 
-### Code and checks (branch `fy4b/confirmed-fusion`, not merged)
+### Code and checks (branch `fy4b/confirmed-fusion`, merged as `934d427` and pushed)
 
 - `e0b208f`: the option.
   - `_fusion_source_matrices` is the one place the merges, the bands and the stack read their sources.
@@ -142,9 +142,12 @@ with the 99.67% interval in brackets:
 - **This was agreed as the last try,** so the line of FY4B-in-the-fusion tries closes here, and plain FY4B stays in
   the merges and bands. The register holds all 15 tries.
 
-**The user's call:**
-- Merge `fy4b/confirmed-fusion` as the record. The option and the comparison stay in the code, as the earlier
-  tries' did.
+**Merged (2026-11-10)** as `934d427` and pushed, at the user's request; the branch is deleted. The option and the
+comparison stay in the code, as the earlier tries' did.
+- The merge was first pushed as `cbafde1` under the previous merge's subject: a stale message file was reused.
+- With the user's OK, it was reworded and pushed with `--force-with-lease`. The tree and parents are unchanged.
+
+**Still the user's call:**
 - Whether the paper states the number of tries, for example as a supplementary table from `fy4b_tries.md`.
 - Whether §3.4 says that a gauge-free confirmation was also tried. Citing it needs a `[[step]]` and a `[[table]]`
   in `paper/sources.toml`.
