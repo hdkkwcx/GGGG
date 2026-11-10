@@ -5,6 +5,8 @@ docs
 data/raw/copernicus_glo30/
 
 *.csv
+# The paper's one hand-kept table (Draft Table S1, every FY4B fix tried); every other CSV is an output.
+!paper/fy4b_tries.csv
 
 data/
 output/

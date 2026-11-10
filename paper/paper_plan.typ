@@ -20,6 +20,8 @@
 // provenance.csv records its commit. §3.4's sentence on false-rain episodes rests on
 // scripts/explain_fy4b_qm_time_holdout.jl at 3e45ae6 (output/fy4b_qm_time_holdout_explained), on the
 // earlier FY4B run's cells; corrected FY4B's raw field is the same in both runs.
+// Draft Table S1 (supplementary material) is paper/fy4b_tries.csv, kept by hand and in words only:
+// every FY4B fix tried, the readable version of Projects_Pending_Handover/fy4b_tries.md.
 // scripts/make_paper.jl rebuilds every figure and number here in dependency order; the [[step]]
 // graph in paper/sources.toml records each step's command and what it needs.
 // paper/references.bib is the BibTeX export of the Zotero library's items tagged GGGG (local API,
@@ -83,6 +85,7 @@
 #let ft = load("fy4b_time_holdout") // §3.4: corrected FY4B's raw change with whole weeks held out as well
 #let fc = load("fy4b_clt")         // §3.4: July 2023 cloud-type pilot, hours dominated by ice cloud
 #let fcf = load("fy4b_clt_filter") // §3.4: the cloud-type filter against an amount-matched control
+#let tr = load("fy4b_tries")      // §3.4, Draft Table S1: every FY4B fix tried, in words
 #let G = "GPM_uncal"              // the primary GPM product
 #let B = "blend_agrenv_mgwr"      // MGWR + agreement blend, the headline fusion method
 #let find(rows, ..conditions) = {
@@ -559,6 +562,12 @@ adjusted to gauges. And part of its gain holds only for the weeks the training g
 held-out ones (above); in the merge or the bands, that would reach every merged row and every
 agreement blend in Table 3.
 
+Draft Table S1 (supplementary material) lists every fix tried for FY4B,
+#stat("fy4b_tries", "n") in all, with how each was tested and what it gave. None of those that changed
+which FY4B the merge and the agreement bands take cleared its rule. The last of them keeps FY4B only
+where GPM or GSMaP also reports rain, so it needs no gauges; it was held to a stricter level, because
+so many tries on the same gauges and hours came before it.
+
 = Discussion
 
 == Uncertainties
@@ -656,3 +665,25 @@ reports report against these three research contents.
 *Outside RQ1–RQ3.* Obtain hydrological-station discharge data for the flood-forecasting outlook (§4.3).
 
 #bibliography("references.bib", title: "References", style: "apa")
+
+#heading(numbering: none)[Supplementary material]
+
+#figure(
+  table(
+    columns: (auto, auto, 1.7fr, 1fr, auto, 1.5fr),
+    align: (right, left, left, left, left, left),
+    stroke: none,
+    rule,
+    table.header([*No.*], [*Date*], [*Fix tried*], [*Tested by*], [*Rule set first*], [*Outcome*]),
+    thin,
+    ..tr.map(row => (row.n, row.date, row.fix, row.test, row.rule_first, row.outcome)).flatten(),
+    rule,
+  ),
+  caption: [Draft Table S1. Every fix of FY4B tried, in the order tried (§3.4). All were tested on the
+  benchmark's gauges (§2.4), and on all its hours unless _Tested by_ names a month or scans. A screen
+  scores held-out values without refitting the benchmark; a full run refits it. Where a rule was fixed
+  before the test, the outcome is that rule's verdict. So many tries on the same gauges and hours make a
+  late pass possibly luck, so the last was held to a stricter interval: the usual 5% shared over all
+  #stat("fy4b_tries", "n") tries. Corrected FY4B is the result of tries 2 and 3 (§2.5); the merge and
+  the agreement bands take plain FY4B. GPM is IMERG Uncal.],
+)
