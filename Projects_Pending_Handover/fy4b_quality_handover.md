@@ -32,7 +32,52 @@ with an interval spanning 0, and the RMSE gain is all that survives (Newest, bra
 
 ---
 
-## Newest (2026-11-10): the two-stage screen with weeks held out: the r gain does not survive
+## Newest (2026-11-11): the final run in two configurations, plain FY4B or FY4B_QM in the merges and bands
+
+The user asked for both FY4Bs in the final benchmark run, all three products treated alike, and both
+configurations scored on the same held-out station-hours, pooled over June 2022 – December 2024 only, with
+prediction coverage. Benchmark work; no paper text or number changed.
+
+**How to read it (fixed before the result was looked at).** A description, with no rule and no verdict. It
+cannot move plain FY4B out of the merges and the bands: the pair was judged as try 13, the line was closed on
+2026-11-10, and a switch would be try 16 at the 1 − 0.05/16 bar. `fy4b_tries.md` gets no row.
+
+- **Configurations:** `plain` is the paper's `benchmark` step (run at `fe421b3`). `qm` is the same command plus
+  `--fy4b-qm-fusion`, rerun clean at `7fa1953` (step `benchmark_qmfusion`; it replaces the 31 October run).
+  Only FY4B is quantile-mapped; GPM and GSMaP stay as delivered (the user's choice).
+- **Script:** `scripts/compare_fy4b_fusion_configs.jl` (step `fy4b_fusion_configs`), output in
+  `output/fy4b_fusion_configs/`: `scores.csv`, `paired.csv`, `matched_sample.csv`, `selection.csv`,
+  `fold_status.csv`. Intervals resample 7-day blocks, 2,000 draws.
+- **Equality audit of the three products in the benchmark:**
+  - equal: the hours (one common grid, 20,087 hours, all from 1 June 2022), the folds, the tuning hours (drawn
+    from the gauges), the sources of the merges and bands, and every fit inside the training fold (FY4B_QM's
+    shift, map and strength, merge weights, blend weights, covariate selection);
+  - not equal in a run: each product is scored on its own mask. The script scores everything on the cells in
+    both runs' matched samples instead;
+  - by design: a product's selection seed follows its place in the list (the same in both runs), and only
+    FY4B is mapped to gauges;
+  - caveat, not fixed: inside a fold, the inner split that picks blend and merge weights sees an FY4B_QM fitted
+    on all of that fold's training gauges. Held-out gauges are never involved. Today's FY4B_QM anchor has it too.
+- **Sample and coverage:** balanced spatial 4,451,967 of 4,634,780 eligible gauge-hours (96.06%) on 19,816
+  hours, exactly the paper's Table 3 sample, and `plain`'s rows reproduce all 42 of Table 3's source rows.
+  Random 4,483,487 (96.74%). Own prediction coverage runs from 0.966 (the joint methods; fold 4 is `partial`)
+  to 1.000 in both configurations.
+- **Guards:** every field of GPM_uncal, GSMaP, FY4B and FY4B_QM but the agreement blends is identical in the
+  two runs, NaNs included, so the runs differ in the fusion alone.
+- **Result, `qm` against `plain`, agreement blend on MGWR, balanced spatial (negative is better):**
+  - GPM_uncal −0.00% (−0.07..+0.06), |FBI8 − 1| +0.007 (+0.002..+0.014), worse;
+  - GSMaP +0.08% (+0.02..+0.16), worse;
+  - FY4B +0.10% (−0.11..+0.34); FY4B_QM −0.00% (−0.07..+0.07);
+  - MERGED_MEAN −0.42% (−0.76..−0.12), but CSI8 −0.0036 (−0.0059..−0.0012), worse; its raw merge −4.59%
+    (−7.81..−2.04) and mgwr −1.17% (−2.07..−0.41); mgwr selects differently in 3 of 5 folds;
+  - MERGED_OLS −0.12% (−0.20..−0.03); raw −0.07% (−0.18..+0.03).
+  - Random split: every agreement blend within ±0.13%.
+  - Same picture as try 13: correcting FY4B helps the equal-weight merge, mostly before MGWR, at a cost in
+    heavy rain; the OLS merge and the single anchors barely move.
+
+---
+
+## Previous (2026-11-10): the two-stage screen with weeks held out: the r gain does not survive
 
 The user asked whether the roadmap's two-stage idea was still worth pursuing. Its screen (§0) held out gauges but
 not weeks, and the 11-07 check had shown FY4B_QM's r gain disappear once weeks were held out. The tables are
