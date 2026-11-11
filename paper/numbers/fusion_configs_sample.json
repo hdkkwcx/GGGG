@@ -1,0 +1,10 @@
+{
+ "source": "output/fy4b_fusion_configs/scores.csv",
+ "source_sha256": "1deba5fce04817e0c5dcd0208175f29328b0eab78860dc9a4c6accaf48a0f6ce",
+ "rows": [],
+ "stats": {
+  "n": "4,451,967",
+  "share": "96.1",
+  "coverage": "96.6–100.0"
+ }
+}

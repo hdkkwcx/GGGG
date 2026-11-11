@@ -11,8 +11,8 @@ those strings and never a number typed by hand, so a rerun reaches the text by r
 `scripts/check_paper_provenance.py` re-exports in memory and fails on any difference.
 
 Formats: `Nf` (N fixed decimals, e.g. `3f`, `0f`), `+Nf` (the same with a sign, for a value the text
-prints signed, such as a bias or a value already in percent), `pct1` / `pct0` (a fraction as a signed
-percentage with one or no decimal, no `%`), `,0f` (a whole number with thousands separators, e.g.
+prints signed, such as a bias or a value already in percent), `pct2` / `pct1` / `pct0` (a fraction as
+a signed percentage with two, one or no decimals, no `%`), `,0f` (a whole number with thousands separators, e.g.
 `26,304`). A signed format drops the sign when the value rounds to
 zero. Standard library only.
 """
@@ -50,7 +50,7 @@ def _signed(value: float, decimals: int) -> str:
 
 def format_value(raw: str, fmt: str) -> str:
     value = float(raw)
-    if fmt in ("pct1", "pct0"):
+    if fmt in ("pct2", "pct1", "pct0"):
         return _signed(100 * value, int(fmt[-1]))
     if fmt.endswith("f") and fmt.lstrip("+")[:-1].isdigit():
         decimals = int(fmt.lstrip("+")[:-1])
