@@ -189,6 +189,14 @@ using Main.BenchmarkDiagnostics
   the cells every product of the run is scored on (`BenchmarkDiagnostics.matched_evaluation_mask`,
   folder suffix `_matched`) and stops if a method failed a whole fold. Claims and fusion read a
   rebuilt-FY4B run only with the same `--fy4b-file`; the three FY4B scripts take the run folder.
+- The final run has two configurations, which differ only in the FY4B the merges and the agreement
+  bands read: the `benchmark` step (plain FY4B) and `benchmark_qmfusion` (the same command plus
+  `--fy4b-qm-fusion`, each fold's FY4B_QM). Product list, hours, folds, seeds and tuning hours are
+  the same, and only FY4B is mapped to gauges. `scripts/compare_fy4b_fusion_configs.jl` (step
+  `fy4b_fusion_configs`) scores both on the held-out gauge-hours in both runs' matched samples,
+  pooled over the whole record, with prediction coverage beside the scores. It errors unless every
+  field the fusion never reaches is identical in the two runs. It applies no rule: the pair was
+  judged as try 13.
 - `hurdle_gwr` (`InterpolationBenchmarkHurdle.jl`) is deliberately disabled and absent from
   `BENCHMARK_RUNS`.
 

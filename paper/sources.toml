@@ -805,6 +805,28 @@ command = ["julia", "--project=.", "scripts/run_gauge_satellite_fusion.jl",
 marker = "output/gauge_satellite_fusion_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal_matched_block7d/source_provenance.csv"
 needs = ["claims"]
 
+# The final run's second configuration and its comparison with the first, on one sample. No figure or
+# cited number reads them yet: `benchmark` feeds plain FY4B to the merges and the agreement bands,
+# `benchmark_qmfusion` each fold's FY4B_QM, everything else equal.
+[[step]]
+id = "benchmark_qmfusion"
+kind = "analysis"
+command = ["julia", "-t", "4", "--project=.", "scripts/run_interpolation_benchmark.jl", "full",
+           "--nested-covariates", "--satellite-wet-blend", "--blend-axis", "agreement_envelope",
+           "--fused-anchor", "--with-fy4b", "--fy4b-file", "output/fy4b_rebuild_2022_2024/fy4b_w3_h0.csv",
+           "--fy4b-qm", "--fy4b-qm-adaptive", "--fy4b-qm-fusion"]
+marker = "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv"
+needs = ["prep_study_area", "prep_gpm_uncal", "prep_terrain", "prep_era5", "prep_ndvi", "fy4b_rebuild"]
+note = "about 2 h with 4 threads; the `benchmark` step's command plus --fy4b-qm-fusion: FY4B_QM in the merges and agreement bands in place of plain FY4B, same product list, hours, folds and seeds"
+
+[[step]]
+id = "fy4b_fusion_configs"
+kind = "analysis"
+command = ["julia", "--project=.", "scripts/compare_fy4b_fusion_configs.jl"]
+marker = "output/fy4b_fusion_configs/provenance.csv"
+needs = ["benchmark", "benchmark_qmfusion"]
+note = "scores both configurations on the held-out gauge-hours in both runs' matched samples, pooled over June 2022 - December 2024, with prediction coverage; errors unless the fields the fusion never reaches are identical in the two runs"
+
 # FY4B (§3.4): the rebuild from the raw 15-min files, the comparison of corrected FY4B the paper
 # cites, the check with time held out, and the cloud-type pilot, all on the main run's matched sample.
 [[step]]
