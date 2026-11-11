@@ -442,6 +442,60 @@ hi = ["rel_RMSE_hi", "pct1"]
 r = ["candidate_r", "2f"]
 r0 = ["baseline_r", "2f"]
 
+# The run's two configurations (§3.4, Draft Table 5): corrected FY4B (candidate) or plain FY4B (baseline) in
+# the merges and the agreement bands, on the gauge-hours in both runs' matched samples.
+[[table]]
+name = "fusion_configs"
+label = "§3.4 text and Table 5: corrected against plain FY4B in the merges and the agreement bands (intervals over 7-day blocks)"
+step = "fy4b_fusion_configs"
+source = "output/fy4b_fusion_configs/paired.csv"
+provenance = [
+    "output/fy4b_fusion_configs/provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv",
+]
+keys = ["product", "method"]
+[table.where]
+scheme = "balanced_spatial"
+method = ["raw", "mgwr", "blend_agrenv_mgwr"]
+[table.values]
+rmse_plain = ["baseline_RMSE", "3f"]
+rmse_qm = ["candidate_RMSE", "3f"]
+change = ["rel_RMSE", "pct2"]
+lo = ["rel_RMSE_lo", "pct2"]
+hi = ["rel_RMSE_hi", "pct2"]
+csi8_plain = ["baseline_CSI_8", "3f"]
+csi8_qm = ["candidate_CSI_8", "3f"]
+dcsi8 = ["delta_CSI_8", "+4f"]
+dcsi8_lo = ["delta_CSI_8_lo", "+4f"]
+dcsi8_hi = ["delta_CSI_8_hi", "+4f"]
+
+[[table]]
+name = "fusion_configs_sample"
+label = "§3.4 Table 5: the shared sample of the two configurations and each method's own prediction coverage"
+step = "fy4b_fusion_configs"
+source = "output/fy4b_fusion_configs/scores.csv"
+provenance = [
+    "output/fy4b_fusion_configs/provenance.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_gpmuncal/benchmark_scope.csv",
+    "output/interpolation_benchmark_full_joint_covariates_nested_mgwrintercept_only_satwetblend_blendagrenv_fusedanchor_fy4bw3h0_fy4bqm_fy4bqmadapt_qmfusion_gpmuncal/benchmark_scope.csv",
+]
+keys = ["config"]
+[table.where]
+scheme = "balanced_spatial"
+[table.stats.n]
+stat = "max"
+column = "n"
+fmt = ",0f"
+[table.stats.share]
+stat = "max"
+column = "matched_share"
+fmt = "pct1"
+[table.stats.coverage]
+stat = "range"
+column = "own_coverage"
+fmt = "pct1"
+
 [[table]]
 name = "fy4b_time_holdout"
 label = "§3.4 text: corrected FY4B's raw change against plain FY4B, with whole weeks held out as well as gauges"

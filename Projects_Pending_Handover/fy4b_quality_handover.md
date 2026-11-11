@@ -75,6 +75,12 @@ cannot move plain FY4B out of the merges and the bands: the pair was judged as t
   - Same picture as try 13: correcting FY4B helps the equal-weight merge, mostly before MGWR, at a cost in
     heavy rain; the OLS merge and the single anchors barely move.
 
+- **In the paper (2026-11-11, branch `paper/fy4b-fusion-configs`):** §2.5 describes the second configuration in
+  two sentences; §3.4 gives the measured result before its two reasons, with Draft Table 5 (each anchor's MGWR +
+  agreement blend in both configurations, the shared sample and coverage in the caption). Table 3 and RQ3 stay
+  on plain FY4B. Tables `fusion_configs` and `fusion_configs_sample` in `paper/sources.toml`; the exporter has a
+  new `pct2` format, since these changes are hundredths of a percent.
+
 ---
 
 ## Previous (2026-11-10): the two-stage screen with weeks held out: the r gain does not survive

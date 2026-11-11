@@ -20,6 +20,10 @@
 // provenance.csv records its commit. §3.4's sentence on false-rain episodes rests on
 // scripts/explain_fy4b_qm_time_holdout.jl at 3e45ae6 (output/fy4b_qm_time_holdout_explained), on the
 // earlier FY4B run's cells; corrected FY4B's raw field is the same in both runs.
+// Draft Table 5 and §3.4's paragraph on the two configurations come from
+// scripts/compare_fy4b_fusion_configs.jl (output/fy4b_fusion_configs): the benchmark run above against
+// the same run with --fy4b-qm-fusion (..._fy4bqmadapt_qmfusion_gpmuncal), corrected FY4B in the merges
+// and the bands, both scored on the gauge-hours in both runs' matched samples.
 // Draft Table S1 (supplementary material) is paper/fy4b_tries.csv, kept by hand and in words only:
 // every FY4B fix tried, the readable version of Projects_Pending_Handover/fy4b_tries.md.
 // scripts/make_paper.jl rebuilds every figure and number here in dependency order; the [[step]]
@@ -85,6 +89,7 @@
 #let ft = load("fy4b_time_holdout") // §3.4: corrected FY4B's raw change with whole weeks held out as well
 #let fc = load("fy4b_clt")         // §3.4: July 2023 cloud-type pilot, hours dominated by ice cloud
 #let fcf = load("fy4b_clt_filter") // §3.4: the cloud-type filter against an amount-matched control
+#let fg = load("fusion_configs")   // §3.4, Table 5: corrected against plain FY4B in the merges and the bands
 #let tr = load("fy4b_tries")      // §3.4, Draft Table S1: every FY4B fix tried, in words
 #let G = "GPM_uncal"              // the primary GPM product
 #let B = "blend_agrenv_mgwr"      // MGWR + agreement blend, the headline fusion method
@@ -126,6 +131,19 @@
 #let dq(baseline, method, scheme: "balanced_spatial") = {
   let row = (scheme: scheme, product: "FY4B_QM", baseline: baseline, method: method)
   [#val(fq, "change", ..row)% (#val(fq, "lo", ..row) to #val(fq, "hi", ..row)%)]
+}
+
+/// One anchor and method with corrected instead of plain FY4B in the merges and the bands: its change
+/// in RMSE with its 95% interval over whole 7-day blocks, signed: "−0.42% (−0.76 to −0.12%)".
+#let dg(product, method) = {
+  let row = (product: product, method: method)
+  [#val(fg, "change", ..row)% (#val(fg, "lo", ..row) to #val(fg, "hi", ..row)%)]
+}
+/// One Table 5 row: the anchor's MGWR + agreement blend in both configurations.
+#let t5(product) = {
+  let row = (product: product, method: B)
+  (val(fg, "rmse_plain", ..row), val(fg, "rmse_qm", ..row), dg(product, B),
+   val(fg, "csi8_plain", ..row), val(fg, "csi8_qm", ..row))
 }
 
 /// Raw corrected FY4B against plain FY4B in the check that holds out whole weeks as well as gauges
@@ -311,7 +329,10 @@ quantile map per season and regime, with a wet threshold that matches the gauges
 It is applied month by month, only as strongly as the training gauges support: not at all, the
 threshold alone, or the threshold with a quarter to all of the map. The corrected product, FY4B_QM,
 is scored in the same benchmark run as RQ3, as a further anchor beside the three products and on
-the same matched sample (§2.4); it enters neither the merge nor the agreement bands. Corrected FY4B
+the same matched sample (§2.4); it enters neither the merge nor the agreement bands. A second
+configuration of the same run feeds each fold's corrected FY4B to the merges and the bands in place of
+plain FY4B, with the products, hours, folds and random seeds unchanged; the two configurations are
+compared on the gauge-hours on which both score every anchor and method (§3.4). Corrected FY4B
 is also scored on the RQ1 events (§2.2), over the hours of each event that the gauges and all four
 products share, which are the hours RQ1 scores; its value at each gauge comes from the cross-validation fold
 that held that gauge out.
@@ -555,7 +576,49 @@ on 2022-10-03 the bias goes from #val(fv, "MB", product: "FY4B", event_day: "202
   MB is the mean bias and RMSE the root-mean-square error, both in mm; CSI at 50 mm. GPM is IMERG Uncal.],
 )
 
-Corrected FY4B stays out of the merge and the agreement bands, for two reasons. It is already fitted
+Corrected FY4B stays out of the merge and the agreement bands. What it would change there is measured
+by the run's second configuration (§2.5), in which the merges and the bands take each fold's corrected
+FY4B in place of plain FY4B. Draft Table 5 compares the two on the gauge-hours of Table 3; every field
+that the merges and the bands do not reach is identical in the two runs. Corrected FY4B helps the
+equal-weight merge of the three products (Draft Fig. 6), in which FY4B carries a third of the weight:
+its RMSE changes by #dg("MERGED_MEAN", "raw") raw, #dg("MERGED_MEAN", "mgwr") after MGWR and
+#dg("MERGED_MEAN", B) after the agreement blend. But that blend's CSI at 8 mm h⁻¹ falls by
+#val(fg, "dcsi8", product: "MERGED_MEAN", method: B).trim("−")
+(#val(fg, "dcsi8_lo", product: "MERGED_MEAN", method: B) to
+#val(fg, "dcsi8_hi", product: "MERGED_MEAN", method: B)). The OLS merge changes by
+#dg("MERGED_OLS", B) after the blend, and the blends on GPM and GSMaP, which corrected FY4B reaches
+only through the bands, by #dg(G, B) and #dg("GSMaP", B). The gain is thus confined to one merge, most
+of it is gone after the fusion, and it costs heavy-rain detection there. This pair was judged once
+before, by a rule fixed before its test (Draft Table S1); the comparison here applies no new rule.
+
+#figure(
+  table(
+    columns: (auto, auto, auto, auto, auto, auto),
+    align: (left, right, right, right, right, right),
+    stroke: none,
+    rule,
+    table.header([*Anchor*], [*RMSE, plain*], [*RMSE, corrected*], [*Change (95% interval)*],
+      [*CSI 8, plain*], [*CSI 8, corrected*]),
+    thin,
+    [GPM], ..t5(G),
+    [GSMaP], ..t5("GSMaP"),
+    [FY4B], ..t5("FY4B"),
+    [Corrected FY4B], ..t5("FY4B_QM"),
+    [Merged (equal weights)], ..t5("MERGED_MEAN"),
+    [Merged (OLS)], ..t5("MERGED_OLS"),
+    rule,
+  ),
+  caption: [Draft Table 5. MGWR + agreement blend with plain or corrected FY4B in the merges and the
+  agreement bands, at held-out gauges, balanced spatial CV. Both configurations and every row are
+  scored on the same #stat("fusion_configs_sample", "n") gauge-hours, those on which both runs score
+  every anchor and method: #stat("fusion_configs_sample", "share")% of the held-out gauge-hours with a
+  gauge value, of which each method's own predictions cover
+  #stat("fusion_configs_sample", "coverage")%. RMSE in mm h⁻¹; the change is in RMSE, corrected
+  against plain, negative being better, with a 95% interval over whole 7-day blocks; CSI at
+  8 mm h⁻¹. GPM is IMERG Uncal.],
+)
+
+Two reasons hold apart from these scores. Corrected FY4B is already fitted
 to the training gauges, so in the merge MGWR and the blend would correct the same error on the same
 gauges a second and a third time, and the merge would no longer combine only products that are not
 adjusted to gauges. And part of its gain holds only for the weeks the training gauges share with the
@@ -647,7 +710,8 @@ reports report against these three research contents.
 - RQ2 (time): complete.
 - RQ3 (fusion): complete.
 - FY4B: in RQ1–RQ3 as the third product, on the matched sample; §3.4 complete; corrected FY4B stays
-  out of the merge and the agreement bands.
+  out of the merge and the agreement bands, and the configuration with it in them is reported beside
+  the main one (Draft Table 5).
 - Literature (§4.2): the citations come from the 18 papers with a PDF in Zotero and the IMERG V07 ATBD.
   Claude checked each cited sentence against the paper's full text; the author has still to read
   them. The other 14 GGGG items without a PDF are unread, among them the MGWR paper of Fotheringham et

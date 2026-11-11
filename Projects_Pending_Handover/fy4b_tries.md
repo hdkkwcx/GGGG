@@ -55,6 +55,8 @@ When a try is added, add it in both places and re-export with `scripts/export_pa
 - the error budget;
 - the time-held-out check of FY4B_QM;
 - the week-block recheck of the paper's intervals;
+- the final run's two configurations (2026-11-11, `compare_fy4b_fusion_configs.jl`): try 13's pair rescored on
+  the paper's Table 3 sample with 7-day blocks, as a description with no rule (paper §3.4, Draft Table 5);
 - try 4's screen rerun with weeks held out (2026-11-10, `screen_fy4b_two_stage.jl --crossed`): TS_E's r gain
   over FY4B_QM goes from +0.043 to +0.022 (−0.013..+0.056), so try 4's verdict, stop, stands.
 
