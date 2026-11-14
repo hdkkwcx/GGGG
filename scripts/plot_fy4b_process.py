@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import html
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -23,6 +24,9 @@ TRACE = ROOT / "output" / "fy4b_process_trace"
 MANIFEST = ROOT / "output" / "fy4b_raw_manifest"
 NUMBERS = ROOT / "paper" / "numbers"
 PAGE = TRACE / "fy4b_process.html"
+# The companion page (scripts/plot_fy4b_methods.py): beside this one on disk; a published copy
+# passes its own address.
+METHODS_LINK = os.environ.get("FY4B_METHODS_URL", "fy4b_methods.html")
 
 # Loss causes keep one colour each wherever they appear; "complete" is the kept series.
 CAUSE_COLOR = {"complete": "var(--s1)", "before_first_file": "var(--s7)", "relocation_gap": "var(--s2)",
@@ -264,7 +268,8 @@ as the third product of RQ1–RQ3, and corrected FY4B from the <code>benchmark</
 <div class="meta">{status}
 <span>Tables: <code>scripts/trace_fy4b_process.jl</code> at <code>{esc(trace_prov.get("git_commit", "")[:7])}</code>{" (uncommitted changes)" if dirty else ", clean tree"}</span>
 <span>Rebuild: <code>{esc(steps[1]["git_commit"][:7])}</code></span>
-<span>Benchmark: <code>{esc(scope["git_commit"][:7])}</code></span></div>
+<span>Benchmark: <code>{esc(scope["git_commit"][:7])}</code></span>
+<span>How each step works, with formulas: <a href="{esc(METHODS_LINK)}">FY4B methods</a></span></div>
 <div class="tiles">
 <div><b>{n(raw["15-minute files used, after duplicates are dropped"])}</b><span>15-minute files used</span></div>
 <div><b>{n(complete)}</b><span>hours with all four files, of {n(total_hours)}</span></div>
@@ -730,6 +735,7 @@ table.grid.tight thead th { font-size: 10px; writing-mode: vertical-rl; padding:
 .chart .tick { fill: var(--muted); font: 11px var(--mono) } .chart .lab { fill: var(--fg2); font: 13px var(--sans) }
 .chart .val { fill: var(--fg); font: 12px var(--mono) }
 .axis-label { font-size: 12.5px; color: var(--fg2); margin: 14px 0 2px }
+.meta a { color: var(--accent) }
 .src { font-size: 12px; color: var(--muted); margin: 2px 0 0 } .aside { font-size: 13.5px; color: var(--fg2) }
 .note { background: var(--note); border-radius: 6px; padding: 14px 18px; margin: 18px 0 } .note h3 { margin: 0 0 4px } .note p { margin: 4px 0 0 }
 pre.cmd { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere }
