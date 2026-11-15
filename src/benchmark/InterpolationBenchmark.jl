@@ -11,7 +11,7 @@ load_standalone_modules(
     "TraditionalInterpolation", "DEMTerrainExperiment", "JointCovariateModels",
     "ERA5VariableSelection", "NDVIVariableSelection", "JointVariableSelection",
     "SatelliteFusion", "SatelliteCalibration", "HurdleGWR", "RunProvenance", "TimeBlockFolds",
-    "HumidityGate",
+    "HumidityGate", "SatelliteTwoStage",
 )
 
 using .TraditionalInterpolation
@@ -24,6 +24,7 @@ using .SatelliteFusion
 using .SatelliteCalibration
 using .TimeBlockFolds: time_block_folds
 using .HumidityGate: station_humidity, time_crossed_gate, GATE_CUTS, GATE_SPARED_MM
+using .SatelliteTwoStage: two_stage_fold, TS_MIN_PAIRS
 using .HurdleGWR
 using .RunProvenance: start_provenance, git_provenance
 

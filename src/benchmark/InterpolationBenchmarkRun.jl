@@ -131,6 +131,10 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
             time_fold=fy4b_calibration.time_folds.fold_of_time))
     # The gated product shares FY4B_QM's grid and gauges; its anchor is built per fold below.
     cfg.fy4b_qm_rh_gate && (product_data[FY4B_QM_RH_PRODUCT] = product_data[FY4B_QM_PRODUCT])
+    # So does the two-stage product. `twostage_nearby` keeps each centre shift's neighbour counts,
+    # which depend on neither the fold nor the scheme.
+    cfg.fy4b_twostage && (product_data[FY4B_TS_PRODUCT] = product_data[FY4B_QM_PRODUCT])
+    twostage_nearby = Dict{Int,Tuple{Matrix{UInt8},Int}}()
     products = benchmark_products(cfg, source_products)
     terrain = _dem_enabled(cfg) ? load_aligned_terrain(something(cfg.terrain_path), ids) : nothing
     dem_store = _empty_dem_store()
@@ -189,6 +193,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     fy4b_map_rows = NamedTuple[]
     fy4b_strength_rows = NamedTuple[]
     fy4b_gate_rows = NamedTuple[]
+    fy4b_twostage_rows = NamedTuple[]
     hurdle_rows = NamedTuple[]
     # Cells where the fold was too small for an inner selection split and fell back to
     # leave-one-out. Reported in `benchmark_scope.csv` so the fallback is never silent.
@@ -253,6 +258,20 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                     product_data[FY4B_QM_PRODUCT].times; wet=cfg.mger.rain_threshold,
                 )
             end
+            # Each fold's two-stage FY4B: the tables counted on that fold's training stations at its
+            # pixel shift (the cache it shares with the calibration above), applied at every station.
+            fold_twostage = !cfg.fy4b_twostage ? nothing : map(1:cfg.k) do fold
+                _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+                expected, _, table_rows = two_stage_fold(
+                    fy4b_calibration.grid, fy4b_calibration.sums,
+                    product_data[FY4B_TS_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                    fy4b_calibration.regime_of_time, fy4b_calibration.cells,
+                    product_data[FY4B_TS_PRODUCT].times, first(fold_calibration[fold]);
+                    cache=fy4b_calibration.cache, nearby_cache=twostage_nearby,
+                    wet=cfg.mger.rain_threshold,
+                )
+                (expected, table_rows)
+            end
             fold_bands = if cfg.fy4b_qm_fusion && !isempty(blend_bands)
                 map(1:cfg.k) do fold
                     sources = _fold_sources(cfg, source_products, band_sources, fold_calibration, fold)
@@ -271,12 +290,14 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                 fusion = get(fused_specifications, product, nothing)
                 calibrated = product == FY4B_QM_PRODUCT
                 gated = product == FY4B_QM_RH_PRODUCT
+                two_stage = product == FY4B_TS_PRODUCT
                 predictions = Dict(
                     method => fill(NaN, size(y_obs)) for method in benchmark_methods(cfg)
                 )
                 # A derived product has no anchor until a fold says which stations may be used to
                 # fit one, so `raw` is filled per fold below instead of in one assignment here.
-                fusion === nothing && !calibrated && !gated && (predictions["raw"] .= y_sat)
+                fusion === nothing && !calibrated && !gated && !two_stage &&
+                    (predictions["raw"] .= y_sat)
                 nearest_train_distance = fill(NaN, length(ids))
 
                 for fold in 1:cfg.k
@@ -303,6 +324,14 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
                             n_train_station=length(gate_train_idx))
                         append!(fy4b_gate_rows, [merge(context, row) for row in cut_rows])
+                    elseif two_stage
+                        _, _, twostage_train_idx, twostage_val_idx =
+                            _fold_station_indices(folds, id_map, cfg.k, fold)
+                        fold_sat, table_rows = fold_twostage[fold]
+                        predictions["raw"][twostage_val_idx, :] = fold_sat[twostage_val_idx, :]
+                        context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
+                            n_train_station=length(twostage_train_idx))
+                        append!(fy4b_twostage_rows, [merge(context, row) for row in table_rows])
                     elseif fusion !== nothing && fusion.design !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
@@ -430,6 +459,11 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     # stations over the other time folds' hours, with the training CSI before and after it.
     isempty(fy4b_gate_rows) ||
         CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_rh_gate_cuts.csv"), DataFrame(fy4b_gate_rows))
+    # One row per fold x season-by-regime cell x context class: the training counts, the level they
+    # were pooled at, the chance of rain, the mean wet amount and their product, the value applied.
+    isempty(fy4b_twostage_rows) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_twostage_tables.csv"),
+            DataFrame(fy4b_twostage_rows))
 
     return _write_benchmark_outputs(
         cfg, products, seeds, nested_joint, joint_inputs,

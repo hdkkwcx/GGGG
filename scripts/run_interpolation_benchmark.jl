@@ -37,6 +37,7 @@ function benchmark_config(
     fy4b::Bool=true, fy4b_file::Union{Nothing,String}=nothing, fy4b_qm::Bool=false,
     fy4b_qm_adaptive::Bool=false, fy4b_qm_fusion::Bool=false, fy4b_out_of_fusion::Bool=false,
     fy4b_qm_rh_gate::Bool=false, fy4b_qm_crossed::Bool=false, fy4b_confirm_fusion::Bool=false,
+    fy4b_twostage::Bool=false,
 )
     mode in (:smoke, :full) || throw(ArgumentError("mode must be :smoke or :full"))
     fy4b_confirm_fusion && !fy4b && throw(ArgumentError(
@@ -51,6 +52,12 @@ function benchmark_config(
     ))
     fy4b_qm_rh_gate && !fy4b_qm && throw(ArgumentError(
         "--fy4b-qm-rh-gate gates FY4B_QM, which needs --fy4b-qm",
+    ))
+    fy4b_twostage && !fy4b_qm && throw(ArgumentError(
+        "--fy4b-twostage reads the offset grid at FY4B_QM's pixel shift, which needs --fy4b-qm",
+    ))
+    fy4b_twostage && fy4b_qm_crossed && throw(ArgumentError(
+        "--fy4b-twostage counts its tables on every hour, so it does not go with --fy4b-qm-crossed",
     ))
     fy4b_file === nothing || fy4b || throw(ArgumentError("--fy4b-file needs --with-fy4b"))
     fy4b_out_of_fusion && !fy4b && throw(ArgumentError(
@@ -127,6 +134,7 @@ function benchmark_config(
             (fy4b_out_of_fusion ? "_fy4bnofusion" : "") *
             (fy4b_confirm_fusion ? "_fy4bconfirm" : "") *
             (fy4b_qm_rh_gate ? "_qmrhgate" : "") *
+            (fy4b_twostage ? "_fy4btwostage" : "") *
             # Before `_gpmuncal`, which the report scripts detect with `endswith`.
             (fy4b ? "" : "_nofy4b") *
             (gpm_uncal ? "_gpmuncal" : "") *
@@ -307,6 +315,7 @@ function benchmark_config(
         fy4b_out_of_fusion=fy4b_out_of_fusion,
         fy4b_confirm_fusion=fy4b_confirm_fusion,
         fy4b_qm_rh_gate=fy4b_qm_rh_gate,
+        fy4b_twostage=fy4b_twostage,
         # The joint path without nested selection reads a full-data spec, which the config
         # validator refuses unless the run admits it is exploratory. --no-nested-covariates is
         # exactly that admission, so it is the only way this turns on.
@@ -528,12 +537,20 @@ function main(args=ARGS)
     # other product keeps its seed and rows (`scripts/compare_fy4b_humidity_gate.jl`). ERA5-Land is
     # reanalysis: this is FY4B + reanalysis.
     fy4b_qm_rh_gate = "--fy4b-qm-rh-gate" in args
+    # With --fy4b-qm: add FY4B_TS_E, FY4B's two-stage series: the chance of rain times the mean wet
+    # amount of each hour's context class (FY4B's intensity, rain nearby, rain at t-1 and t+1),
+    # counted per fold on training stations at FY4B_QM's pixel shift (`SatelliteTwoStage`,
+    # `fy4b_twostage_tables.csv`). A conditional mean, so it flattens heavy rain. Appended last and
+    # kept out of the fusion, so every other product keeps its seed and rows
+    # (`scripts/compare_fy4b_two_stage_benchmark.jl`). Not held out in time, so not with
+    # --fy4b-qm-crossed.
+    fy4b_twostage = "--fy4b-twostage" in args
     cfg = benchmark_config(mode; with_random, legacy_dem, repeats, nested_covariates,
         local_grid, stratified_tuning_weights, legacy_tuning_geometry, mgwr_grouping,
         residual_shrinkage, unsupported_local_target, satellite_wet_blend, blend_axes,
         fused_anchor, fused_anchor_lagnbr, stacked_blend, gpm_uncal, fy4b, fy4b_file, fy4b_qm,
         fy4b_qm_adaptive, fy4b_qm_fusion, fy4b_out_of_fusion, fy4b_qm_rh_gate, fy4b_qm_crossed,
-        fy4b_confirm_fusion)
+        fy4b_confirm_fusion, fy4b_twostage)
     !legacy_dem && Threads.nthreads() == 1 && @warn(
         "Joint dynamic models are compute intensive; use julia -t 4 for parallel hourly fits " *
         "(-t auto is slower here, see scripts/profile_hour_fit.jl)",
@@ -565,6 +582,7 @@ function main(args=ARGS)
         (fy4b_out_of_fusion ? "fy4b_out_of_fusion=true, " : "") *
         (fy4b_confirm_fusion ? "fy4b_confirm_fusion=true, " : "") *
         (fy4b_qm_rh_gate ? "fy4b_qm_rh_gate=true, " : "") *
+        (fy4b_twostage ? "fy4b_twostage=true, " : "") *
         "output=$(cfg.mger.outdir)")
     result = run_interpolation_benchmark(cfg)
     println("Finished: $(nrow(result.metrics)) metric rows, $(nrow(result.scans)) scan rows")

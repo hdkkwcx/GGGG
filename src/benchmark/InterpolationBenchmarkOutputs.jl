@@ -434,6 +434,17 @@ function _write_benchmark_outputs(
             "is FY4B + reanalysis",
         ]))
     end
+    if cfg.fy4b_twostage
+        append!(scope, DataFrame(key=["fy4b_twostage"], value=[
+            "derived product $(FY4B_TS_PRODUCT): FY4B replaced by P(gauge wet) x the mean wet gauge " *
+            "amount of its context class (FY4B's intensity, rain in the surrounding shifts, rain " *
+            "at t-1 and t+1, within season x regime), counted per fold on that fold's training " *
+            "stations at its pixel shift and applied to every station; a class with fewer than " *
+            "$(TS_MIN_PAIRS) training pairs is pooled. A conditional mean, so it flattens heavy " *
+            "rain. The tables are not held out in time. It stays out of the fusion; see " *
+            "fy4b_twostage_tables.csv",
+        ]))
+    end
     if cfg.fy4b_out_of_fusion
         append!(scope, DataFrame(key=["fy4b_out_of_fusion"], value=[
             "FY4B is scored but left out of the fused anchors and the blend's non-constant bands; " *
