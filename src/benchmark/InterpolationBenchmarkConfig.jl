@@ -178,17 +178,24 @@ const FY4B_QM_RH_TIME_FOLD_SEED = 20261107
 # The time folds a crossed FY4B_QM is fitted over: the gate's, so both hold out the same weeks.
 const FY4B_QM_CROSSED_TIME_FOLD_SEED = FY4B_QM_RH_TIME_FOLD_SEED
 
+# FY4B's two-stage series (`SatelliteTwoStage.expected_anchor`): the chance of rain times the mean
+# wet amount of the hour's context class, counted per fold on training stations at the fold's pixel
+# shift. It is a conditional mean, so it flattens heavy rain. Named as in the screen
+# (`scripts/screen_fy4b_two_stage.jl`).
+const FY4B_TS_PRODUCT = "FY4B_TS_E"
+
 """The rebuild writes each hour's satellite longitude and software beside the offset grid."""
 _fy4b_hour_meta_path(cfg) = joinpath(dirname(something(cfg.fy4b_qm_grid)), "fy4b_hour_meta.csv")
 
 """
 The products a run scores: the ones with files, plus one derived product per fusion variant, plus
-`FY4B_QM_PRODUCT` when `fy4b_qm_grid` is set, plus `FY4B_QM_RH_PRODUCT` when `fy4b_qm_rh_gate` is.
+`FY4B_QM_PRODUCT` when `fy4b_qm_grid` is set, plus `FY4B_QM_RH_PRODUCT` when `fy4b_qm_rh_gate` is,
+plus `FY4B_TS_PRODUCT` when `fy4b_twostage` is.
 
 The fused names are sorted so the order does not depend on how the variants were listed, matching
-`load_global_common_product_data`, which sorts `sat_paths`; the calibrated product comes after them
-and the gated one last. A product's position sets its selection seed, so appending the gated one
-leaves every other product's seed, and so its rows, as they are.
+`load_global_common_product_data`, which sorts `sat_paths`; the calibrated product comes after them,
+then the gated one, and the two-stage one last. A product's position sets its selection seed, so
+appending these leaves every other product's seed, and so its rows, as they are.
 """
 function benchmark_products(cfg, products::Vector{String})
     derived = sort([_fused_product_name(variant) for variant in cfg.fused_anchor_variants])
@@ -196,6 +203,7 @@ function benchmark_products(cfg, products::Vector{String})
     hasproperty(cfg, :fy4b_qm_grid) && cfg.fy4b_qm_grid !== nothing &&
         push!(derived, FY4B_QM_PRODUCT)
     hasproperty(cfg, :fy4b_qm_rh_gate) && cfg.fy4b_qm_rh_gate && push!(derived, FY4B_QM_RH_PRODUCT)
+    hasproperty(cfg, :fy4b_twostage) && cfg.fy4b_twostage && push!(derived, FY4B_TS_PRODUCT)
     return isempty(derived) ? products : vcat(products, derived)
 end
 
@@ -282,6 +290,13 @@ Base.@kwdef struct InterpolationBenchmarkConfig
     # other product keeps its seed and rows. Needs `fy4b_qm_grid` and the joint covariates, whose
     # ERA5-Land t2m and d2m give the humidity. Output directory suffix `_qmrhgate`.
     fy4b_qm_rh_gate::Bool = false
+    # Add `FY4B_TS_PRODUCT`: FY4B's two-stage series (`SatelliteTwoStage`), the chance of rain times
+    # the mean wet amount of each hour's context class, counted per fold on that fold's training
+    # stations at its pixel shift. Appended last and kept out of the fusion: its blends use the
+    # run's bands, and every other product keeps its seed and rows. Needs `fy4b_qm_grid`. The tables
+    # are counted on every hour, so it is refused with `fy4b_qm_crossed`. Output directory suffix
+    # `_fy4btwostage`.
+    fy4b_twostage::Bool = false
     # Acknowledges that this run's numbers are not admissible as a result.
     #
     # `joint_covariates.spec_path` names a variable set and local/global role map screened over
@@ -541,6 +556,13 @@ function _validate_benchmark_config(cfg::InterpolationBenchmarkConfig, n_station
         cfg.joint_covariates === nothing && throw(ArgumentError(
             "fy4b_qm_rh_gate reads ERA5-Land t2m and d2m from the joint covariates, which this " *
             "run does not load"))
+    end
+    if cfg.fy4b_twostage
+        cfg.fy4b_qm_grid === nothing && throw(ArgumentError(
+            "fy4b_twostage reads the offset grid at each fold's pixel shift, which needs fy4b_qm_grid"))
+        cfg.fy4b_qm_crossed && throw(ArgumentError(
+            "fy4b_twostage counts its tables on every hour, so beside a fy4b_qm_crossed " *
+            "$FY4B_QM_PRODUCT the two would not be fitted alike"))
     end
     if cfg.fy4b_out_of_fusion
         haskey(cfg.mger.sat_paths, "FY4B") || throw(ArgumentError(

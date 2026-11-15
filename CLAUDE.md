@@ -169,6 +169,12 @@ using Main.BenchmarkDiagnostics
   gauges and 7-day time folds. Appended last and kept out of the fusion, so no other row moves. It
   needs the joint covariates' ERA5, which the end-to-end test cannot load, so
   `scripts/compare_fy4b_humidity_gate.jl` checks that against the paper run cell by cell instead.
+- `--fy4b-twostage` (`_fy4btwostage`, with `--fy4b-qm`) appends `FY4B_TS_E`: FY4B's two-stage series,
+  the chance of rain times the mean wet amount of each hour's context class, counted per fold on
+  training stations (`SatelliteTwoStage`). Appended after `FY4B_QM_RH` and kept out of the fusion, so
+  no other row moves; the end-to-end test asserts it, and
+  `scripts/compare_fy4b_two_stage_benchmark.jl` checks it against the paper run cell by cell. Its
+  tables are not held out in time, so it is refused with `--fy4b-qm-crossed`.
 - `--fy4b-confirm-fusion` (`_fy4bconfirm`, with `--with-fy4b`) feeds the fused anchors and the
   agreement bands a FY4B kept only where GPM or GSMaP also calls the cell wet, and 0 where FY4B is
   wet alone (`SatelliteFusion.confirmed_by_others`). It reads no gauge and fits nothing, so only

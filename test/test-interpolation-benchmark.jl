@@ -1310,6 +1310,11 @@ end
         (; fused_anchor_variants=[:ols, :mean], fy4b_qm_grid="g", fy4b_qm_rh_gate=true), products)
     @test with_gate == vcat(without_gate, FY4B_QM_RH_PRODUCT)
     @test last(without_gate) == FY4B_QM_PRODUCT
+    # The two-stage FY4B comes after both, for the same reason.
+    @test benchmark_products((; fused_anchor_variants=[:ols, :mean], fy4b_qm_grid="g",
+        fy4b_twostage=true), products) == vcat(without_gate, FY4B_TS_PRODUCT)
+    @test benchmark_products((; fused_anchor_variants=[:ols, :mean], fy4b_qm_grid="g",
+        fy4b_qm_rh_gate=true, fy4b_twostage=true), products) == vcat(with_gate, FY4B_TS_PRODUCT)
 end
 
 @testset "Day-block bootstrap of detection skill" begin
@@ -1890,6 +1895,47 @@ end
         @test !("strength" in names(maps))
         strengths = CSV.read(joinpath(outdir_qm, "fy4b_qm_strengths.csv"), DataFrame)
         @test all(strengths.strength .== 1.0) && all(strengths.threshold_applied)
+
+        # `fy4b_twostage` appends FY4B_TS_E: each fold's two-stage FY4B, counted on its training
+        # stations. Every other product, FY4B_QM included, keeps its rows.
+        outdir_ts = joinpath(temp_dir, "benchmark_fy4btwostage")
+        fields = fieldnames(MGERConfig)
+        cfg_ts = InterpolationBenchmarkConfig(
+            mger=MGERConfig(; merge(NamedTuple{fields}(Tuple(getfield(cfg_qm.mger, field)
+                for field in fields)), (; outdir=outdir_ts))...),
+            k=3, seed=11, cv_schemes=[:balanced_spatial],
+            idw_powers=[2.0], neighbor_candidates=Union{Nothing,Int}[8],
+            tps_smooth_candidates=[0.01], min_tuning_coverage=0.8, bootstrap_reps=0,
+            tuning_geometry=:inner_spatial, fy4b_qm_grid=grid_path, fy4b_twostage=true,
+        )
+        two_stage = run_interpolation_benchmark(cfg_ts)
+        @test Set(two_stage.metrics.product) ==
+            Set(["FY4B", "GPM", FY4B_QM_PRODUCT, FY4B_TS_PRODUCT])
+        ts_kept = filter(row -> row.product != FY4B_TS_PRODUCT, two_stage.metrics)
+        @test nrow(ts_kept) == nrow(calibrated.metrics)
+        ts_lookup = Dict(rowkey(row) => (row.n, row.RMSE) for row in eachrow(ts_kept))
+        @test all(eachrow(calibrated.metrics)) do row
+            haskey(ts_lookup, rowkey(row)) && isequal(ts_lookup[rowkey(row)], (row.n, row.RMSE))
+        end
+        # Its held-out anchor is the table's value for the cell's class: one of the fold's
+        # `expected` values, and so never above the largest mean wet amount.
+        ts_tables = CSV.read(joinpath(outdir_ts, "fy4b_twostage_tables.csv"), DataFrame)
+        @test Set(ts_tables.fold) == Set(1:cfg_ts.k)
+        @test all(ts_tables.n_train_station .< n_station)
+        @test all(ts_tables.expected .≈ ifelse.(ts_tables.p_wet .== 0, 0.0,
+            ts_tables.p_wet .* ts_tables.wet_amount))
+        ts_raw = CSV.read(joinpath(outdir_ts, "balanced_spatial", lowercase(FY4B_TS_PRODUCT),
+            "oof_raw.csv"), DataFrame)
+        ts_values = Matrix{Float64}(ts_raw[:, Not(:time)])
+        @test all(isfinite, ts_values)
+        @test all(value -> any(≈(value), ts_tables.expected), ts_values)
+        @test "fy4b_twostage" in CSV.read(joinpath(outdir_ts, "benchmark_scope.csv"), DataFrame).key
+        # It needs the grid, and is refused beside a FY4B_QM fitted out of time.
+        @test_throws "fy4b_twostage" _validate_benchmark_config(
+            InterpolationBenchmarkConfig(mger=cfg_ts.mger, fy4b_twostage=true), n_station)
+        @test_throws "fy4b_twostage" _validate_benchmark_config(
+            InterpolationBenchmarkConfig(mger=cfg_ts.mger, fy4b_qm_grid=grid_path,
+                fy4b_twostage=true, fy4b_qm_crossed=true), n_station)
 
         # `fy4b_qm_fusion`: the fused anchors and the agreement bands take each fold's FY4B_QM.
         # Against the same run without it, the merged products move, while every real product's
