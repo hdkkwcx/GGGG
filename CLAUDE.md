@@ -27,6 +27,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'          # full suite (test/runtest
 julia --project=. test/test-study-area.jl             # one file; each is self-contained
 julia --project=. scripts/run_mger_smoke_202206.jl    # scripts/run_*.jl, verify_*.jl are the entry points
 julia --project=. scripts/make_paper.jl               # paper status; --run rebuilds what is stale (see its header)
+julia --project=. scripts/trace_fy4b_process.jl       # FY4B from raw files to the paper's numbers, checked; then scripts/plot_fy4b_process.py draws the page (list_fy4b_raw_files.jl first lists the raw drive), and scripts/plot_fy4b_methods.py the page of formulas, each checked by test/test-fy4b-methods-formulas.jl
 ```
 
 One-time setup for the paper workflow:

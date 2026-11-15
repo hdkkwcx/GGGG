@@ -37,6 +37,7 @@ try
   include("test-fy4b-rebuild.jl")
   include("test-fy4b-cloud-type.jl")
   include("test-satellite-calibration.jl")
+  include("test-fy4b-methods-formulas.jl")
   include("test-satellite-two-stage.jl")
   include("test-time-block-folds.jl")
   include("test-humidity-gate.jl")
