@@ -32,6 +32,11 @@
 # |bias|, CSI at 0.1, 2 and 8 mm/h, FBI_8 and |FBI_8 − 1|. Fields: `raw`, `mgwr`, the ADW blend and the
 # agreement blend. Also reported, in no verdict: each FY4B series' agreement blend against GPM_uncal's.
 #
+# A product's evaluation mask needs every method finite, so a fold in which one method fails for
+# FY4B_TS_E leaves the cells both score (in the full run, `mixed_gwr` fails balanced fold 2). The
+# rows with role `two_stage_qm_mask` therefore repeat the pair against FY4B_QM on FY4B_QM's own mask,
+# wherever the compared field of FY4B_TS_E is finite. They are reported only.
+#
 # The rule, fixed before the full run, is the decision rule of the dry-band, fusion and humidity-gate
 # tests, on the agreement blend in balanced spatial CV, FY4B_TS_E against FY4B_QM. The two-stage
 # series helps only if:
@@ -155,6 +160,13 @@ function compare_main(args=ARGS)
             push!(rows, merge((; scheme, candidate=FY4B_TS_PRODUCT, baseline=baseline_product,
                 method, role), row, (; meets_rule)))
         end
+        for method in SCORED
+            candidate, baseline = field(FY4B_TS_PRODUCT, method), field(FY4B_QM_PRODUCT, method)
+            push!(rows, merge((; scheme, candidate=FY4B_TS_PRODUCT, baseline=FY4B_QM_PRODUCT, method,
+                role="two_stage_qm_mask"), compare(candidate, baseline,
+                    shared_cells(FY4B_QM_PRODUCT, FY4B_QM_PRODUCT, candidate, baseline)),
+                (; meets_rule=false)))
+        end
         gpm = field("GPM_uncal", AGREEMENT)
         for product in (FY4B_TS_PRODUCT, FY4B_QM_PRODUCT, "FY4B")
             candidate = field(product, AGREEMENT)
@@ -185,8 +197,8 @@ function compare_main(args=ARGS)
     println("\nFY4B_TS_E vs FY4B_QM and plain FY4B, and each against GPM_uncal's agreement blend ",
         "(95% intervals over $(BLOCK_DAYS)-day blocks):")
     for row in rows
-        @printf("  %-17s %-9s vs %-9s %-18s n %d  RMSE %.4f vs %.4f %+.2f%% (%+.2f..%+.2f)  r %+.4f (%+.4f..%+.4f)  bias %+.4f vs %+.4f  CSI0.1 %+.4f  CSI2 %+.4f  CSI8 %+.4f (%+.4f..%+.4f)  |FBI8-1| %+.3f (%+.3f..%+.3f)\n",
-            row.scheme, row.candidate, row.baseline, row.method, row.candidate_n, row.candidate_RMSE,
+        @printf("  %-17s %-17s %-9s vs %-9s %-18s n %d  RMSE %.4f vs %.4f %+.2f%% (%+.2f..%+.2f)  r %+.4f (%+.4f..%+.4f)  bias %+.4f vs %+.4f  CSI0.1 %+.4f  CSI2 %+.4f  CSI8 %+.4f (%+.4f..%+.4f)  |FBI8-1| %+.3f (%+.3f..%+.3f)\n",
+            row.scheme, row.role, row.candidate, row.baseline, row.method, row.candidate_n, row.candidate_RMSE,
             row.baseline_RMSE, 100 * row.rel_RMSE, 100 * row.rel_RMSE_lo, 100 * row.rel_RMSE_hi,
             row.delta_r, row.delta_r_lo, row.delta_r_hi, row.candidate_bias, row.baseline_bias,
             getproperty(row, Symbol("delta_CSI_0.1")), row.delta_CSI_2, row.delta_CSI_8,
