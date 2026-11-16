@@ -15,13 +15,17 @@ gauges, balanced spatial folds:
 | GSMaP | 0.379 |
 | IMERG Uncal | 0.436 |
 
-**Status (2026-11-01): built as counting tables, screened, and stopped there by the user's
-decision; `FY4B_QM` stays the FY4B quality step. See the handover's §0.**
+**Status (2026-11-15): built as counting tables, screened, and scored in the benchmark, where it
+fails the rule; `FY4B_QM` stays the FY4B quality step. See the handover's Newest section and §0.**
+The user stopped it after the screen on 2026-11-01, and asked for the benchmark run on 2026-11-15.
 - **Built:**
   - `src/models/SatelliteTwoStage.jl`, without machine learning at the user's request: per fold,
     on training gauges, it counts P(wet) and the wet amount per context class. The classes are
     intensity, rain nearby, and rain at t±1.
   - `scripts/screen_fy4b_two_stage.jl` scores it on held-out raw FY4B.
+  - `--fy4b-twostage` puts P × amount in the benchmark as a further anchor, `FY4B_TS_E`, after every
+    other product and out of the fusion. `scripts/compare_fy4b_two_stage_benchmark.jl` scores it
+    against `FY4B_QM`, by a rule fixed before the run.
 - **Results:**
   - P × amount raises r from 0.247 to 0.290 and cuts RMSE by 13%, but it never reaches 8 mm/h.
   - Most of that is not context. An amount-only table (the intensity class alone) already gives
@@ -36,9 +40,18 @@ decision; `FY4B_QM` stays the FY4B quality step. See the handover's §0.**
     - The RMSE gain stays (−26.5% against plain FY4B), but it is shrinkage toward a conditional mean, with heavy
       rain still lost (CSI_8 0).
     - The context adds +0.009, still small.
-- **Not built:**
-  - the 15-minute quarters, the product-quality features, hour of day and elevation;
-  - a benchmark run, to score MGWR and the blend downstream.
+  - **In the benchmark (2026-11-15), the gain does not survive MGWR and the blend.** Against
+    `FY4B_QM`, balanced spatial:
+    - raw RMSE −13.3%, MGWR −4.8% (−7.3..−2.4), MGWR + ADW blend −0.4% (−1.1..+0.3);
+    - MGWR + agreement blend +0.05% (−0.55..+0.59), with CSI at 8 mm/h and |FBI_8 − 1| significantly
+      worse. All four checks of the rule fail.
+    - The gap to IMERG Uncal's agreement blend does not close (+2.1% on its own cells, against +2.0% for `FY4B_QM`).
+    - `mixed_gwr` fails balanced fold 2 for `FY4B_TS_E`; on `FY4B_QM`'s own mask the agreement blend
+      is +0.27% (−0.29..+0.83).
+    - It is try 16 in `Projects_Pending_Handover/fy4b_tries.md`.
+- **Not built:** the 15-minute quarters, the product-quality features, hour of day and elevation.
+  Nothing so far argues for them: the context adds little, and the raw gain is gone after MGWR and
+  the blend.
 
 **Why the current fixes stop short.**
 - The pixel shift fixes where FY4B puts rain, and the quantile map fixes how much.
@@ -78,7 +91,10 @@ so nothing of it was reused.)
 - CSI at 0.1, 2 and 8 mm/h;
 - the frequency bias index, since P × amount compresses the distribution and can look good on r
   and RMSE while losing heavy rain;
-- downstream: MGWR and the agreement blend, as for `FY4B_QM`.
+- downstream: MGWR and the agreement blend, as for `FY4B_QM` (done 2026-11-15 for the counting
+  tables: the rule fails);
+- with weeks held out as well as gauges, since the screen's r gain went once they were
+  (2026-11-10).
 
 No gain is promised: FY4B's own information, an infrared-based estimate, sets the ceiling.
 
