@@ -111,7 +111,8 @@ MERGED_OLS only. The agreement bands would keep plain FY4B.
 - A `compare_fy4b_fusion_same_hours.jl` mode with those guards.
 
 **How to judge it.**
-- It would be try 16, so the primary's interval is 1 − 0.05/16, under try 15's rule otherwise.
+- It would be try 17, so the primary's interval is 1 − 0.05/17, under try 15's rule otherwise. (Try 16 is
+  the two-stage series in the benchmark, 2026-11-15.)
 - It is not independent of try 15: it uses the same series, and its merged anchors are the same. So
   report it as a follow-up of try 15, never as a fresh test.
 - Run it only if try 15's result leaves a reason to: for example, the merges gain but FY4B's own blend
