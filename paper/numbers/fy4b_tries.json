@@ -1,6 +1,6 @@
 {
  "source": "paper/fy4b_tries.csv",
- "source_sha256": "8cbca80361acafca25fbf5a73cdde7fda296ba6cc833918c38f28ce950eb9dcb",
+ "source_sha256": "125410a2426672e2850930e9b492a7edf106c416fbe1ae87a00ed9e1379cc94f",
  "rows": [
   {
    "date": "2026-10-30/31",
@@ -121,9 +121,17 @@
    "rule_first": "Yes (stricter)",
    "outcome": "Failed: the merge's raw gain was gone after MGWR",
    "n": "15"
+  },
+  {
+   "date": "2026-11-15",
+   "fix": "The two-stage series of try 4 as a further anchor, corrected by MGWR and the blend",
+   "test": "Full run",
+   "rule_first": "Yes",
+   "outcome": "Failed: MGWR gained, but the agreement blend did not, and heavy rain was detected less well",
+   "n": "16"
   }
  ],
  "stats": {
-  "n": "15"
+  "n": "16"
  }
 }

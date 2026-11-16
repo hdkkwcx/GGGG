@@ -5,8 +5,8 @@ try is one more chance for a fix that does nothing to clear its bar by luck. A s
 on 2026-11-09, before the last try. Fixing the rule before each run stops tuning within one test, but
 not this. So:
 - the list is kept whole, for the paper;
-- the last try's bar shares the usual 5% over the tries counted here (`N_TRIES` in
-  `scripts/compare_fy4b_fusion_same_hours.jl`).
+- try 15's bar shares the usual 5% over the 15 tries counted up to it (`N_TRIES` in
+  `scripts/compare_fy4b_fusion_same_hours.jl`, which stays 15: it records that test's level).
 
 **What counts as a try.** One row per test that had its own run or comparison script. A row can hold
 more than one variant when one test judged them together. Diagnoses that built no corrected series are
@@ -35,6 +35,7 @@ When a try is added, add it in both places and re-export with `scripts/export_pa
 | 13 | 2026-11-09 | FY4B_QM in place of plain FY4B in the merges and bands | Scratch comparison: qmfusion run against the paper run | Yes (the script's rule) | No agreement blend clears. MERGED_MEAN −0.42%, but CSI_8 and \|FBI_8 − 1\| worse | "why FY4B_QM stays out of the merges and the bands"; scratch in `output/fy4b_qm_vs_plain_in_fusion_scratch/` |
 | 14 | 2026-11-09 | FY4B_QM fitted out of time, in place of plain FY4B (`--fy4b-qm-crossed --fy4b-qm-fusion`) | New full run against the paper run | Yes ("no worse") | Fails \|FBI_8 − 1\| on GPM_uncal and MERGED_MEAN; keep plain FY4B | "FY4B_QM fitted out of time"; `7368f66`, `2e9d832` |
 | 15 | 2026-11-09 | **Confirmed FY4B** in place of plain FY4B in the merges and bands: FY4B kept only where GPM_uncal or GSMaP also calls the cell wet (`--fy4b-confirm-fusion`). Gauge-free, fits nothing | New full run against the paper run | Yes, stricter (below) | Fails. MERGED_MEAN blend −0.04% (99.67%: −0.22..+0.14); GSMaP's CSI_8 and MERGED_MEAN's \|FBI_8 − 1\| worse; R1 +0.05%; random +0.09% (sig). Keep plain FY4B. Its raw series is better on its own (RMSE −5.1%, FAR 0.71 → 0.57), and the raw merge gains −0.97%, gone after MGWR | "the last try, confirmed FY4B"; `e0b208f`, `b044b3f`, run at `15db848` |
+| 16 | 2026-11-15 | Try 4's two-stage series in the benchmark, as a further anchor `FY4B_TS_E` (`--fy4b-twostage`): the chance of rain times the mean wet amount of each hour's context class, counted per fold on training gauges. Appended last and kept out of the fusion, so no other row moves | New full run, against FY4B_QM in the same run | Yes (the decision rule of the dry-band, fusion and humidity-gate tests, tries 6, 10 and 11, at 95%) | Fails all four checks. Against FY4B_QM, balanced spatial: raw −13.3%, MGWR −4.8% (−7.3..−2.4), but the agreement blend +0.05% (−0.55..+0.59), with CSI_8 −0.010 and \|FBI_8 − 1\| +0.040, both significant, and \|bias\| up 0.0052 mm/h. `mixed_gwr` fails balanced fold 2 for FY4B_TS_E; on FY4B_QM's own mask the blend is +0.27%. Neither series is held out in time. FY4B_QM stays the quality step | No handover section: `scripts/compare_fy4b_two_stage_benchmark.jl` (its header holds the rule), `output/fy4b_two_stage_benchmark_comparison/`; `424dfc9`, `410e2c1`, merged as `1f4bb95` |
 
 **Try 15's rule**, chosen by the user and fixed before its run. It is judged on balanced_spatial, with
 7-day blocks:
@@ -63,6 +64,12 @@ When a try is added, add it in both places and re-export with `scripts/export_pa
 **Closed (2026-11-10).** Try 15 was agreed with the user as the last, and it fails, so the line of FY4B fixes
 for the fusion ends here. Plain FY4B stays in the merges and the bands.
 
+**After the close (2026-11-15).** Try 16 is not a fix for the fusion: the user asked for the two-stage series
+in the benchmark, and it stays out of the merges and the bands. It was judged at 95%, with no share of the 5%
+over the tries, and it fails even so. The row was added on 2026-11-16, after a side agent noted that the run
+had been merged without one.
+
 **Parked:** confirmed FY4B in the merges only, the bands keeping plain FY4B. It is in `ROADMAP.md` as
-exploratory. It would be try 16, with the bar 1 − 0.05/16, and it is not independent of try 15: its
+exploratory. It would be try 17, with the bar 1 − 0.05/17 (notes written before 2026-11-15, in the handover,
+call it try 16), and it is not independent of try 15: its
 merged anchor is try 15's, whose gain is gone after MGWR.

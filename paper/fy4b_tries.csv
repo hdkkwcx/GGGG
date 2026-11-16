@@ -14,3 +14,4 @@ try,date,fix,test,rule_first,outcome
 13,2026-11-09,Corrected FY4B in place of plain FY4B in the merge and the agreement bands,Two existing runs,Yes,No blend cleared the rule
 14,2026-11-09,"The same, with the correction fitted out of time: each week on the other weeks' gauges",Full run,Yes (no worse),"Failed: fewer heavy-rain hours in two blends"
 15,2026-11-09/10,"FY4B kept only where GPM or GSMaP also reports rain: no gauges, nothing fitted",Full run,Yes (stricter),"Failed: the merge's raw gain was gone after MGWR"
+16,2026-11-15,"The two-stage series of try 4 as a further anchor, corrected by MGWR and the blend",Full run,Yes,"Failed: MGWR gained, but the agreement blend did not, and heavy rain was detected less well"
