@@ -30,9 +30,9 @@ using .RunProvenance: start_provenance, git_provenance
 
 # The benchmark's implementation is split across concern-specific files (config, fold-splitting,
 # DEM, joint-covariates, predictors, blends and the stack, tuning, metrics, bootstrap, output
-# writing, per-fold runs, orchestrator) purely for readability; each is a plain top-level fragment, not a module, so
-# include order only needs to put shared consts/structs before the files that reference them as
-# call-time names.
+# writing, per-fold runs, derived products, orchestrator) purely for readability; each is a plain
+# top-level fragment, not a module, so include order only needs to put shared consts/structs
+# before the files that reference them as call-time names.
 include(joinpath(@__DIR__, "InterpolationBenchmarkConfig.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkFolds.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkDEM.jl"))
@@ -45,4 +45,5 @@ include(joinpath(@__DIR__, "InterpolationBenchmarkMetrics.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkBootstrap.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkOutputs.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkFold.jl"))
+include(joinpath(@__DIR__, "InterpolationBenchmarkDerived.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkRun.jl"))
