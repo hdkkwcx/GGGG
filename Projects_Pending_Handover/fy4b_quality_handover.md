@@ -92,8 +92,9 @@ FY4B_TS_E against FY4B_QM, balanced spatial, on the 3,546,598 cells both score (
   - |FBI_8 − 1|: +0.0405 (+0.0158..+0.0681), significantly worse;
   - |bias|: +0.0052 mm/h (−0.0026..+0.0067), just over the 0.005 allowed.
 - **The gain shrinks at every stage:** −13.3% raw, −4.8% after MGWR, −0.4% after the ADW blend, and none after
-  the agreement blend. FY4B_QM and the humidity gate shrank the same way: FY4B_QM's −16.8% raw is −0.7% after
-  the agreement blend, and the gate's −1.7% is +0.03%.
+  the agreement blend. The humidity gate went the same way (−1.7% raw, +0.03% after the agreement blend).
+  FY4B_QM is different: against plain FY4B it gains at every stage, −16.8% raw, −5.3% after MGWR and −0.7%
+  (−1.2..−0.2) after the agreement blend, all significant. Its gain shrinks too, but it is not gone.
 - **Heavy rain is lost.** The raw series never reaches 8 mm/h. MGWR brings some of it back (FBI_8 0.18), but less
   than for FY4B_QM (0.44), and the agreement blend stays behind (CSI_8 0.060 against 0.071).
 - **It is wet too often.** FBI at 0.1 mm/h is 1.93 raw (FY4B_QM 1.00), and 2.34 against 2.11 after the agreement
@@ -126,8 +127,9 @@ FY4B_TS_E against FY4B_QM, balanced spatial, on the 3,546,598 cells both score (
   Table S1 gains the row in words and its count reads 16. No other paper number or sentence changes. The parked
   merges-only variant is therefore try 17.
 - **Not built:** the 15-minute quarters, the product-quality features, hour of day and elevation (`ROADMAP.md`).
-  Nothing here argues for them: the context adds little (§0), and most or all of a raw gain has now gone after
-  MGWR and the blend three times (FY4B_QM, the humidity gate, this run).
+  Nothing here argues for them: the context adds little (§0), and of the three raw gains taken through MGWR
+  and the blend, only FY4B_QM's is still there after the agreement blend (−0.7%, significant). The humidity
+  gate's and this run's are gone.
 - **Notes:** `NOWAY/why_fy4b_scored_worst.typ` and `NOWAY/fy4b_benchmark_workflow.typ` (2026-11-16, merged as
   `4c7ddb5`) collect the FY4B results and the benchmark's stages for reading. They hold no new analysis.
 
