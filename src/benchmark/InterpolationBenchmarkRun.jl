@@ -1,7 +1,21 @@
-function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
-    mkpath(cfg.mger.outdir)
-    # Read before any work: the code that runs is the code checked out now, not at the end.
-    provenance = _start_provenance(cfg)
+"""
+What is fixed for the whole run, as one NamedTuple: the stations and products the benchmark reads,
+and everything built from them once.
+
+- `ids`, `lonlat`: the common stations. `source_products` are the products with files; `products`
+  adds the derived ones (`benchmark_products`); `product_data` holds each one's `times`, `Y_obs`
+  and `Y_sat`.
+- `terrain`, `joint_inputs`, `nested_joint`: the covariates of the legacy DEM path or of the joint
+  path.
+- `fused_specifications`, `fy4b_calibration`, `gate_inputs`, `twostage_nearby`: what the derived
+  products need that does not depend on the fold (`InterpolationBenchmarkDerived.jl`).
+- `blend_bands`, `band_sources`, `stack_agreement`: the bands of the non-constant blend axes and of
+  the stack, read off the source products.
+
+Validates `cfg` once the stations are known. Writes `global_common_time_qc.csv`, for a crossed
+FY4B_QM `fy4b_qm_time_folds.csv`, and the joint provenance tables.
+"""
+function _benchmark_setup(cfg::InterpolationBenchmarkConfig)
     station_meta = load_station_meta(cfg.mger.station_meta_path;
         station_id_col=cfg.mger.station_id_col, lon_col=cfg.mger.lon_col, lat_col=cfg.mger.lat_col)
     source_products, ids, product_data = load_global_common_product_data(cfg.mger)
@@ -24,7 +38,8 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
             time=Dates.format.(product_data[FY4B_QM_PRODUCT].times, dateformat"yyyy-mm-ddTHH:MM:SS"),
             block=fy4b_calibration.time_folds.block_of_time,
             time_fold=fy4b_calibration.time_folds.fold_of_time))
-    # The gated product shares FY4B_QM's grid and gauges; its anchor is built per fold below.
+    # The gated product shares FY4B_QM's grid and gauges; its anchor is built per fold
+    # (`_benchmark_partition`).
     cfg.fy4b_qm_rh_gate && (product_data[FY4B_QM_RH_PRODUCT] = product_data[FY4B_QM_PRODUCT])
     # So does the two-stage product. `twostage_nearby` keeps each centre shift's neighbour counts,
     # which depend on neither the fold nor the scheme.
@@ -70,10 +85,113 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
         nothing
     end
     joint_inputs === nothing || _write_joint_provenance(cfg, joint_inputs, nested_joint)
+    return (; cfg, ids, lonlat, products, source_products, product_data, terrain, joint_inputs,
+        nested_joint, fused_specifications, fy4b_calibration, gate_inputs, twostage_nearby,
+        blend_bands, band_sources, stack_agreement)
+end
 
+"""
+One fold partition of the stations, a repeat of a scheme, as a NamedTuple: its `folds`, the
+folder its tables go to, and each fold's derived FY4B series (`fold_calibration`, `fold_gate`,
+`fold_twostage`, `fold_bands`; `nothing` when the run does not use one). Those series depend on
+the fold's training stations alone, so they are built here once for every product that reads them.
+
+Writes `split_common.csv`.
+"""
+function _benchmark_partition(
+    setup, repeat_index::Int, repeat_seed::Int, scheme_symbol::Symbol, repeat_root,
+)
+    (; cfg, ids, lonlat, source_products, product_data, fy4b_calibration, gate_inputs,
+        twostage_nearby, blend_bands, band_sources) = setup
+    scheme = string(scheme_symbol)
+    scheme_dir = joinpath(repeat_root, scheme)
+    mkpath(scheme_dir)
+    folds = benchmark_folds(
+        scheme_symbol, ids, lonlat; k=cfg.k, seed=repeat_seed,
+        center_init=cfg.fold_center_init, rotation=repeat_index - 1,
+    )
+    _write_split(joinpath(scheme_dir, "split_common.csv"), ids, folds, scheme_symbol)
+    id_map = Dict(id => index for (index, id) in enumerate(ids))
+    # A fold's calibrated FY4B depends only on its training stations, so it is built once
+    # per fold here: for FY4B_QM itself and, under `fy4b_qm_fusion`, for the fused anchors
+    # and blend bands it feeds. Under `fy4b_qm_crossed` each time fold's hours come from
+    # a fit on the other time folds' hours alone.
+    fold_calibration = fy4b_calibration === nothing ? nothing : map(1:cfg.k) do fold
+        _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+        if cfg.fy4b_qm_crossed
+            calibrate_crossed(
+                fy4b_calibration.grid, fy4b_calibration.crossed_sums,
+                product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                fy4b_calibration.regime_of_time, fy4b_calibration.cells,
+                fy4b_calibration.time_folds.fold_of_time, product_data[FY4B_QM_PRODUCT].times;
+                cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
+                choice_labels=fy4b_calibration.month_labels,
+            )
+        else
+            calibrate_fold(
+                fy4b_calibration.grid, fy4b_calibration.sums,
+                product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                fy4b_calibration.regime_of_time, fy4b_calibration.cells;
+                cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
+                choice_labels=fy4b_calibration.month_labels,
+            )
+        end
+    end
+    # Each fold's gated FY4B_QM: the cut chosen on that fold's training stations, per time
+    # fold on the other blocks' hours, and applied at every station.
+    fold_gate = gate_inputs === nothing ? nothing : map(1:cfg.k) do fold
+        _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+        time_crossed_gate(
+            first(fold_calibration[fold]), product_data[FY4B_QM_PRODUCT].Y_obs,
+            gate_inputs.humidity, train_idx, gate_inputs.time_folds.fold_of_time,
+            product_data[FY4B_QM_PRODUCT].times; wet=cfg.mger.rain_threshold,
+        )
+    end
+    # Each fold's two-stage FY4B: the tables counted on that fold's training stations at its
+    # pixel shift (the cache it shares with the calibration above), applied at every station.
+    fold_twostage = !cfg.fy4b_twostage ? nothing : map(1:cfg.k) do fold
+        _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+        expected, _, table_rows = two_stage_fold(
+            fy4b_calibration.grid, fy4b_calibration.sums,
+            product_data[FY4B_TS_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+            fy4b_calibration.regime_of_time, fy4b_calibration.cells,
+            product_data[FY4B_TS_PRODUCT].times, first(fold_calibration[fold]);
+            cache=fy4b_calibration.cache, nearby_cache=twostage_nearby,
+            wet=cfg.mger.rain_threshold,
+        )
+        (expected, table_rows)
+    end
+    fold_bands = if cfg.fy4b_qm_fusion && !isempty(blend_bands)
+        map(1:cfg.k) do fold
+            sources = _fold_sources(cfg, source_products, band_sources, fold_calibration, fold)
+            Dict(axis => blend_band_matrix(
+                axis, first(sources), sources, cfg.mger.rain_threshold,
+            ) for axis in keys(blend_bands))
+        end
+    else
+        nothing
+    end
+    return (; scheme, scheme_symbol, scheme_dir, repeat_index, repeat_seed, folds, id_map,
+        fold_calibration, fold_gate, fold_twostage, fold_bands)
+end
+
+"""
+Run the benchmark `cfg` describes and write its tables to `cfg.mger.outdir`: every product, on
+every fold of every scheme and repeat, then the pooled scores (`_write_benchmark_outputs`, whose
+result this returns).
+"""
+function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
+    mkpath(cfg.mger.outdir)
+    # Read before any work: the code that runs is the code checked out now, not at the end.
+    provenance = _start_provenance(cfg)
+    setup = _benchmark_setup(cfg)
+    (; ids, products, product_data, fused_specifications) = setup
     rows = _benchmark_rows()
 
-    _dem_enabled(cfg) && _screen_dem_full_data!(rows.dem_store, cfg, terrain, lonlat, products, product_data)
+    _dem_enabled(cfg) && _screen_dem_full_data!(
+        rows.dem_store, cfg, setup.terrain, setup.lonlat, products, product_data)
 
     seeds = benchmark_seeds(cfg)
     # Repeated cross-validation: one independent fold partition per repeat.
@@ -86,76 +204,10 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     for (repeat_index, repeat_seed) in enumerate(seeds)
         repeat_root = _repeat_dir(cfg.mger.outdir, repeat_index, length(seeds))
         for scheme_symbol in cfg.cv_schemes
-            scheme = string(scheme_symbol)
-            scheme_dir = joinpath(repeat_root, scheme)
-            mkpath(scheme_dir)
-            folds = benchmark_folds(
-                scheme_symbol, ids, lonlat; k=cfg.k, seed=repeat_seed,
-                center_init=cfg.fold_center_init, rotation=repeat_index - 1,
-            )
-            _write_split(joinpath(scheme_dir, "split_common.csv"), ids, folds, scheme_symbol)
-            id_map = Dict(id => index for (index, id) in enumerate(ids))
-            # A fold's calibrated FY4B depends only on its training stations, so it is built once
-            # per fold here: for FY4B_QM itself and, under `fy4b_qm_fusion`, for the fused anchors
-            # and blend bands it feeds. Under `fy4b_qm_crossed` each time fold's hours come from
-            # a fit on the other time folds' hours alone.
-            fold_calibration = fy4b_calibration === nothing ? nothing : map(1:cfg.k) do fold
-                _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
-                if cfg.fy4b_qm_crossed
-                    calibrate_crossed(
-                        fy4b_calibration.grid, fy4b_calibration.crossed_sums,
-                        product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
-                        fy4b_calibration.regime_of_time, fy4b_calibration.cells,
-                        fy4b_calibration.time_folds.fold_of_time, product_data[FY4B_QM_PRODUCT].times;
-                        cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
-                        adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
-                        choice_labels=fy4b_calibration.month_labels,
-                    )
-                else
-                    calibrate_fold(
-                        fy4b_calibration.grid, fy4b_calibration.sums,
-                        product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
-                        fy4b_calibration.regime_of_time, fy4b_calibration.cells;
-                        cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
-                        adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
-                        choice_labels=fy4b_calibration.month_labels,
-                    )
-                end
-            end
-            # Each fold's gated FY4B_QM: the cut chosen on that fold's training stations, per time
-            # fold on the other blocks' hours, and applied at every station.
-            fold_gate = gate_inputs === nothing ? nothing : map(1:cfg.k) do fold
-                _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
-                time_crossed_gate(
-                    first(fold_calibration[fold]), product_data[FY4B_QM_PRODUCT].Y_obs,
-                    gate_inputs.humidity, train_idx, gate_inputs.time_folds.fold_of_time,
-                    product_data[FY4B_QM_PRODUCT].times; wet=cfg.mger.rain_threshold,
-                )
-            end
-            # Each fold's two-stage FY4B: the tables counted on that fold's training stations at its
-            # pixel shift (the cache it shares with the calibration above), applied at every station.
-            fold_twostage = !cfg.fy4b_twostage ? nothing : map(1:cfg.k) do fold
-                _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
-                expected, _, table_rows = two_stage_fold(
-                    fy4b_calibration.grid, fy4b_calibration.sums,
-                    product_data[FY4B_TS_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
-                    fy4b_calibration.regime_of_time, fy4b_calibration.cells,
-                    product_data[FY4B_TS_PRODUCT].times, first(fold_calibration[fold]);
-                    cache=fy4b_calibration.cache, nearby_cache=twostage_nearby,
-                    wet=cfg.mger.rain_threshold,
-                )
-                (expected, table_rows)
-            end
-            fold_bands = if cfg.fy4b_qm_fusion && !isempty(blend_bands)
-                map(1:cfg.k) do fold
-                    sources = _fold_sources(cfg, source_products, band_sources, fold_calibration, fold)
-                    Dict(axis => blend_band_matrix(
-                        axis, first(sources), sources, cfg.mger.rain_threshold,
-                    ) for axis in keys(blend_bands))
-                end
-            else
-                nothing
-            end
+            partition = _benchmark_partition(
+                setup, repeat_index, repeat_seed, scheme_symbol, repeat_root)
+            (; scheme, scheme_dir, folds, id_map, fold_calibration, fold_gate, fold_twostage) =
+                partition
 
             for product in products
                 data = product_data[product]
@@ -175,6 +227,11 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                 nearest_train_distance = fill(NaN, length(ids))
 
                 for fold in 1:cfg.k
+                    train_ids, val_ids, train_idx, val_idx =
+                        _fold_station_indices(folds, id_map, cfg.k, fold)
+                    stations = (; train_ids, val_ids, train_idx, val_idx)
+                    # The fold's identity: the first five columns of every row it writes.
+                    cell = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed)
                     fold_sat = y_sat
                     if calibrated
                         _, _, calibration_train_idx, calibration_val_idx =
@@ -184,8 +241,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         fold_sat, shift_rows, map_rows, strength_rows = fold_calibration[fold]
                         predictions["raw"][calibration_val_idx, :] =
                             fold_sat[calibration_val_idx, :]
-                        context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                            n_train_station=length(calibration_train_idx))
+                        context = merge(cell, (; n_train_station=length(calibration_train_idx)))
                         append!(rows.fy4b_shift, [merge(context, row) for row in shift_rows])
                         append!(rows.fy4b_map, [merge(context, row) for row in map_rows])
                         append!(rows.fy4b_strength,
@@ -195,16 +251,14 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                             _fold_station_indices(folds, id_map, cfg.k, fold)
                         fold_sat, cut_rows = fold_gate[fold]
                         predictions["raw"][gate_val_idx, :] = fold_sat[gate_val_idx, :]
-                        context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                            n_train_station=length(gate_train_idx))
+                        context = merge(cell, (; n_train_station=length(gate_train_idx)))
                         append!(rows.fy4b_gate, [merge(context, row) for row in cut_rows])
                     elseif two_stage
                         _, _, twostage_train_idx, twostage_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
                         fold_sat, table_rows = fold_twostage[fold]
                         predictions["raw"][twostage_val_idx, :] = fold_sat[twostage_val_idx, :]
-                        context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                            n_train_station=length(twostage_train_idx))
+                        context = merge(cell, (; n_train_station=length(twostage_train_idx)))
                         append!(rows.fy4b_twostage, [merge(context, row) for row in table_rows])
                     elseif fusion !== nothing && fusion.design !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
@@ -225,12 +279,11 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         terms = vcat("intercept", lower, lower .* "_lag1",
                             lower .* "_lead1", lower .* "_nbr8")
                         for group in 1:design.n_group, (row, term) in enumerate(terms)
-                            push!(rows.fused_grouped, (;
-                                scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
+                            push!(rows.fused_grouped, merge(cell, (;
                                 variant=String(fusion.variant), group=group - 1,
                                 n_cell=used[group], fell_back=fell_back[group], term,
                                 coefficient=coefficients[row, group],
-                            ))
+                            )))
                         end
                     elseif fusion !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
@@ -247,8 +300,8 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         fold_sat = apply_satellite_fusion(sources, coefficients)
                         predictions["raw"][fusion_val_idx, :] = fold_sat[fusion_val_idx, :]
                         push!(rows.fused_anchor, merge(
-                            (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                                variant=String(fusion.variant),
+                            cell,
+                            (; variant=String(fusion.variant),
                                 n_train_station=length(fusion_train_idx), n_train_cell=used,
                                 fell_back, intercept=coefficients[1]),
                             NamedTuple{Tuple(Symbol("beta_", lowercase(name))
@@ -257,12 +310,8 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         ))
                     end
                     _run_benchmark_fold!(
-                        cfg, fold, folds, id_map, ids, products, product,
-                        data, lonlat, y_obs, fold_sat, terrain, joint_inputs, nested_joint,
-                        scheme, scheme_symbol, repeat_index, repeat_seed,
-                        predictions, nearest_train_distance,
-                        fold_bands === nothing ? blend_bands : fold_bands[fold],
-                        stack_agreement, rows,
+                        setup, partition, cell, stations, fold_sat, predictions,
+                        nearest_train_distance, rows,
                     )
                 end
 
@@ -304,7 +353,5 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
         end
     end # repeat loop
 
-    return _write_benchmark_outputs(
-        cfg, products, seeds, nested_joint, joint_inputs, rows; provenance,
-    )
+    return _write_benchmark_outputs(setup, seeds, rows; provenance)
 end

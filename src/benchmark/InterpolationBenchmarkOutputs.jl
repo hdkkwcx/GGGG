@@ -173,15 +173,13 @@ _benchmark_rows() = (;
 
 """
 Assemble every result table from the accumulated `rows` (`_benchmark_rows`) and write the run's
-CSVs.
+CSVs. `setup` is the run's `_benchmark_setup`.
 
 Split out of `run_interpolation_benchmark` so the orchestration reads as
 setup -> repeat/scheme/product/fold loops -> outputs.
 """
-function _write_benchmark_outputs(
-    cfg::InterpolationBenchmarkConfig, products, seeds, nested_joint::Bool, joint_inputs, rows;
-    provenance::DataFrame=_git_provenance(),
-)
+function _write_benchmark_outputs(setup, seeds, rows; provenance::DataFrame=_git_provenance())
+    (; cfg, products, nested_joint, joint_inputs) = setup
     # One row per fold x band x term; `group` is the agreement-envelope band (0 = no product
     # wet). `fell_back` marks a band too sparse or singular to fit alone, which took the pooled fit.
     isempty(rows.fused_grouped) ||

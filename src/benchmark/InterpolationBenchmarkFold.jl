@@ -2,21 +2,20 @@
 `auto` for one fold: choose a single GWR-family method using only the inner selection split, and
 record the choice.
 
-Split out of `_run_benchmark_fold!`, which was 262 lines. Mutates `fold_predictions` (writing the
-`auto` entry, NaN when no contender could be scored), `rows.auto_selection` and `rows.status`.
-Parameters keep the names the enclosing locals had, so the body is unchanged from when it was
-inline.
+`cell` is the fold's identity and `fold_data` its slices, as `_run_benchmark_fold!` builds them.
+Mutates `fold_predictions` (writing the `auto` entry, NaN when no contender could be scored),
+`rows.auto_selection` and `rows.status`.
 
 Returns the inner-split contenders and the tuning hours they were scored over, which
 `_run_fold_blend!` reuses.
 """
 function _run_fold_auto!(
-    cfg::InterpolationBenchmarkConfig, fold::Int, scheme, product, repeat_index::Int,
-    repeat_seed::Int, val_idx, y_obs, y_sat_val, y_obs_train, y_sat_train, train_lonlat,
-    selection_groups, joint_selection_contexts, joint_inputs, nested_joint::Bool,
+    cfg::InterpolationBenchmarkConfig, cell, fold_data, joint_inputs, nested_joint::Bool,
     fold_selected, fold_predictions, predictions, rows,
     twins::Dict{String,String}=Dict{String,String}(),
 )
+    (; val_idx, y_obs, y_obs_train, y_sat_train, train_lonlat, eligible, selection_groups,
+        joint_selection_contexts) = fold_data
 
     # `auto`: choose one GWR-family method for this fold on the inner split alone.
     #
@@ -67,9 +66,7 @@ function _run_fold_auto!(
         fold_predictions[AUTO_METHOD] = fold_predictions[auto_choice.chosen]
         predictions[AUTO_METHOD][val_idx, :] = fold_predictions[AUTO_METHOD]
         push!(rows.auto_selection, merge(
-            (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed),
-            auto_choice,
-            (; skipped=join(auto_failures, " | ")),
+            cell, auto_choice, (; skipped=join(auto_failures, " | ")),
         ))
     else
         # No inner split (leave-one-out geometry, or a fold too small to split), or no
@@ -80,16 +77,14 @@ function _run_fold_auto!(
     # Measured the same way as every other method's row - non-NaN share of the
     # held-out cells it could have predicted - so the column means one thing across the
     # table. `auto_selection.csv` carries the inner-split mask coverage separately.
-    auto_eligible = .!isnan.(y_obs[val_idx, :]) .& .!isnan.(y_sat_val)
-    auto_coverage = _prediction_coverage(auto_eligible, fold_predictions[AUTO_METHOD])
+    auto_coverage = _prediction_coverage(eligible, fold_predictions[AUTO_METHOD])
     auto_status, auto_error = _auto_status(
         auto_choice !== nothing, auto_coverage, cfg.min_tuning_coverage,
         _dem_enabled(cfg), selection_groups !== nothing, auto_failures,
     )
     push!(rows.status, _benchmark_status_row(
         nothing, nothing, joint_inputs, nested_joint;
-        scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-        mode="", method=AUTO_METHOD, output_method=AUTO_METHOD,
+        cell..., mode="", method=AUTO_METHOD, output_method=AUTO_METHOD,
         status=auto_status, error=auto_error, prediction_coverage=auto_coverage,
     ))
     # Handed back rather than discarded: `_run_fold_blend!` needs the same inner-split predictions
@@ -136,19 +131,17 @@ itself unpredicted rather than defaulting.
 Mutates `predictions`, `fold_predictions`, `rows.blend_selection` and `rows.status`.
 """
 function _run_fold_blend!(
-    cfg::InterpolationBenchmarkConfig, fold::Int, scheme, product, repeat_index::Int,
-    repeat_seed::Int, val_idx, y_obs, y_sat_val, y_obs_train, y_sat_train, train_lonlat,
-    selection_groups, auto_inner, fold_selected, fold_predictions, predictions,
-    blend_band_train, blend_band_val, rows,
+    cfg::InterpolationBenchmarkConfig, cell, fold_data, auto_inner, fold_selected,
+    fold_predictions, predictions, blend_band_train, blend_band_val, rows,
 )
+    (; val_idx, y_obs, y_sat_val, y_obs_train, y_sat_train, train_lonlat, eligible,
+        selection_groups) = fold_data
     threshold = cfg.mger.rain_threshold
-    eligible = .!isnan.(y_obs[val_idx, :]) .& .!isnan.(y_sat_val)
 
     # One `run_status.csv` row for a blended method, which carries no covariate model.
     status_row(output_method, status, message, coverage) = _benchmark_status_row(
         nothing, nothing, nothing, false;
-        scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-        mode="", method=output_method, output_method,
+        cell..., mode="", method=output_method, output_method,
         status, error=message, prediction_coverage=coverage,
     )
 
@@ -244,8 +237,8 @@ function _run_fold_blend!(
         fold_predictions[output_method] = blended
         predictions[output_method][val_idx, :] = blended
         push!(rows.blend_selection, merge(
-            (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                method=output_method, source, fallback=BLEND_FALLBACK_METHOD, threshold,
+            cell,
+            (; method=output_method, source, fallback=BLEND_FALLBACK_METHOD, threshold,
                 axis=String(axis)),
             _blend_selection_weights(choice, axis),
         ))
@@ -274,16 +267,14 @@ member did not fit - the same reason `_run_fold_blend!` gives for not defaulting
 Mutates `fold_predictions`, `predictions`, `rows.stack_selection` and `rows.status`.
 """
 function _run_fold_stack!(
-    cfg::InterpolationBenchmarkConfig, fold::Int, scheme, product, repeat_index::Int,
-    repeat_seed::Int, times, val_idx, y_obs, y_sat_val, y_obs_train, y_sat_train, train_lonlat,
-    selection_groups, joint_selection_contexts, fold_selected, fold_predictions, predictions,
-    agreement_train, agreement_val, val_distance, rows,
+    cfg::InterpolationBenchmarkConfig, cell, fold_data, times, fold_selected, fold_predictions,
+    predictions, agreement_train, agreement_val, val_distance, rows,
 )
-    eligible = .!isnan.(y_obs[val_idx, :]) .& .!isnan.(y_sat_val)
+    (; val_idx, y_obs, y_sat_val, y_obs_train, y_sat_train, train_lonlat, eligible,
+        selection_groups, joint_selection_contexts) = fold_data
     status_row(status, message, coverage) = _benchmark_status_row(
         nothing, nothing, nothing, false;
-        scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-        mode="", method=STACK_METHOD, output_method=STACK_METHOD,
+        cell..., mode="", method=STACK_METHOD, output_method=STACK_METHOD,
         status, error=message, prediction_coverage=coverage,
     )
     function skip(status::String, message::String)
@@ -344,8 +335,8 @@ function _run_fold_stack!(
     predictions[STACK_METHOD][val_idx, :] = stacked
     for band in 1:n_bands
         push!(rows.stack_selection, merge(
-            (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                method=STACK_METHOD, band, n_cell=choice.used[band],
+            cell,
+            (; method=STACK_METHOD, band, n_cell=choice.used[band],
                 fell_back=choice.fell_back[band]),
             NamedTuple{Tuple(Symbol.("w_" .* STACK_FEATURES))}(Tuple(choice.weights[:, band])),
             (; inner_RMSE=choice.inner_RMSE, source_RMSE=choice.source_RMSE),
@@ -364,26 +355,39 @@ Everything one cross-validation fold does: split the stations, build the fold's 
 contexts, tune and predict each `BENCHMARK_RUNS` method, run `auto` and the blends, and append the
 fold's metric, scan and status rows.
 
-Extracted verbatim from `run_interpolation_benchmark`, whose body was a single 580-line function
-with the fold loop nested four deep. Parameters are named for the values they receive so the body
-is unchanged from when it was inline; the length of this argument list is the honest measure of
-how much per-run state a fold touches, and is a fair target for a later pass.
+What a fold touches arrives in four bundles, which the first lines unpack into the names the body
+has always used:
+- `setup`: what is fixed for the run (`_benchmark_setup`);
+- `partition`: this repeat of this scheme (`_benchmark_partition`);
+- `cell`: the fold's identity, `(; scheme, product, fold, repeat, seed)`, the first five columns
+  of every row the fold writes;
+- `stations`: its training and held-out stations, as `_fold_station_indices` gives them.
 
-Mutates `predictions`, `nearest_train_distance`, the DEM/joint stores and the row accumulators.
+`y_sat` is the anchor the fold corrects: the product's own field, or a derived product's anchor
+for this fold.
+
+Mutates `predictions`, `nearest_train_distance` and `rows`.
 """
 function _run_benchmark_fold!(
-    cfg::InterpolationBenchmarkConfig, fold::Int, folds, id_map, ids, products, product,
-    data, lonlat, y_obs, y_sat, terrain, joint_inputs, nested_joint::Bool,
-    scheme, scheme_symbol, repeat_index::Int, repeat_seed::Int,
-    predictions, nearest_train_distance, blend_bands, stack_agreement, rows,
+    setup, partition, cell, stations, y_sat, predictions, nearest_train_distance, rows,
 )
+    (; cfg, ids, lonlat, products, terrain, joint_inputs, nested_joint, stack_agreement) = setup
+    (; scheme, scheme_symbol, repeat_index, repeat_seed) = partition
+    (; product, fold) = cell
+    (; train_ids, train_idx, val_idx) = stations
+    data = setup.product_data[product]
+    y_obs = data.Y_obs
+    # Under `fy4b_qm_fusion` the blend bands follow the fold's calibrated FY4B.
+    blend_bands = partition.fold_bands === nothing ? setup.blend_bands : partition.fold_bands[fold]
 
-    train_ids, val_ids, train_idx, val_idx = _fold_station_indices(folds, id_map, cfg.k, fold)
     train_lonlat = Matrix{Float64}(lonlat[train_idx, :])
     val_lonlat = Matrix{Float64}(lonlat[val_idx, :])
     y_obs_train = Matrix{Float64}(y_obs[train_idx, :])
     y_sat_train = Matrix{Float64}(y_sat[train_idx, :])
     y_sat_val = Matrix{Float64}(y_sat[val_idx, :])
+    # The held-out cells a method could have predicted; every status row's coverage is a share of
+    # these.
+    eligible = .!isnan.(y_obs[val_idx, :]) .& .!isnan.(y_sat_val)
     distance_train_val = haversine_distance_matrix(train_lonlat, val_lonlat)
     nearest_train_distance[val_idx] = vec(minimum(distance_train_val, dims=1))
     null_predictions = _null_fold_predictions(y_obs_train, length(val_idx))
@@ -539,12 +543,10 @@ function _run_benchmark_fold!(
             end
             predictions[output_method][val_idx, :] = fold_predictions[output_method]
             fold_selected[output_method] = selected
-            eligible = .!isnan.(y_obs[val_idx, :]) .& .!isnan.(y_sat_val)
             coverage = _prediction_coverage(eligible, fold_predictions[output_method])
             push!(rows.status, _benchmark_status_row(
                 dem_context, joint_context, joint_inputs, nested_joint;
-                scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                mode, method, output_method,
+                cell..., mode, method, output_method,
                 status=coverage >= cfg.min_tuning_coverage ? "success" : "partial",
                 error=coverage >= cfg.min_tuning_coverage ? "" :
                     "prediction coverage below minimum",
@@ -554,8 +556,7 @@ function _run_benchmark_fold!(
             fold_predictions[output_method] = fill(NaN, length(val_idx), size(y_obs, 2))
             push!(rows.status, _benchmark_status_row(
                 dem_context, joint_context, joint_inputs, nested_joint;
-                scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
-                mode, method, output_method, status="failed",
+                cell..., mode, method, output_method, status="failed",
                 error=sprint(showerror, e), prediction_coverage=0.0,
             ))
         end
@@ -568,27 +569,24 @@ function _run_benchmark_fold!(
         )
     end
 
+    # The fold's slices, for the three steps that work on the fitted methods' predictions.
+    fold_data = (; val_idx, y_obs, y_sat_val, y_obs_train, y_sat_train, train_lonlat, eligible,
+        selection_groups, joint_selection_contexts)
     auto_inner = _run_fold_auto!(
-        cfg, fold, scheme, product, repeat_index, repeat_seed, val_idx, y_obs, y_sat_val,
-        y_obs_train, y_sat_train, train_lonlat, selection_groups, joint_selection_contexts,
-        joint_inputs, nested_joint, fold_selected, fold_predictions, predictions,
-        rows, twins,
+        cfg, cell, fold_data, joint_inputs, nested_joint, fold_selected, fold_predictions,
+        predictions, rows, twins,
     )
     if cfg.satellite_wet_blend
         blend_band_train = Dict(axis => band[train_idx, :] for (axis, band) in blend_bands)
         blend_band_val = Dict(axis => band[val_idx, :] for (axis, band) in blend_bands)
         _run_fold_blend!(
-            cfg, fold, scheme, product, repeat_index, repeat_seed, val_idx, y_obs, y_sat_val,
-            y_obs_train, y_sat_train, train_lonlat, selection_groups, auto_inner,
-            fold_selected, fold_predictions, predictions, blend_band_train, blend_band_val,
-            rows,
+            cfg, cell, fold_data, auto_inner, fold_selected, fold_predictions, predictions,
+            blend_band_train, blend_band_val, rows,
         )
     end
     if cfg.stacked_blend
         _run_fold_stack!(
-            cfg, fold, scheme, product, repeat_index, repeat_seed, data.times, val_idx, y_obs,
-            y_sat_val, y_obs_train, y_sat_train, train_lonlat, selection_groups,
-            joint_selection_contexts, fold_selected, fold_predictions, predictions,
+            cfg, cell, fold_data, data.times, fold_selected, fold_predictions, predictions,
             stack_agreement[train_idx, :], stack_agreement[val_idx, :],
             nearest_train_distance[val_idx], rows,
         )
