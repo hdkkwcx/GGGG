@@ -16,7 +16,7 @@ export ST_GWR, ST_GWR_fast, ST_GWR_fast!, gwr_neighbors
 export fitted, fitted!
 
 export cor
-export metric_continuous, metric_event, common_valid_mask, complete_time_mask, tied_ranks
+export metric_continuous, metric_event, common_valid_mask, tied_ranks
 export INTENSITY_BOUNDS, INTENSITY_CLASSES, INTENSITY_RANGES, intensity_class
 
 include("core/fitted.jl")

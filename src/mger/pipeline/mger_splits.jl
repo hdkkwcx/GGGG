@@ -1,28 +1,4 @@
-"""
-    split_stations_train_val(station_ids::Vector{String}; train_frac::Float64=0.8, rng::AbstractRNG=Random.GLOBAL_RNG)
-
-Split stations into training and validation sets by a random shuffle.
-Returns: (train_ids, val_ids)
-
-The held-out stations are new/unseen *locations*, so this tests generalisation to stations that
-were not fitted. It is NOT a spatial split: the shuffle never reads `lonlat`, so held-out
-stations sit interleaved with training ones and a validation station typically has a training
-neighbour a few km away. For held-out *area*, use `split_stations_spatial_block_kfold`.
-"""
-
 # Station-wise train/validation splits
-
-function split_stations_train_val(station_ids::Vector{String}; train_frac::Float64=0.8, rng::AbstractRNG=Random.GLOBAL_RNG)
-    n = length(station_ids)
-    n_train = max(1, floor(Int, n * train_frac))
-
-    shuffled = shuffle(rng, station_ids)
-    train_ids = shuffled[1:n_train]
-    val_ids = shuffled[n_train+1:end]
-
-    return train_ids, val_ids
-end
-
 
 function split_stations_kfold(station_ids::Vector{String}; k::Int=5, rng::AbstractRNG=Random.GLOBAL_RNG)
 	n = length(station_ids)

@@ -21,30 +21,6 @@ function write_wide(path::AbstractString, times::Vector{DateTime}, station_ids::
 end
 
 
-function write_fullfit_product(
-        outdir::AbstractString, product::AbstractString, times::Vector{DateTime}, ids::Vector{String},
-		lonlat::Matrix{Float64}, Y_obs::Matrix{Float64}, Y_sat::Matrix{Float64}, dMat::Matrix{Float64}, best,
-)
-	wMat = gw_weight(dMat, Float64(best.bw); kernel=Int(best.kernel), adaptive=Bool(best.adaptive))
-	R = Y_obs .- Y_sat
-	Rhat = local_linear_residual_predict(
-		lonlat, R, lonlat, wMat; slope_ridge=Float64(best.slope_ridge),
-	)
-	Y_corr = Y_sat .+ Rhat
-        path = joinpath(outdir, "corr_$(product)_fullfit_insample.csv")
-        try
-                write_wide(path, times, ids, Y_corr)
-                return path
-        catch e
-                stamp = Dates.format(now(), dateformat"yyyymmdd_HHMMSS")
-                fallback_path = joinpath(outdir, "corr_$(product)_fullfit_insample_$(stamp).csv")
-                @warn "Could not replace full-fit product file; writing timestamped fallback instead." product path fallback_path exception=(e, catch_backtrace())
-                write_wide(fallback_path, times, ids, Y_corr)
-                return fallback_path
-        end
-end
-
-
 function write_validation_scope(
 	outdir::AbstractString; cv_scheme::AbstractString, use_loocv_eval::Bool,
 	fold_scheme::Union{Nothing,Symbol}=nothing,
