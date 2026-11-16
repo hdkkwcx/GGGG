@@ -32,7 +32,6 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     twostage_nearby = Dict{Int,Tuple{Matrix{UInt8},Int}}()
     products = benchmark_products(cfg, source_products)
     terrain = _dem_enabled(cfg) ? load_aligned_terrain(something(cfg.terrain_path), ids) : nothing
-    dem_store = _empty_dem_store()
     common_times = product_data[first(products)].times
     joint_inputs = _joint_enabled(cfg) ? load_joint_benchmark_inputs(
         something(cfg.joint_covariates), source_products, ids, common_times,
@@ -70,31 +69,11 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
     else
         nothing
     end
-    joint_store = _empty_joint_store()
-    joint_scaling_tables = DataFrame[]
-    joint_qc_tables = DataFrame[]
     joint_inputs === nothing || _write_joint_provenance(cfg, joint_inputs, nested_joint)
 
-    all_metric_rows = NamedTuple[]
-    all_scan_rows = NamedTuple[]
-    all_bootstrap_rows = NamedTuple[]
-    run_status_rows = NamedTuple[]
-    auto_selection_rows = NamedTuple[]
-    blend_selection_rows = NamedTuple[]
-    stack_selection_rows = NamedTuple[]
-    fused_anchor_rows = NamedTuple[]
-    fused_grouped_rows = NamedTuple[]
-    fy4b_shift_rows = NamedTuple[]
-    fy4b_map_rows = NamedTuple[]
-    fy4b_strength_rows = NamedTuple[]
-    fy4b_gate_rows = NamedTuple[]
-    fy4b_twostage_rows = NamedTuple[]
-    hurdle_rows = NamedTuple[]
-    # Cells where the fold was too small for an inner selection split and fell back to
-    # leave-one-out. Reported in `benchmark_scope.csv` so the fallback is never silent.
-    selection_fallback_cells = String[]
+    rows = _benchmark_rows()
 
-    _dem_enabled(cfg) && _screen_dem_full_data!(dem_store, cfg, terrain, lonlat, products, product_data)
+    _dem_enabled(cfg) && _screen_dem_full_data!(rows.dem_store, cfg, terrain, lonlat, products, product_data)
 
     seeds = benchmark_seeds(cfg)
     # Repeated cross-validation: one independent fold partition per repeat.
@@ -207,9 +186,9 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                             fold_sat[calibration_val_idx, :]
                         context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
                             n_train_station=length(calibration_train_idx))
-                        append!(fy4b_shift_rows, [merge(context, row) for row in shift_rows])
-                        append!(fy4b_map_rows, [merge(context, row) for row in map_rows])
-                        append!(fy4b_strength_rows,
+                        append!(rows.fy4b_shift, [merge(context, row) for row in shift_rows])
+                        append!(rows.fy4b_map, [merge(context, row) for row in map_rows])
+                        append!(rows.fy4b_strength,
                             [merge(context, row) for row in strength_rows])
                     elseif gated
                         _, _, gate_train_idx, gate_val_idx =
@@ -218,7 +197,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         predictions["raw"][gate_val_idx, :] = fold_sat[gate_val_idx, :]
                         context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
                             n_train_station=length(gate_train_idx))
-                        append!(fy4b_gate_rows, [merge(context, row) for row in cut_rows])
+                        append!(rows.fy4b_gate, [merge(context, row) for row in cut_rows])
                     elseif two_stage
                         _, _, twostage_train_idx, twostage_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
@@ -226,7 +205,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         predictions["raw"][twostage_val_idx, :] = fold_sat[twostage_val_idx, :]
                         context = (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
                             n_train_station=length(twostage_train_idx))
-                        append!(fy4b_twostage_rows, [merge(context, row) for row in table_rows])
+                        append!(rows.fy4b_twostage, [merge(context, row) for row in table_rows])
                     elseif fusion !== nothing && fusion.design !== nothing
                         _, _, fusion_train_idx, fusion_val_idx =
                             _fold_station_indices(folds, id_map, cfg.k, fold)
@@ -246,7 +225,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         terms = vcat("intercept", lower, lower .* "_lag1",
                             lower .* "_lead1", lower .* "_nbr8")
                         for group in 1:design.n_group, (row, term) in enumerate(terms)
-                            push!(fused_grouped_rows, (;
+                            push!(rows.fused_grouped, (;
                                 scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
                                 variant=String(fusion.variant), group=group - 1,
                                 n_cell=used[group], fell_back=fell_back[group], term,
@@ -267,7 +246,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         # residual target would mean two different things inside one fit.
                         fold_sat = apply_satellite_fusion(sources, coefficients)
                         predictions["raw"][fusion_val_idx, :] = fold_sat[fusion_val_idx, :]
-                        push!(fused_anchor_rows, merge(
+                        push!(rows.fused_anchor, merge(
                             (; scheme, product, fold, repeat=repeat_index, seed=repeat_seed,
                                 variant=String(fusion.variant),
                                 n_train_station=length(fusion_train_idx), n_train_cell=used,
@@ -283,17 +262,14 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         scheme, scheme_symbol, repeat_index, repeat_seed,
                         predictions, nearest_train_distance,
                         fold_bands === nothing ? blend_bands : fold_bands[fold],
-                        dem_store, joint_store, joint_scaling_tables, joint_qc_tables,
-                        all_metric_rows, all_scan_rows, run_status_rows, auto_selection_rows,
-                        blend_selection_rows, hurdle_rows, selection_fallback_cells,
-                        stack_agreement, stack_selection_rows,
+                        stack_agreement, rows,
                     )
                 end
 
                 common_mask = _common_method_mask(y_obs, predictions)
                 if !any(common_mask)
                     failures = ["fold=$(row.fold) method=$(row.method): $(row.error)" for
-                        row in run_status_rows if row.scheme == scheme && row.product == product &&
+                        row in rows.status if row.scheme == scheme && row.product == product &&
                         row.status != "success"]
                     error("[$scheme/$product] no common valid OOF samples across all methods; " *
                         join(failures, " | "))
@@ -306,7 +282,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                         joinpath(product_dir, "oof_$(method).csv"), data.times, ids, predictions[method],
                     )
                     append_stratified_metrics!(
-                        all_metric_rows, scheme, product, method, data.times, y_obs,
+                        rows.metrics, scheme, product, method, data.times, y_obs,
                         predictions[method], common_mask, nearest_train_distance, cfg.event_thresholds;
                         repeat=repeat_index, seed=repeat_seed,
                     )
@@ -319,7 +295,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
                     CSV.write(joinpath(product_dir, "common_evaluation_mask.csv"), mask_df)
                 end
                 if scheme_symbol == :balanced_spatial && cfg.bootstrap_reps > 0
-                    append!(all_bootstrap_rows, paired_bootstrap_rows(
+                    append!(rows.bootstrap, paired_bootstrap_rows(
                         cfg, scheme, product, data.times, y_obs, predictions, common_mask;
                         repeat=repeat_index, seed=repeat_seed,
                     ))
@@ -328,43 +304,7 @@ function run_interpolation_benchmark(cfg::InterpolationBenchmarkConfig)
         end
     end # repeat loop
 
-    # One row per fold x band x term; `group` is the agreement-envelope band (0 = no product
-    # wet). `fell_back` marks a band too sparse or singular to fit alone, which took the pooled fit.
-    isempty(fused_grouped_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "fused_anchor_grouped_coefficients.csv"),
-            DataFrame(fused_grouped_rows))
-    # One row per fold x stack band: the band's inner-split cell count, whether it took the pooled
-    # fit, and its weight on every `STACK_FEATURES` member.
-    isempty(stack_selection_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "stack_selection.csv"), DataFrame(stack_selection_rows))
-    # One row per fold x FY4B regime: the pixel shift chosen on the training stations, with the
-    # pooled training r it reached and the unshifted r it is measured against.
-    isempty(fy4b_shift_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_shift_selection.csv"),
-            DataFrame(fy4b_shift_rows))
-    # One row per fold x season x regime: the wet threshold and the map's pool and anchor knots.
-    isempty(fy4b_map_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_maps.csv"), DataFrame(fy4b_map_rows))
-    # One row per fold x regime x month: how strongly the map was applied, and the training error
-    # with no adjustment, with the full map and with what was applied.
-    isempty(fy4b_strength_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_strengths.csv"),
-            DataFrame(fy4b_strength_rows))
-    # One row per fold x time fold: the humidity cut (-Inf for no gate) chosen on the fold's training
-    # stations over the other time folds' hours, with the training CSI before and after it.
-    isempty(fy4b_gate_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_rh_gate_cuts.csv"), DataFrame(fy4b_gate_rows))
-    # One row per fold x season-by-regime cell x context class: the training counts, the level they
-    # were pooled at, the chance of rain, the mean wet amount and their product, the value applied.
-    isempty(fy4b_twostage_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "fy4b_twostage_tables.csv"),
-            DataFrame(fy4b_twostage_rows))
-
     return _write_benchmark_outputs(
-        cfg, products, seeds, nested_joint, joint_inputs,
-        dem_store, joint_store, joint_scaling_tables, joint_qc_tables,
-        all_metric_rows, all_scan_rows, all_bootstrap_rows, run_status_rows,
-        auto_selection_rows, blend_selection_rows, fused_anchor_rows, hurdle_rows,
-        selection_fallback_cells; provenance,
+        cfg, products, seeds, nested_joint, joint_inputs, rows; provenance,
     )
 end

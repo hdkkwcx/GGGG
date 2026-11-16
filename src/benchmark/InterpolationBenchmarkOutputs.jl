@@ -152,23 +152,72 @@ function _screen_dem_full_data!(dem_store, cfg::InterpolationBenchmarkConfig, te
 end
 
 """
-Assemble every result table from the accumulated rows and write the run's CSVs.
+Every table a run accumulates, one field per output.
+
+The row vectors become the CSVs `_write_benchmark_outputs` writes. `dem_store` and `joint_store`
+hold the per-fold selection tables, `joint_scaling` and `joint_qc` each fold's scaling and
+quality-control table. `selection_fallback_cells` names the cells whose fold was too small for an
+inner selection split and fell back to leave-one-out; `benchmark_scope.csv` reports them, so the
+fallback is never silent.
+"""
+_benchmark_rows() = (;
+    metrics=NamedTuple[], scans=NamedTuple[], bootstrap=NamedTuple[], status=NamedTuple[],
+    auto_selection=NamedTuple[], blend_selection=NamedTuple[], stack_selection=NamedTuple[],
+    fused_anchor=NamedTuple[], fused_grouped=NamedTuple[],
+    fy4b_shift=NamedTuple[], fy4b_map=NamedTuple[], fy4b_strength=NamedTuple[],
+    fy4b_gate=NamedTuple[], fy4b_twostage=NamedTuple[], hurdle=NamedTuple[],
+    selection_fallback_cells=String[],
+    dem_store=_empty_dem_store(), joint_store=_empty_joint_store(),
+    joint_scaling=DataFrame[], joint_qc=DataFrame[],
+)
+
+"""
+Assemble every result table from the accumulated `rows` (`_benchmark_rows`) and write the run's
+CSVs.
 
 Split out of `run_interpolation_benchmark` so the orchestration reads as
-setup -> repeat/scheme/product/fold loops -> outputs. Parameters are named for the accumulators
-they receive so the body is unchanged from when it was inline.
+setup -> repeat/scheme/product/fold loops -> outputs.
 """
 function _write_benchmark_outputs(
-    cfg::InterpolationBenchmarkConfig, products, seeds, nested_joint::Bool, joint_inputs,
-    dem_store, joint_store, joint_scaling_tables, joint_qc_tables,
-    all_metric_rows, all_scan_rows, all_bootstrap_rows, run_status_rows,
-    auto_selection_rows, blend_selection_rows, fused_anchor_rows, hurdle_rows,
-    selection_fallback_cells; provenance::DataFrame=_git_provenance(),
+    cfg::InterpolationBenchmarkConfig, products, seeds, nested_joint::Bool, joint_inputs, rows;
+    provenance::DataFrame=_git_provenance(),
 )
-    metrics = DataFrame(all_metric_rows)
-    scans = DataFrame(all_scan_rows)
-    bootstrap = DataFrame(all_bootstrap_rows)
-    status = DataFrame(run_status_rows)
+    # One row per fold x band x term; `group` is the agreement-envelope band (0 = no product
+    # wet). `fell_back` marks a band too sparse or singular to fit alone, which took the pooled fit.
+    isempty(rows.fused_grouped) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fused_anchor_grouped_coefficients.csv"),
+            DataFrame(rows.fused_grouped))
+    # One row per fold x stack band: the band's inner-split cell count, whether it took the pooled
+    # fit, and its weight on every `STACK_FEATURES` member.
+    isempty(rows.stack_selection) ||
+        CSV.write(joinpath(cfg.mger.outdir, "stack_selection.csv"), DataFrame(rows.stack_selection))
+    # One row per fold x FY4B regime: the pixel shift chosen on the training stations, with the
+    # pooled training r it reached and the unshifted r it is measured against.
+    isempty(rows.fy4b_shift) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_shift_selection.csv"),
+            DataFrame(rows.fy4b_shift))
+    # One row per fold x season x regime: the wet threshold and the map's pool and anchor knots.
+    isempty(rows.fy4b_map) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_maps.csv"), DataFrame(rows.fy4b_map))
+    # One row per fold x regime x month: how strongly the map was applied, and the training error
+    # with no adjustment, with the full map and with what was applied.
+    isempty(rows.fy4b_strength) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_strengths.csv"),
+            DataFrame(rows.fy4b_strength))
+    # One row per fold x time fold: the humidity cut (-Inf for no gate) chosen on the fold's training
+    # stations over the other time folds' hours, with the training CSI before and after it.
+    isempty(rows.fy4b_gate) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_qm_rh_gate_cuts.csv"), DataFrame(rows.fy4b_gate))
+    # One row per fold x season-by-regime cell x context class: the training counts, the level they
+    # were pooled at, the chance of rain, the mean wet amount and their product, the value applied.
+    isempty(rows.fy4b_twostage) ||
+        CSV.write(joinpath(cfg.mger.outdir, "fy4b_twostage_tables.csv"),
+            DataFrame(rows.fy4b_twostage))
+
+    metrics = DataFrame(rows.metrics)
+    scans = DataFrame(rows.scans)
+    bootstrap = DataFrame(rows.bootstrap)
+    status = DataFrame(rows.status)
     claim = if :balanced_spatial in cfg.cv_schemes && cfg.bootstrap_reps > 0
         assess_gwr_claim(metrics, bootstrap, products)
     else
@@ -192,31 +241,31 @@ function _write_benchmark_outputs(
     CSV.write(joinpath(cfg.mger.outdir, "parameter_scan.csv"), scans)
     # How much of each hurdle prediction actually came from a local fit. Without this a
     # globally-degenerate model is indistinguishable from a local one in the metrics.
-    isempty(hurdle_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "hurdle_diagnostics.csv"), DataFrame(hurdle_rows))
+    isempty(rows.hurdle) ||
+        CSV.write(joinpath(cfg.mger.outdir, "hurdle_diagnostics.csv"), DataFrame(rows.hurdle))
     nrow(bootstrap) > 0 && CSV.write(joinpath(cfg.mger.outdir, "paired_comparisons.csv"), bootstrap)
     CSV.write(joinpath(cfg.mger.outdir, "run_status.csv"), status)
     # Which method `auto` picked in each fold, and by how much. A `chosen` column that changes
     # from fold to fold is the honest reading of "no single GWR variant is best here", and the
     # gap to `runner_up_rmse` says whether the choice was decisive or a coin flip.
-    isempty(auto_selection_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "auto_selection.csv"), DataFrame(auto_selection_rows))
-    isempty(blend_selection_rows) ||
-        CSV.write(joinpath(cfg.mger.outdir, "blend_selection.csv"), DataFrame(blend_selection_rows))
+    isempty(rows.auto_selection) ||
+        CSV.write(joinpath(cfg.mger.outdir, "auto_selection.csv"), DataFrame(rows.auto_selection))
+    isempty(rows.blend_selection) ||
+        CSV.write(joinpath(cfg.mger.outdir, "blend_selection.csv"), DataFrame(rows.blend_selection))
     # The fusion coefficients each derived product's anchor was built from, per fold. Worth
     # reporting for the same reason `auto_selection.csv` is: they are fitted quantities the
     # published numbers rest on, and their stability across folds is the evidence that the anchor
     # is a property of the products rather than of one partition. `fell_back` marks a fold whose
     # normal equations were singular and which therefore used equal weights instead.
-    isempty(fused_anchor_rows) ||
+    isempty(rows.fused_anchor) ||
         CSV.write(joinpath(cfg.mger.outdir, "fused_anchor_selection.csv"),
-            DataFrame(fused_anchor_rows))
-    _dem_enabled(cfg) && _write_dem_outputs(cfg.mger.outdir, dem_store, scans, status)
+            DataFrame(rows.fused_anchor))
+    _dem_enabled(cfg) && _write_dem_outputs(cfg.mger.outdir, rows.dem_store, scans, status)
     if joint_inputs !== nothing
-        scaling = isempty(joint_scaling_tables) ? DataFrame() :
-            vcat(joint_scaling_tables...; cols=:union)
-        quality = isempty(joint_qc_tables) ? DataFrame() :
-            vcat(joint_qc_tables...; cols=:union)
+        scaling = isempty(rows.joint_scaling) ? DataFrame() :
+            vcat(rows.joint_scaling...; cols=:union)
+        quality = isempty(rows.joint_qc) ? DataFrame() :
+            vcat(rows.joint_qc...; cols=:union)
         CSV.write(joinpath(cfg.mger.outdir, "joint_fold_scaling.csv"), scaling)
         CSV.write(joinpath(cfg.mger.outdir, "joint_fold_quality_control.csv"), quality)
         bandwidths = filter([:mode, :method, :selected] =>
@@ -226,7 +275,7 @@ function _write_benchmark_outputs(
         CSV.write(joinpath(cfg.mger.outdir, "covariate_model_status.csv"), filter(
             :covariate_selection_mode => in(("fixed_full_data", "nested_per_fold")), status,
         ))
-        nested_joint && _write_joint_selection_outputs(cfg.mger.outdir, joint_store)
+        nested_joint && _write_joint_selection_outputs(cfg.mger.outdir, rows.joint_store)
     end
     if ncol(claim) > 0
         CSV.write(joinpath(cfg.mger.outdir, "claim_assessment.csv"), claim)
@@ -262,8 +311,8 @@ function _write_benchmark_outputs(
                 "uniform (default): unweighted RMSE over a wet-oversampled subsample, so the tuning RMSE runs ~3x the reported pooled RMSE it stands in for; the level error is close to a constant multiplier and cancels in the candidate ranking",
             cfg.tuning_geometry === :inner_spatial ?
                 "inner_spatial (default): candidates scored by out-of-fold prediction onto an inner $(cfg.tuning_inner_k == 0 ? cfg.k : cfg.tuning_inner_k)-group split of the training stations, built with the same splitter and scheme as the outer partition, so selection and reporting are the same estimand" *
-                (isempty(selection_fallback_cells) ? "" :
-                    "; FELL BACK to leave-one-out in $(length(selection_fallback_cells)) cell(s) too small to split: $(join(selection_fallback_cells, ", "))") :
+                (isempty(rows.selection_fallback_cells) ? "" :
+                    "; FELL BACK to leave-one-out in $(length(rows.selection_fallback_cells)) cell(s) too small to split: $(join(rows.selection_fallback_cells, ", "))") :
                 "loocv (legacy): candidates scored by leave-one-out at training stations, which measures interpolation next to a retained gauge while the reported metric measures extrapolation to a station 20+ km from any gauge",
             "auto: one GWR-family method chosen per fold on the inner selection split ($(join([_output_method(mode, method) for (mode, method) in AUTO_CANDIDATE_RUNS], ", "))), contenders re-predicted and compared on the intersection of their masks; every method is also reported on its own, but naming a per-method winner from those columns is selection on the held-out fold, which is what auto exists to avoid",
             # `oof_*.csv` and `common_evaluation_mask.csv` are large, so only the first partition
@@ -479,7 +528,7 @@ function _write_benchmark_outputs(
     append!(scope, DataFrame(key=["git_dirty_at_end"], value=end_git.value[end_git.key .== "git_dirty"]))
     CSV.write(joinpath(cfg.mger.outdir, "benchmark_scope.csv"), scope)
     return (; metrics, scans, bootstrap, status, claim, repeat_summary, fold_summary,
-        rank_stability, auto_selection=DataFrame(auto_selection_rows))
+        rank_stability, auto_selection=DataFrame(rows.auto_selection))
 end
 
 # Two levels up: this file lives in `src/benchmark/`. Derived rather than configured - `src/`
