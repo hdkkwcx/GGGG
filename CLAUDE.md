@@ -101,10 +101,11 @@ Three loading disciplines:
    its own fragment files, which share one namespace, so include order only needs to put shared
    consts and structs first.
 
-Lowercase subdirectories inside a tier (`benchmark/diagnostics/`, `models/dem/`,
-`mger/pipeline/`, `selection/era5/`, …) hold fragments `include`d into their parent module or
-pipeline. Never load them on their own. `MGERConfig` stays in `MGERPipeline.jl` because it is
-`load_pipeline`'s sentinel.
+Lowercase subdirectories inside a tier (`benchmark/diagnostics/`, `benchmark/no_rain/`,
+`models/dem/`, `models/joint/`, `mger/pipeline/`, `selection/era5/`, `selection/joint/`,
+`sources/fy4b/`, …) hold fragments `include`d into their parent module or pipeline. Never load
+them on their own. `MGERConfig` stays in `MGERPipeline.jl` because it is `load_pipeline`'s
+sentinel.
 
 Adding a file: a reusable GWR primitive (anything two modules would otherwise each copy) goes in
 `core/`, plus an `include` line in `src/MixedGWR.jl`. Anything else becomes a standalone module in
