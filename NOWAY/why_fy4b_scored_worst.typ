@@ -339,8 +339,8 @@ held to a stricter level, and the line of fixes for the fusion was closed after 
   Dates, tests and rules are in `Projects_Pending_Handover/fy4b_tries.md`.],
 )
 
-One more run came after the register closed. On 2026-11-15 FY4B's two-stage series (the chance of rain
-times the mean wet amount of each hour's class) was scored in the full benchmark. Against corrected
+FY4B's two-stage series (the chance of rain times the mean wet amount of each hour's class) was also
+scored in the full benchmark, on 2026-11-15. Against corrected
 FY4B its MGWR improved by 4.8%, but its agreement blend changed by +0.05% (−0.55 to +0.59), with CSI
 at 8 mm h⁻¹ lower by 0.010. All four checks of the rule fixed before the run failed
 #src[`output/fy4b_two_stage_benchmark_comparison/rule.csv` and `paired.csv`].
