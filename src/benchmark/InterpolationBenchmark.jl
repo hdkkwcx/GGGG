@@ -29,8 +29,8 @@ using .HurdleGWR
 using .RunProvenance: start_provenance, git_provenance
 
 # The benchmark's implementation is split across concern-specific files (config, fold-splitting,
-# DEM, joint-covariates, predictors, tuning, metrics, bootstrap, output writing, per-fold runs,
-# orchestrator) purely for readability; each is a plain top-level fragment, not a module, so
+# DEM, joint-covariates, predictors, blends and the stack, tuning, metrics, bootstrap, output
+# writing, per-fold runs, orchestrator) purely for readability; each is a plain top-level fragment, not a module, so
 # include order only needs to put shared consts/structs before the files that reference them as
 # call-time names.
 include(joinpath(@__DIR__, "InterpolationBenchmarkConfig.jl"))
@@ -38,6 +38,7 @@ include(joinpath(@__DIR__, "InterpolationBenchmarkFolds.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkDEM.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkJoint.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkPredictors.jl"))
+include(joinpath(@__DIR__, "InterpolationBenchmarkBlend.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkHurdle.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkTuning.jl"))
 include(joinpath(@__DIR__, "InterpolationBenchmarkMetrics.jl"))
