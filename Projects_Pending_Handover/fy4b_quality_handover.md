@@ -1,6 +1,6 @@
 # Handover: FY4B quality work (raw data coming via the Samsung T9)
 
-**Date:** 2026-11-10 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
+**Date:** 2026-11-16 · **State:** the FY4B work is merged (`805bad6`); two-stage counting tables
 screened on raw FY4B and stopped there by the user's decision (§0), so `FY4B_QM` stays the FY4B
 quality step. A blend screen and a nested run of two dry-band blends found nothing that clears
 the decision rule (merged as `f720404`). Adding FY4B_QM to the fusion clears it for no product's
@@ -26,13 +26,116 @@ GPM_uncal or GSMaP is also wet) in place of plain FY4B in the merges and bands. 
 before the run, with every try listed in `fy4b_tries.md`, and it fails, so plain FY4B stays (Previous, merged as
 `934d427` and pushed); the paper lists the tries in Draft Table S1 (merged as `1eab051`). The two-stage screen,
 rerun with weeks held out as well as gauges, loses its r gain: TS_E's r against FY4B_QM goes from +0.043 to +0.022,
-with an interval spanning 0, and the RMSE gain is all that survives (Newest, branch
-`fy4b/two-stage-time-holdout`) · **Next step:** none pending for FY4B. Quote RQ3 and §3.4 numbers only from the
+with an interval spanning 0, and the RMSE gain is all that survives (Previous, branch
+`fy4b/two-stage-time-holdout`). The two-stage series was then scored in the benchmark itself, at the user's request
+(`--fy4b-twostage`): its MGWR gains, but its agreement blend does not and heavy rain is worse, so all four checks of
+the rule fail and FY4B_QM stays (Newest, merged as `1f4bb95` and pushed; try 16 in `fy4b_tries.md`) · **Next step:** none pending for FY4B. Quote RQ3 and §3.4 numbers only from the
 `_matched` report folders, as the paper does
 
 ---
 
-## Newest (2026-11-11): the final run in two configurations, plain FY4B or FY4B_QM in the merges and bands
+## Newest (2026-11-15): the two-stage series in the benchmark: its MGWR gains, its agreement blend does not
+
+The user asked for the two-stage series in the benchmark after all, scored on the existing hours and with the
+paper left alone. This reverses the "no benchmark run" of 2026-11-01 (§0). It answers §0's option 1: does a
+flatter anchor with a higher r help MGWR and the agreement blend? Benchmark work; no paper text or result changed.
+
+### Code and run (branch `fy4b/two-stage-benchmark`, merged as `1f4bb95` and pushed)
+
+- `424dfc9`: `--fy4b-twostage` (with `--fy4b-qm`; folder suffix `_fy4btwostage`) appends `FY4B_TS_E`
+  (`SatelliteTwoStage.expected_anchor`).
+  - It is the chance of rain times the mean wet gauge amount of the hour's context class: FY4B's intensity, rain
+    in the surrounding shifts, and rain at t−1 and t+1, within season × regime.
+  - The tables are counted per fold on that fold's training stations, at FY4B_QM's pixel shift, and applied to
+    every station. A class with fewer than 200 training pairs is pooled. They are written to
+    `fy4b_twostage_tables.csv`.
+  - It is appended after every other product and kept out of the fusion, so no other product's seed or row
+    moves. The end-to-end test asserts that.
+  - It is refused with `--fy4b-qm-crossed`, because its tables are not held out in time.
+- `scripts/compare_fy4b_two_stage_benchmark.jl` scores it against FY4B_QM and plain FY4B from the run's
+  out-of-fold files. Output: `output/fy4b_two_stage_benchmark_comparison/` (`paired.csv`, `rule.csv`,
+  `provenance.csv`). Log: `output/compare_fy4b_two_stage_benchmark.log`. Intervals are 95%, over whole 7-day blocks.
+- `410e2c1`: the same pair again on FY4B_QM's own mask (role `two_stage_qm_mask`), reported only.
+- **Run:** clean at `424dfc9`: the paper's `benchmark` command plus `--fy4b-twostage`.
+  - Folder: `output/interpolation_benchmark_full_..._fy4bqm_fy4bqmadapt_fy4btwostage_gpmuncal`, a link to
+    `/Volumes/T9/GGGG_output/` (the internal disk is nearly full).
+  - Log: `output/full_benchmark_fy4bw3h0_fy4bqm_fy4bqmadapt_fy4btwostage.log`.
+  - The comparison ran clean at `410e2c1`.
+- **Guard passed:** every product of the paper run keeps its `raw`, `adw`, `mgwr`, both blends and its mask, cell
+  for cell. (`residual_gwr` is left out of the guard: threading can move it in the last digit between runs.)
+
+### The rule (fixed in `424dfc9`, before the full run)
+
+The decision rule of the dry-band, fusion and humidity-gate tests, at 95%, on the agreement blend in balanced
+spatial CV, FY4B_TS_E against FY4B_QM. The two-stage series helps only if:
+1. RMSE changes by −0.3% or better, with its interval below 0;
+2. CSI at 8 mm/h is not significantly lower;
+3. |FBI_8 − 1| is not significantly worse;
+4. |bias| grows by at most 0.005 mm/h.
+
+The random split and the pair against plain FY4B are reported only.
+
+### Result
+
+FY4B_TS_E against FY4B_QM, balanced spatial, on the 3,546,598 cells both score (fold 2 is out; see below):
+
+| Field | RMSE, TS_E | RMSE, QM | Change | Change in r | CSI_8, TS_E / QM | FBI_8, TS_E / QM |
+|---|---|---|---|---|---|---|
+| raw | 0.833 | 0.961 | −13.3% (−19.7..−7.2) | +0.046 (+0.019..+0.074) | 0.000 / 0.049 | 0.00 / 0.62 |
+| MGWR | 0.757 | 0.795 | −4.8% (−7.3..−2.4) | +0.030 (+0.010..+0.053) | 0.051 / 0.085 | 0.18 / 0.44 |
+| MGWR + ADW blend | 0.749 | 0.753 | −0.42% (−1.13..+0.25) | +0.002 (−0.006..+0.012) | 0.058 / 0.069 | 0.17 / 0.22 |
+| MGWR + agreement blend | 0.749 | 0.748 | +0.05% (−0.55..+0.59) | −0.004 (−0.011..+0.004) | 0.060 / 0.071 | 0.18 / 0.22 |
+
+- **The rule: all four checks fail,** so FY4B_QM stays the quality step.
+  - RMSE: +0.05% (−0.55..+0.59);
+  - CSI_8: −0.0104 (−0.0185..−0.0041), significantly lower;
+  - |FBI_8 − 1|: +0.0405 (+0.0158..+0.0681), significantly worse;
+  - |bias|: +0.0052 mm/h (−0.0026..+0.0067), just over the 0.005 allowed.
+- **The gain shrinks at every stage:** −13.3% raw, −4.8% after MGWR, −0.4% after the ADW blend, and none after
+  the agreement blend. The humidity gate went the same way (−1.7% raw, +0.03% after the agreement blend).
+  FY4B_QM is different: against plain FY4B it gains at every stage, −16.8% raw, −5.3% after MGWR and −0.7%
+  (−1.2..−0.2) after the agreement blend, all significant. Its gain shrinks too, but it is not gone.
+- **Heavy rain is lost.** The raw series never reaches 8 mm/h. MGWR brings some of it back (FBI_8 0.18), but less
+  than for FY4B_QM (0.44), and the agreement blend stays behind (CSI_8 0.060 against 0.071).
+- **It is wet too often.** FBI at 0.1 mm/h is 1.93 raw (FY4B_QM 1.00), and 2.34 against 2.11 after the agreement
+  blend, where CSI at 0.1 mm/h is 0.339 against 0.363.
+- **On FY4B_QM's own mask** (reported only; 4,447,695 cells for the fitted fields): raw −13.2%, MGWR −4.2%
+  (−6.6..−2.1), ADW blend −0.12% (−0.76..+0.48), agreement blend +0.27% (−0.29..+0.83).
+- **Against plain FY4B** (reported only): raw −27.2%, MGWR −9.1% (−12.8..−5.1), ADW blend −1.5% (−2.4..−0.5),
+  agreement blend −0.67% (−1.42..+0.17).
+- **The gap to GPM_uncal's agreement blend does not close:** FY4B_TS_E +2.09% (+1.44..+2.79) on its own cells,
+  FY4B_QM +1.98% (+1.28..+2.61), plain FY4B +2.68% (+1.77..+3.61).
+- **Random split** (not judged): MGWR −1.15% (−1.66..−0.66), ADW blend −0.75% (−1.11..−0.44), agreement blend
+  −0.13% (−0.22..−0.03).
+
+### Limits
+
+- **A fold is missing.** `mixed_gwr` fails balanced fold 2 for FY4B_TS_E. A product's mask needs every mask
+  method finite, so its mask drops that fold: 3,546,598 cells against FY4B_QM's 4,476,431. The cause was not
+  looked into. The rows on FY4B_QM's own mask are there for this reason, and they give the same verdict.
+- **Neither series is held out in time.** The tables and the quantile map are both fitted on the weeks they are
+  scored in, so the pair is like for like, but both hold for the same weeks only. The screen's rerun with weeks
+  held out (Previous, 2026-11-10) had already shown TS_E's raw r gain go.
+- **One more try on the same gauges and hours.** It was judged at 95%, with no share of the 5% over the tries.
+  It fails even so, so this does not change the verdict.
+
+### Where it stands
+
+- `FY4B_QM` stays FY4B's quality step. `--fy4b-twostage` stays in the code as an opt-in flag (`CLAUDE.md`).
+- **Register (2026-11-16):** it is try 16 in `fy4b_tries.md` and in `paper/fy4b_tries.csv` (`a532103`, merged as
+  `3d6a97d` and pushed). The run had been merged without a row; a side agent noted it. The paper's Draft
+  Table S1 gains the row in words and its count reads 16. No other paper number or sentence changes. The parked
+  merges-only variant is therefore try 17.
+- **Not built:** the 15-minute quarters, the product-quality features, hour of day and elevation (`ROADMAP.md`).
+  Nothing here argues for them: the context adds little (§0), and of the three raw gains taken through MGWR
+  and the blend, only FY4B_QM's is still there after the agreement blend (−0.7%, significant). The humidity
+  gate's and this run's are gone.
+- **Notes:** `NOWAY/why_fy4b_scored_worst.typ` and `NOWAY/fy4b_benchmark_workflow.typ` (2026-11-16, merged as
+  `4c7ddb5`) collect the FY4B results and the benchmark's stages for reading. They hold no new analysis.
+
+---
+
+## Previous (2026-11-11): the final run in two configurations, plain FY4B or FY4B_QM in the merges and bands
 
 The user asked for both FY4Bs in the final benchmark run, all three products treated alike, and both
 configurations scored on the same held-out station-hours, pooled over June 2022 – December 2024 only, with
@@ -40,7 +143,8 @@ prediction coverage. Benchmark work; no paper text or number changed.
 
 **How to read it (fixed before the result was looked at).** A description, with no rule and no verdict. It
 cannot move plain FY4B out of the merges and the bands: the pair was judged as try 13, the line was closed on
-2026-11-10, and a switch would be try 16 at the 1 − 0.05/16 bar. `fy4b_tries.md` gets no row.
+2026-11-10, and a switch would be try 16 at the 1 − 0.05/16 bar (try 17 since 2026-11-15, when the two-stage
+run became try 16). `fy4b_tries.md` gets no row.
 
 - **Configurations:** `plain` is the paper's `benchmark` step (run at `fe421b3`). `qm` is the same command plus
   `--fy4b-qm-fusion`, rerun clean at `7fa1953` (step `benchmark_qmfusion`; it replaces the 31 October run).
@@ -170,7 +274,8 @@ may be luck. The user then called this "the last time".
 - It replaces plain FY4B in the merges and the agreement bands. It reads no gauge and fits nothing.
 - It was aimed at the two earlier failures. A gauge-fitted map dries heavy rain, and it reuses gauge-hours.
   Neither applies here: MERGED_MEAN cannot lose an hour ≥ 8 mm/h, and no gauge is read.
-- Offered and parked: the same series in the merges only, now `ROADMAP.md`'s exploratory entry, try 16. Not
+- Offered and parked: the same series in the merges only, now `ROADMAP.md`'s exploratory entry, try 16 (try 17
+  since 2026-11-15). Not
   recommended: calibration to IMERG Uncal, and the crossed map with its top end kept.
 
 **Rule (user's choice, fixed in `b044b3f` before the run).** Stricter, for a late try. Balanced spatial, 7-day
@@ -1700,6 +1805,8 @@ Held-out raw scores, balanced spatial:
 - **Decided (2026-11-01): stop.** The user chose option 3 below after seeing the screen.
   `FY4B_QM` stays the FY4B quality step. No `--fy4b-twostage` flag, benchmark run or quarter
   rebuild was made; `SatelliteTwoStage` and the screen stay in the repo as the record.
+  (2026-11-15: the user asked for the flag and the benchmark run after all, option 1 below. It fails
+  the rule; see Newest.)
 - **The options that were on the table:**
   1. Add `FY4B_TS_E` to the benchmark (`--fy4b-twostage`, a derived product like `FY4B_QM`) and
      do the ~4 h full run. It would show whether a flatter anchor with a higher r helps MGWR and
