@@ -151,9 +151,9 @@ and a formula is marked as checked only when a test compares it, written out pla
 
     # === A. Raw file to hourly value ===============================================================
     a: list[str] = []
-    a.append(step(1, "Choosing the files", where(("src/sources/FY4BPreprocessing.jl", "find_nc_files"),
-                                                   ("src/sources/FY4BPreprocessing.jl", "is_15min_file"),
-                                                   ("src/sources/FY4BPreprocessing.jl", "segment_problem")), checked(), md(r"""
+    a.append(step(1, "Choosing the files", where(("src/sources/fy4b/fy4b_files_qc.jl", "find_nc_files"),
+                                                   ("src/sources/fy4b/fy4b_filenames.jl", "is_15min_file"),
+                                                   ("src/sources/fy4b/fy4b_files_qc.jl", "segment_problem")), checked(), md(r"""
 The raw tree is walked once. A file is a 15-minute scan when its name carries a start time $t_0$ and an end time $t_1$ with
 
 $$t_0 \in \{{:}00,\ {:}15,\ {:}30,\ {:}45\} \ \text{(seconds 0)}, \qquad t_1 = t_0 + 15\ \text{min} - 1\ \text{s}.$$
@@ -172,8 +172,8 @@ This step has no formula to check; the trace page checks its result against the 
         nav_rows.append([esc(s["station_id"]), f(lon, 3), f(lat, 3), f(c1, 2), f(r1, 2), f"{round(c1) + 1}, {round(r1) + 1}",
                          f(c2, 2), f(r2, 2), f"{round(c2) + 1}, {round(r2) + 1}"])
     a.append(step(2, "Navigation: from latitude and longitude to a pixel",
-                  where(("src/sources/FY4BPreprocessing.jl", "latlon_to_scan_angles"),
-                        ("src/sources/FY4BPreprocessing.jl", "scan_angles_to_grid")), checked("navigation"), md(r"""
+                  where(("src/sources/fy4b/fy4b_projection.jl", "latlon_to_scan_angles"),
+                        ("src/sources/fy4b/fy4b_projection.jl", "scan_angles_to_grid")), checked("navigation"), md(r"""
 A gauge at geodetic latitude $\varphi$ and longitude $\lambda_g$ is placed in the full-disk image of a satellite at longitude $\lambda_s$. With $\lambda = \lambda_g - \lambda_s$, the WGS84 radii $r_e = 6\,378\,137$ m and $r_p = 6\,356\,752.314$ m, and $e^2 = f(2-f)$, $f = (r_e - r_p)/r_e$:
 
 $$\varphi_c = \arctan\!\big((1-e^2)\tan\varphi\big), \qquad r_c = \frac{r_p}{\sqrt{1 - e^2\cos^2\varphi_c}}$$
@@ -199,7 +199,7 @@ $c$ grows to the east and $r$ to the south; both count from 0. The pixel read is
         ["Gauge", "Lon", "Lat", "c at 133°E", "r at 133°E", "Pixel (1-based)", "c at 105°E", "r at 105°E", "Pixel (1-based)"],
         nav_rows, num=(1, 2, 3, 4, 5, 6, 7, 8)) + source("data/processed/study_area/station_meta.csv", "computed here with the formula above")))
 
-    a.append(step(3, "Which pixel values are accepted", where(("src/sources/FY4BPreprocessing.jl", "accepts_value")),
+    a.append(step(3, "Which pixel values are accepted", where(("src/sources/fy4b/fy4b_variants.jl", "accepts_value")),
                   checked("pixel rule and 3x3 mean"), md(r"""
 A raw value $P$ with quality flag $Q$ (`DQF`) is accepted when
 
@@ -208,8 +208,8 @@ $$P \neq 65534, \qquad 0 \le P \le 30, \qquad Q < 2,$$
 and neither is missing. The product's valid range is 0–20 mm h⁻¹; the bound of 30 is what removes the sentinels 65533 and 65535, which the files do not declare as fill values.
 """)))
 
-    a.append(step(4, "The 3 × 3 mean of one scan", where(("src/sources/FY4BPreprocessing.jl", "_window_value"),
-                                                           ("src/sources/FY4BPreprocessing.jl", "sample_variants")),
+    a.append(step(4, "The 3 × 3 mean of one scan", where(("src/sources/fy4b/fy4b_variants.jl", "_window_value"),
+                                                           ("src/sources/fy4b/fy4b_variants.jl", "sample_variants")),
                   checked("pixel rule and 3x3 mean"), md(r"""
 Let $\mathcal A_{i,q}$ be the accepted pixels among the nine of the 3 × 3 box centred on gauge $i$'s pixel in scan $q$. The scan's value is their mean, and it exists only when more than half are accepted:
 
@@ -222,8 +222,8 @@ $$\kappa_{i,q} = \frac{|\{p \in \mathcal A_{i,q} : P_p \ge 20\}|}{|\mathcal A_{i
 The same function gives the other variants built in the same pass: the centre pixel alone (window 1, needs 1 pixel), a 5 × 5 box (needs 13 of 25), and the 3 × 3 box at the parallax-shifted pixel.
 """)))
 
-    a.append(step(5, "The strict hour", where(("src/sources/FY4BPreprocessing.jl", "aggregate_hourly_variants"),
-                                                ("src/sources/FY4BPreprocessing.jl", "build_hourly_qc")), checked(), md(r"""
+    a.append(step(5, "The strict hour", where(("src/sources/fy4b/fy4b_variants.jl", "aggregate_hourly_variants"),
+                                                ("src/sources/fy4b/fy4b_files_qc.jl", "build_hourly_qc")), checked(), md(r"""
 An hour is processed only when all four scans (:00, :15, :30, :45) exist and open. Then
 
 $$F_{i,t} = \frac{1}{4}\sum_{q=1}^{4} v_{i,q}, \qquad \text{undefined if any } v_{i,q} \text{ is undefined.}$$
@@ -233,7 +233,7 @@ The scans hold rain rates in mm h⁻¹, so their mean over the hour is the hour'
 The arithmetic is a mean of four numbers and has no test of its own; the trace page checks that every kept hour has exactly the four quarters.
 """)))
 
-    a.append(step(6, "The offset grid kept for the shift", where(("src/sources/FY4BPreprocessing.jl", "sample_variants"),
+    a.append(step(6, "The offset grid kept for the shift", where(("src/sources/fy4b/fy4b_variants.jl", "sample_variants"),
                                                                    ("scripts/prepare_fy4b_rebuild.jl", "OFFSET_GRID")), checked(), md(r"""
 In the same pass the 3 × 3 value is also computed with the box moved by every whole-pixel shift
 
@@ -498,9 +498,9 @@ with a small ridge $\epsilon = 10^{-8}$. $\mathbf h_0$ is the target's row of th
 The test covers the hat row and the too-few-gauges rule; the direct-GWR wrapper is read from the code.
 """)))
 
-    e.append(step(19, "Covariates: preparation", where(("src/models/JointCovariateModels.jl", "build_joint_fold_context"),
-                                                         ("src/models/JointCovariateModels.jl", "_hierarchical_weights"),
-                                                         ("src/models/JointCovariateModels.jl", "_spatial_design"),
+    e.append(step(19, "Covariates: preparation", where(("src/models/joint/joint_fold_context.jl", "build_joint_fold_context"),
+                                                         ("src/models/joint/joint_fold_context.jl", "_hierarchical_weights"),
+                                                         ("src/models/joint/joint_fold_context.jl", "_spatial_design"),
                                                          ("src/models/CovariateGroups.jl", "JOINT_GROUP_ORDER")),
                   checked("covariate centring and scaling"), md(r"""
 The three residual methods may use covariates. Nine groups are candidates: elevation, slope, aspect (sine and cosine) from the DEM; 2 m temperature, 2 m dew point, 10 m wind $u$ and $v$, surface pressure from ERA5-Land, hourly; and NDVI, 16-day.
@@ -519,9 +519,9 @@ The weights $\omega_{j,t}$ are non-zero only on the training gauges' wet hours (
     roles = [r for r in run("joint_fold_roles.csv") if r["scheme"] == "balanced_spatial" and r["product"] in PRODUCT_LABEL and r["final_included"] == "true"]
     role_rows = [[esc(PRODUCT_LABEL[p]), esc(fold), esc(", ".join(f'{r["variable_group"]} ({r["role"]})' for r in roles if r["product"] == p and r["fold"] == fold) or "none")]
                  for p in PRODUCT_LABEL for fold in folds]
-    e.append(step(20, "Covariates: selection inside the fold", where(("src/selection/JointVariableSelection.jl", "select_joint_covariates"),
-                                                                       ("src/selection/JointVariableSelection.jl", "joint_vif"),
-                                                                       ("src/selection/JointVariableSelection.jl", "joint_spatial_variability_test"),
+    e.append(step(20, "Covariates: selection inside the fold", where(("src/selection/joint/joint_selection_run.jl", "select_joint_covariates"),
+                                                                       ("src/selection/joint/joint_vif.jl", "joint_vif"),
+                                                                       ("src/selection/joint/joint_panel_variability.jl", "joint_spatial_variability_test"),
                                                                        ("src/models/dem/screening.jl", "terrain_screen"),
                                                                        ("src/selection/era5/era5_panel_screen.jl", "dynamic_panel_screen")),
                   checked("VIF, permutation p, Benjamini-Hochberg, joint F"), md(r"""
@@ -553,11 +553,11 @@ The four statistics are tested. The ERA5 and NDVI panel screens (their weighting
 """) + "<h4>Covariates kept in the run, with their role</h4>" + table(["Anchor", "Fold", "Groups"], role_rows, cls="wrap")
         + source("joint_fold_roles.csv of the run")))
 
-    e.append(step(21, "Residual GWR, mixed GWR and MGWR", where(("src/models/JointCovariateModels.jl", "_design_at"),
-                                                                  ("src/models/JointCovariateModels.jl", "dynamic_covariate_predict"),
+    e.append(step(21, "Residual GWR, mixed GWR and MGWR", where(("src/models/joint/joint_designs.jl", "_design_at"),
+                                                                  ("src/models/joint/joint_predict.jl", "dynamic_covariate_predict"),
                                                                   ("src/core/mixed_gwr.jl", "mixed_gwr_predict"),
                                                                   ("src/core/mixed_gwr.jl", "_backfit_components"),
-                                                                  ("src/models/JointCovariateModels.jl", "_multiscale_predict_damped")),
+                                                                  ("src/models/joint/joint_backfit.jl", "_multiscale_predict_damped")),
                   checked("mixed GWR back-fit", "MGWR back-fit with over-relaxation"), md(r"""
 All three fit the residual $\boldsymbol\rho_t$ of one hour over the training gauges that have it. They differ in the design.
 
@@ -648,10 +648,10 @@ solved from the normal equations. A cell where any product is missing has no mer
 
     blend = [r for r in rows("fusion_blend_weights.csv") if r["scheme"] == "balanced_spatial"]
     band_head = [f"{a} wet, max {e}" for a in ("1", "2", "3") for e in ("< 2.5", "2.5–8", "≥ 8")]
-    g_parts.append(step(24, "Blends with ADW, and the agreement bands", where(("src/benchmark/InterpolationBenchmarkPredictors.jl", "satellite_wet_blend_prediction"),
-                                                                              ("src/benchmark/InterpolationBenchmarkPredictors.jl", "blend_band_matrix"),
-                                                                              ("src/benchmark/InterpolationBenchmarkPredictors.jl", "banded_blend_prediction"),
-                                                                              ("src/benchmark/InterpolationBenchmarkPredictors.jl", "select_blend_lambdas"),
+    g_parts.append(step(24, "Blends with ADW, and the agreement bands", where(("src/benchmark/InterpolationBenchmarkBlend.jl", "satellite_wet_blend_prediction"),
+                                                                              ("src/benchmark/InterpolationBenchmarkBlend.jl", "blend_band_matrix"),
+                                                                              ("src/benchmark/InterpolationBenchmarkBlend.jl", "banded_blend_prediction"),
+                                                                              ("src/benchmark/InterpolationBenchmarkBlend.jl", "select_blend_lambdas"),
                                                                               ("src/benchmark/InterpolationBenchmarkConfig.jl", "BLEND_ENVELOPE_EDGES")),
                         checked("blends and agreement bands"), md(r"""
 A residual method passes a satellite false alarm straight into its prediction. With `--satellite-wet-blend`, each of the three residual methods also gets a blended version that leans toward gauge-only ADW where the satellites report rain.
