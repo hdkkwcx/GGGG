@@ -102,3 +102,169 @@ function _fold_sources(cfg::InterpolationBenchmarkConfig, names, sources, fold_c
     swapped[something(findfirst(==("FY4B"), names))] = first(fold_calibration[fold])
     return swapped
 end
+
+"""
+Each fold's calibrated FY4B, as `(anchor, shift_rows, map_rows, strength_rows)` per fold, or
+`nothing` when the run does not score `FY4B_QM_PRODUCT`.
+
+A fold's calibrated FY4B depends only on its training stations, so it is built once per fold of a
+partition: for FY4B_QM itself and, under `fy4b_qm_fusion`, for the fused anchors and blend bands
+it feeds. Under `fy4b_qm_crossed` each time fold's hours come from a fit on the other time folds'
+hours alone.
+"""
+function _fold_calibrations(setup, folds, id_map)
+    (; cfg, product_data, fy4b_calibration) = setup
+    fy4b_calibration === nothing && return nothing
+    return map(1:cfg.k) do fold
+        _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+        if cfg.fy4b_qm_crossed
+            calibrate_crossed(
+                fy4b_calibration.grid, fy4b_calibration.crossed_sums,
+                product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                fy4b_calibration.regime_of_time, fy4b_calibration.cells,
+                fy4b_calibration.time_folds.fold_of_time, product_data[FY4B_QM_PRODUCT].times;
+                cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
+                choice_labels=fy4b_calibration.month_labels,
+            )
+        else
+            calibrate_fold(
+                fy4b_calibration.grid, fy4b_calibration.sums,
+                product_data[FY4B_QM_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+                fy4b_calibration.regime_of_time, fy4b_calibration.cells;
+                cache=fy4b_calibration.cache, wet=cfg.mger.rain_threshold,
+                adaptive=cfg.fy4b_qm_adaptive, choice_of_time=fy4b_calibration.month_of_time,
+                choice_labels=fy4b_calibration.month_labels,
+            )
+        end
+    end
+end
+
+"""
+Each fold's gated FY4B_QM, as `(anchor, cut_rows)` per fold, or `nothing` without
+`fy4b_qm_rh_gate`: the cut chosen on that fold's training stations, per time fold on the other
+blocks' hours, and applied at every station.
+"""
+function _fold_gates(setup, folds, id_map, fold_calibration)
+    (; cfg, product_data, gate_inputs) = setup
+    gate_inputs === nothing && return nothing
+    return map(1:cfg.k) do fold
+        _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+        time_crossed_gate(
+            first(fold_calibration[fold]), product_data[FY4B_QM_PRODUCT].Y_obs,
+            gate_inputs.humidity, train_idx, gate_inputs.time_folds.fold_of_time,
+            product_data[FY4B_QM_PRODUCT].times; wet=cfg.mger.rain_threshold,
+        )
+    end
+end
+
+"""
+Each fold's two-stage FY4B, as `(anchor, table_rows)` per fold, or `nothing` without
+`fy4b_twostage`: the tables counted on that fold's training stations at its pixel shift (the cache
+it shares with the calibration), applied at every station.
+"""
+function _fold_two_stage(setup, folds, id_map, fold_calibration)
+    (; cfg, product_data, fy4b_calibration, twostage_nearby) = setup
+    cfg.fy4b_twostage || return nothing
+    return map(1:cfg.k) do fold
+        _, _, train_idx, _ = _fold_station_indices(folds, id_map, cfg.k, fold)
+        expected, _, table_rows = two_stage_fold(
+            fy4b_calibration.grid, fy4b_calibration.sums,
+            product_data[FY4B_TS_PRODUCT].Y_obs, train_idx, fy4b_calibration.regimes,
+            fy4b_calibration.regime_of_time, fy4b_calibration.cells,
+            product_data[FY4B_TS_PRODUCT].times, first(fold_calibration[fold]);
+            cache=fy4b_calibration.cache, nearby_cache=twostage_nearby,
+            wet=cfg.mger.rain_threshold,
+        )
+        (expected, table_rows)
+    end
+end
+
+"""
+Each fold's blend bands under `fy4b_qm_fusion`, read off the sources with FY4B swapped for the
+fold's calibrated anchor (`_fold_sources`). `nothing` otherwise: one set of bands, `setup`'s, then
+serves every fold.
+"""
+function _fold_blend_bands(setup, fold_calibration)
+    (; cfg, source_products, band_sources, blend_bands) = setup
+    (cfg.fy4b_qm_fusion && !isempty(blend_bands)) || return nothing
+    return map(1:cfg.k) do fold
+        sources = _fold_sources(cfg, source_products, band_sources, fold_calibration, fold)
+        Dict(axis => blend_band_matrix(
+            axis, first(sources), sources, cfg.mger.rain_threshold,
+        ) for axis in keys(blend_bands))
+    end
+end
+
+"""
+The anchor a derived product is corrected from in one fold, at every station, with the rows that
+say how it was built appended to `rows`.
+
+There are five kinds: FY4B's three per-fold series, which `partition` already holds
+(`FY4B_QM_PRODUCT`, `FY4B_QM_RH_PRODUCT`, `FY4B_TS_PRODUCT`), and the two fusions, grouped or not,
+whose coefficients are fitted here. Every kind is fitted on the fold's training stations
+(`train_idx`) and applied everywhere: the fold's own training rows need the same anchor its
+held-out rows get, or the residual target would mean two different things inside one fit.
+"""
+function _fold_anchor!(rows, setup, partition, cell, y_obs, train_idx)
+    (; cfg, fused_specifications) = setup
+    (; product, fold) = cell
+    context = merge(cell, (; n_train_station=length(train_idx)))
+    if product == FY4B_QM_PRODUCT
+        fold_sat, shift_rows, map_rows, strength_rows = partition.fold_calibration[fold]
+        append!(rows.fy4b_shift, [merge(context, row) for row in shift_rows])
+        append!(rows.fy4b_map, [merge(context, row) for row in map_rows])
+        append!(rows.fy4b_strength, [merge(context, row) for row in strength_rows])
+        return fold_sat
+    elseif product == FY4B_QM_RH_PRODUCT
+        fold_sat, cut_rows = partition.fold_gate[fold]
+        append!(rows.fy4b_gate, [merge(context, row) for row in cut_rows])
+        return fold_sat
+    elseif product == FY4B_TS_PRODUCT
+        fold_sat, table_rows = partition.fold_twostage[fold]
+        append!(rows.fy4b_twostage, [merge(context, row) for row in table_rows])
+        return fold_sat
+    end
+    fusion = fused_specifications[product]
+    if fusion.design !== nothing
+        design = fusion.design
+        coefficients, used, fell_back = fit_grouped_fusion(
+            y_obs, fusion.sources, design.features, design.groups,
+            design.n_group, train_idx,
+        )
+        coefficients === nothing && error(
+            "$product fold $fold: the pooled fusion fit is singular",
+        )
+        fold_sat = apply_grouped_fusion(
+            fusion.sources, design.features, coefficients, design.groups,
+        )
+        lower = lowercase.(fusion.source_names)
+        terms = vcat("intercept", lower, lower .* "_lag1",
+            lower .* "_lead1", lower .* "_nbr8")
+        for group in 1:design.n_group, (row, term) in enumerate(terms)
+            push!(rows.fused_grouped, merge(cell, (;
+                variant=String(fusion.variant), group=group - 1,
+                n_cell=used[group], fell_back=fell_back[group], term,
+                coefficient=coefficients[row, group],
+            )))
+        end
+        return fold_sat
+    end
+    sources = _fold_sources(
+        cfg, fusion.source_names, fusion.sources, partition.fold_calibration, fold,
+    )
+    coefficients, used, fell_back = fusion_coefficients(
+        fusion.variant, y_obs, sources, train_idx,
+    )
+    fold_sat = apply_satellite_fusion(sources, coefficients)
+    push!(rows.fused_anchor, merge(
+        cell,
+        (; variant=String(fusion.variant),
+            n_train_station=length(train_idx), n_train_cell=used,
+            fell_back, intercept=coefficients[1]),
+        NamedTuple{Tuple(Symbol("beta_", lowercase(name))
+                         for name in fusion.source_names)}(
+            Tuple(coefficients[2:end])),
+    ))
+    return fold_sat
+end
