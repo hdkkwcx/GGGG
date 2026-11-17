@@ -122,7 +122,7 @@ MERGED_OLS only. The agreement bands would keep plain FY4B.
 
 **How it would be built.**
 - A scope option on the same flag, so that the bands keep the plain sources while the fused anchors
-  take the confirmed one. `_fusion_source_matrices` in `InterpolationBenchmarkRun.jl` is where the two
+  take the confirmed one. `_fusion_source_matrices` in `InterpolationBenchmarkDerived.jl` is where the two
   part.
 - A `compare_fy4b_fusion_same_hours.jl` mode with those guards.
 
