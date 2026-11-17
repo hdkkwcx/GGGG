@@ -60,17 +60,6 @@ function common_valid_mask(arrays::AbstractArray...)
 end
 
 
-function complete_time_mask(arrays::AbstractMatrix...)
-	mask = trues(size(arrays[1], 2))
-	for a in arrays
-		size(a, 2) == length(mask) ||
-			throw(DimensionMismatch("all matrices must have the same time dimension"))
-		mask .&= vec(all(.!isnan.(a), dims=1))
-	end
-	return mask
-end
-
-
 """Ranks with ties given their average rank, for Spearman correlation."""
 function tied_ranks(x::AbstractVector{<:Real})
 	order = sortperm(x)
